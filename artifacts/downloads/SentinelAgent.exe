@@ -1,0 +1,24 @@
+========================================================================
+                      NOVA SENTINEL AGENT EXECUTABLE
+========================================================================
+Thank you for downloading the NovaSentinel Agent!
+
+This is a mock executable file generated for development, demonstration,
+and evaluation purposes.
+
+In a production environment, this binary is compiled as a native C#
+single-file self-contained background executable for Windows (x64),
+running as a scheduled system service to collect local telemetry (CPU,
+memory, storage, thermals, battery) and stream it periodically to the
+SaaS console.
+
+Agent capabilities:
+-------------------
+1. Low-overhead background system telemetry gathering.
+2. Direct connection to the report ingestion API.
+3. Automated scheduled reports every 7 days.
+4. Intelligent local anomaly detection.
+
+========================================================================
+                  NovaSentinel — Premium Hardware Intelligence
+========================================================================

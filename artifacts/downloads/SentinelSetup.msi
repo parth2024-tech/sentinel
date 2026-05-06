@@ -1,0 +1,23 @@
+========================================================================
+                      NOVA SENTINEL AGENT SETUP (MSI)
+========================================================================
+Thank you for downloading the NovaSentinel Agent Installer!
+
+This is a mock installer file generated for development, demonstration,
+and evaluation purposes.
+
+In a production environment, this binary is compiled as a WiX Installer
+(MSI) package for Windows systems (x64) and digitally signed. It
+installs the background agent service, registers it with Windows Services,
+and prompts for email registration to pair the device with your account.
+
+Setup & Deployment Capabilities:
+--------------------------------
+1. Installs lightweight background scanning service.
+2. Automates weekly scheduled diagnostic runs.
+3. Automatically registers startup hooks.
+4. Seamlessly pairs with the SaaS telemetry database.
+
+========================================================================
+                  NovaSentinel — Premium Hardware Intelligence
+========================================================================

@@ -1,0 +1,509 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary-border: var(--sidebar-primary-border);
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent-border: var(--sidebar-accent-border);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --ease-sentinel: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+:root {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+
+  /* Dark futuristic theme - deep navy near-black */
+  --background: 222 47% 4%;
+  --foreground: 210 20% 92%;
+  --border: 220 30% 18%;
+  --card: 222 40% 8%;
+  --card-foreground: 210 20% 92%;
+  --card-border: 220 30% 20%;
+  --sidebar: 222 40% 6%;
+  --sidebar-foreground: 210 20% 92%;
+  --sidebar-border: 220 30% 18%;
+  --sidebar-primary: 185 85% 55%;
+  --sidebar-primary-foreground: 222 47% 4%;
+  --sidebar-accent: 265 70% 65%;
+  --sidebar-accent-foreground: 210 20% 92%;
+  --sidebar-ring: 185 85% 55%;
+  --popover: 222 40% 8%;
+  --popover-foreground: 210 20% 92%;
+  --popover-border: 220 30% 20%;
+  /* Electric cyan as primary */
+  --primary: 185 85% 55%;
+  --primary-foreground: 222 47% 4%;
+  /* Violet as secondary */
+  --secondary: 265 70% 65%;
+  --secondary-foreground: 210 20% 92%;
+  /* Dark blue-grey muted */
+  --muted: 220 25% 14%;
+  --muted-foreground: 215 20% 55%;
+  /* Violet accent */
+  --accent: 265 70% 65%;
+  --accent-foreground: 210 20% 92%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 20% 92%;
+  --input: 220 30% 22%;
+  --ring: 185 85% 55%;
+  --chart-1: 185 85% 55%;
+  --chart-2: 265 70% 65%;
+  --chart-3: 38 92% 60%;
+  --chart-4: 160 60% 50%;
+  --chart-5: 0 72% 60%;
+
+  --app-font-sans: 'Inter', 'DM Sans', system-ui, sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+  --radius: 0.5rem;
+
+  /* Custom sentinel vars */
+  --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.4), 0 0 40px rgba(34, 211, 238, 0.15);
+  --glow-violet: 0 0 20px rgba(167, 139, 250, 0.4), 0 0 40px rgba(167, 139, 250, 0.15);
+  --gradient-pulse: linear-gradient(135deg, hsl(185 85% 55%), hsl(265 70% 65%));
+  --gradient-surface: linear-gradient(135deg, hsl(222 40% 10%), hsl(220 35% 8%));
+
+  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.4);
+  --shadow-xs: 0px 2px 4px 0px rgba(0,0,0,0.4);
+  --shadow-sm: 0px 2px 4px 0px rgba(0,0,0,0.4), 0px 1px 2px -1px rgba(0,0,0,0.4);
+  --shadow: 0px 4px 8px 0px rgba(0,0,0,0.4), 0px 2px 4px -1px rgba(0,0,0,0.3);
+  --shadow-md: 0px 6px 12px 0px rgba(0,0,0,0.4), 0px 2px 4px -1px rgba(0,0,0,0.3);
+  --shadow-lg: 0px 10px 20px 0px rgba(0,0,0,0.4), 0px 4px 6px -1px rgba(0,0,0,0.3);
+  --shadow-xl: 0px 20px 40px 0px rgba(0,0,0,0.5), 0px 8px 10px -1px rgba(0,0,0,0.4);
+  --shadow-2xl: 0px 24px 48px 0px rgba(0,0,0,0.6);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+  
+  /* Sentinel Custom Easing */
+  --ease-sentinel: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    transition: outline-offset 100ms linear;
+  }
+}
+
+/* Pulse ring animation */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(400%); }
+}
+
+@keyframes float-chip {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes counter-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes cta-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes border-pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(248, 113, 113, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.animate-border-pulse-red {
+  animation: border-pulse-red 0.5s ease-out 2;
+}
+
+.animate-scan-line {
+  animation: scan-line 3s linear infinite;
+}
+
+.animate-float-chip {
+  animation: float-chip 3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-counter-spin {
+  animation: counter-spin 15s linear infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+.animate-skeleton-pulse {
+  animation: skeleton-pulse 1.2s linear infinite;
+}
+
+.animate-cta-pulse {
+  animation: cta-pulse 300ms cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+}
+
+.glow-cyan {
+  box-shadow: var(--glow-cyan);
+}
+
+.glow-violet {
+  box-shadow: var(--glow-violet);
+}
+
+.text-glow-cyan {
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.6), 0 0 40px rgba(34, 211, 238, 0.3);
+}
+
+.text-glow-violet {
+  text-shadow: 0 0 20px rgba(167, 139, 250, 0.6), 0 0 40px rgba(167, 139, 250, 0.3);
+}
+
+.gradient-text {
+  background: var(--gradient-pulse);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.surface-card {
+  background: var(--gradient-surface);
+  border: 1px solid hsl(220 30% 18%);
+}
+
+@layer utilities {
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  .no-default-hover-elevate {}
+  .no-default-active-elevate {}
+
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: -1;
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: 999;
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+}
+
+/* ── Print stylesheet ─────────────────────────────────────────────────────────
+   Converts the dark-mode report to a clean, printer-friendly light layout.
+   Triggered by window.print() / Ctrl+P / "Save as PDF" in any browser.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@media print {
+  /* Force light background and dark text */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --border: 0 0% 85%;
+    --muted-foreground: 0 0% 35%;
+    --primary: 195 85% 35%;
+    --primary-foreground: 0 0% 100%;
+  }
+
+  html, body {
+    background: white !important;
+    color: #1a1a1a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide non-printable elements */
+  header, footer, nav,
+  .print\\:hidden,
+  [class*="print:hidden"] {
+    display: none !important;
+  }
+
+  /* Remove dark surface cards and replace with bordered boxes */
+  .surface-card {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+
+  /* Remove animations */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Remove glows and shadows */
+  .glow-cyan, .glow-violet {
+    box-shadow: none !important;
+  }
+
+  /* Text readability */
+  .text-foreground { color: #1a1a1a !important; }
+  .text-muted-foreground { color: #555 !important; }
+  .text-muted-foreground\/60,
+  .text-muted-foreground\/50,
+  .text-muted-foreground\/40 { color: #777 !important; }
+  .text-muted-foreground\/80 { color: #444 !important; }
+  .text-primary { color: #0891b2 !important; }
+  .text-primary\/60 { color: #0891b2 !important; }
+
+  /* Finding urgency borders */
+  .border-l-red-400    { border-left-color: #f87171 !important; }
+  .border-l-amber-400  { border-left-color: #fbbf24 !important; }
+  .border-l-cyan-400\/40 { border-left-color: #22d3ee !important; }
+
+  /* Component score bars */
+  .bg-green-500 { background-color: #22c55e !important; }
+  .bg-cyan-400  { background-color: #22d3ee !important; }
+  .bg-amber-400 { background-color: #fbbf24 !important; }
+  .bg-red-400   { background-color: #f87171 !important; }
+
+  /* Page breaks */
+  .report-printable {
+    padding: 0 !important;
+  }
+
+  .report-printable > div {
+    padding: 16px !important;
+  }
+
+  /* Avoid breaking inside cards */
+  .surface-card,
+  .rounded-xl {
+    break-inside: avoid;
+  }
+
+  /* Page header for multi-page prints */
+  @page {
+    margin: 1.5cm;
+    @top-right {
+      content: "Sentinel Hardware Health Report";
+      font-size: 8pt;
+      color: #999;
+    }
+  }
+
+  /* Gradient text → solid for print */
+  .gradient-text {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: #0891b2 !important;
+    background-clip: unset !important;
+    color: #0891b2 !important;
+  }
+
+  /* Score ring SVG: ensure colors print */
+  svg circle {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Font sizes for print readability */
+  .text-xs { font-size: 10px !important; }
+  .text-sm { font-size: 12px !important; }
+  .text-lg { font-size: 16px !important; }
+  .text-xl { font-size: 18px !important; }
+  .text-2xl { font-size: 22px !important; }
+  .text-4xl, .text-5xl { font-size: 28px !important; }
+
+  /* Links: show URL in print */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #777;
+    font-style: italic;
+  }
+
+  /* Internal links: don't show URL */
+  a[href^="/"]::after {
+    content: none;
+  }
+}

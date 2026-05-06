@@ -1,0 +1,1124 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.2.0
+  description: Sentinel HTTP API (Express) — health, waitlist, reports, my-reports, pairing, devices, version, and downloads.
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: waitlist
+    description: Waitlist email signup
+  - name: reports
+    description: Hardware report upload, retrieval, claim, and habit answers
+  - name: my-reports
+    description: Magic-link session for listing claimed reports
+  - name: pair
+    description: Browser ↔ script pairing for report delivery
+  - name: devices
+    description: Sentinel Agent device pairing and status
+  - name: version
+    description: Native agent version and update metadata
+  - name: downloads
+    description: Stable redirects to latest GitHub release assets
+  - name: organizations
+    description: B2B Multi-tenant billing and fleet management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /waitlist:
+    post:
+      operationId: joinWaitlist
+      tags: [waitlist]
+      summary: Join the waitlist
+      description: Submit an email address to join the Sentinel waitlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaitlistEntry"
+      responses:
+        "201":
+          description: Successfully joined the waitlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitlistResult"
+        "409":
+          description: Email already on the waitlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitlistResult"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: getWaitlistCount
+      tags: [waitlist]
+      summary: Get waitlist count
+      description: Returns the total number of waitlist signups
+      responses:
+        "200":
+          description: Waitlist count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitlistCount"
+  /reports:
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Create a hardware report
+      description: |
+        Accepts raw collector JSON, validates it, persists the report, and returns scored `result`.
+        Optional `habitAnswers` can be submitted here, or later via `POST /reports/{id}/habit-answers`.
+
+        When the Sentinel Agent uploads with `Authorization: Bearer <deviceToken>`, the report is
+        auto-claimed to the device's email (if the device is paired).
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: When reused within 24h, returns the same report (deduplicated).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportRequest"
+      responses:
+        "200":
+          description: Idempotent replay — same report as prior request with this Idempotency-Key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportCreateResult"
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportCreateResult"
+        "401":
+          description: Invalid device Bearer token (agent uploads only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Payload too large (> 256 KB)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation or schema error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /reports/{id}:
+    get:
+      operationId: getReportById
+      tags: [reports]
+      summary: Get a report by id
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      responses:
+        "200":
+          description: Report payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "400":
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /reports/{id}/claim:
+    post:
+      operationId: claimReport
+      tags: [reports]
+      summary: Claim a report with the claim token
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimReportRequest"
+      responses:
+        "200":
+          description: Claimed (or already claimed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportClaimResult"
+        "400":
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid claim token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /reports/{id}/habit-answers:
+    post:
+      operationId: submitReportHabitAnswers
+      tags: [reports]
+      summary: Attach or update habit questionnaire answers
+      description: Requires the same `claimToken` returned when the report was created.
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HabitAnswersRequest"
+      responses:
+        "200":
+          description: Habit scores stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HabitAnswersResponse"
+        "400":
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid claim token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-reports/request:
+    post:
+      operationId: requestMyReportsLink
+      tags: [my-reports]
+      summary: Request a magic-link email (dev returns token)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyReportsRequestBody"
+      responses:
+        "200":
+          description: Magic link created (see `devToken` in non-production)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyReportsRequestResponse"
+        "422":
+          description: Invalid email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-reports/verify:
+    get:
+      operationId: verifyMyReportsMagicLink
+      tags: [my-reports]
+      summary: Consume magic-link token and set session cookie
+      description: On success, responds with HTTP 302 redirect to `/my-reports?verified=1`.
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to my-reports with session cookie set
+          headers:
+            Location:
+              schema:
+                type: string
+        "400":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-reports:
+    get:
+      operationId: listMyReports
+      tags: [my-reports]
+      summary: List reports for the authenticated session
+      description: Requires `sentinel_session` cookie from verify flow.
+      responses:
+        "200":
+          description: Reports for the session email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyReportsListResponse"
+        "401":
+          description: Missing or expired session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-reports/session:
+    delete:
+      operationId: deleteMyReportsSession
+      tags: [my-reports]
+      summary: Sign out (clear session)
+      responses:
+        "200":
+          description: Session cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /pair/session:
+    post:
+      operationId: createPairSession
+      tags: [pair]
+      summary: Create a short-lived pair code for the browser
+      responses:
+        "201":
+          description: Pair session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PairSessionCreated"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /pair/session/{code}:
+    get:
+      operationId: getPairSessionStatus
+      tags: [pair]
+      summary: Poll pair session until report is ready
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PairSessionPollResponse"
+  /pair/push:
+    post:
+      operationId: pushPairedReport
+      tags: [pair]
+      summary: Push collector JSON for a pair code (diagnostic script)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PairPushRequest"
+      responses:
+        "200":
+          description: Idempotent — report already linked to this code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PairPushOk"
+        "201":
+          description: Report created and linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PairPushCreated"
+        "404":
+          description: Pair code not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: Pair code expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Payload too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many push attempts for this code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /devices/pair:
+    post:
+      operationId: initiateDevicePairing
+      tags: [devices]
+      summary: Register a new device and return pair + device tokens
+      responses:
+        "201":
+          description: Tokens created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicePairInitResponse"
+  /devices/claim:
+    post:
+      operationId: claimDeviceWithEmail
+      tags: [devices]
+      summary: Bind a device to a user email using the pair token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceClaimRequest"
+      responses:
+        "200":
+          description: Device claimed or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceClaimResponse"
+        "404":
+          description: Invalid pair token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /devices/pair-status:
+    get:
+      operationId: getDevicePairStatus
+      tags: [devices]
+      summary: Poll whether a pair token is known and claimed
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pair token status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicePairStatusResponse"
+        "400":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Unknown token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /version:
+    get:
+      operationId: getLatestReleaseForAgent
+      tags: [version]
+      summary: Version metadata for native update checks
+      responses:
+        "200":
+          description: Version payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentVersionResponse"
+  /downloads/latest:
+    get:
+      operationId: getLatestReleaseJson
+      tags: [downloads]
+      summary: Latest GitHub release metadata (JSON)
+      responses:
+        "200":
+          description: Release metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LatestReleaseMetadata"
+        "502":
+          description: Upstream GitHub error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /downloads/latest/{binary}:
+    get:
+      operationId: redirectLatestBinaryDownload
+      tags: [downloads]
+      summary: Redirect to the latest release asset for a binary slug
+      description: |
+        Valid `binary` values — `oneshot`, `setup`, `agent`. Responds with HTTP 302 to the
+        GitHub `browser_download_url` when found; otherwise redirects to the releases page.
+      parameters:
+        - name: binary
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [oneshot, setup, agent]
+      responses:
+        "302":
+          description: Redirect to download URL or releases page
+          headers:
+            Location:
+              schema:
+                type: string
+        "404":
+          description: Unknown binary slug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /organizations:
+    post:
+      operationId: createOrganization
+      tags: [organizations]
+      summary: Create a new organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganizationRequest"
+      responses:
+        "201":
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /organizations/{orgId}/checkout-session:
+    post:
+      operationId: createStripeCheckoutSession
+      tags: [organizations]
+      summary: Create Stripe checkout session
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutSessionRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /organizations/{orgId}/billing:
+    get:
+      operationId: getBillingStatus
+      tags: [organizations]
+      summary: Get organization billing status
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatusResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Organization not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    ReportId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Report public id
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    WaitlistEntry:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address to join the waitlist
+      required:
+        - email
+    WaitlistResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        alreadyExists:
+          type: boolean
+      required:
+        - success
+        - message
+    WaitlistCount:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Total number of waitlist signups
+      required:
+        - count
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+      required:
+        - error
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok
+    JsonObject:
+      type: object
+      additionalProperties: true
+    HabitAnswersMap:
+      type: object
+      additionalProperties:
+        type: number
+    CreateReportRequest:
+      type: object
+      properties:
+        rawJson:
+          $ref: "#/components/schemas/JsonObject"
+        habitAnswers:
+          $ref: "#/components/schemas/HabitAnswersMap"
+        legacy:
+          type: boolean
+          default: false
+      required:
+        - rawJson
+    ReportCreateResult:
+      type: object
+      properties:
+        id:
+          type: string
+        claimToken:
+          type: string
+        result:
+          $ref: "#/components/schemas/JsonObject"
+        habitScore:
+          type: [integer, "null"]
+        combinedScore:
+          type: [integer, "null"]
+        deduplicated:
+          type: boolean
+      required:
+        - id
+        - claimToken
+        - result
+    ReportView:
+      type: object
+      properties:
+        id:
+          type: string
+        result:
+          $ref: "#/components/schemas/JsonObject"
+        habitScore:
+          type: [integer, "null"]
+        combinedScore:
+          type: [integer, "null"]
+        claimed:
+          type: boolean
+        email:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - result
+        - habitScore
+        - combinedScore
+        - claimed
+        - email
+        - createdAt
+    ClaimReportRequest:
+      type: object
+      properties:
+        claimToken:
+          type: string
+          minLength: 8
+          maxLength: 64
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+        - claimToken
+    ReportClaimResult:
+      type: object
+      properties:
+        id:
+          type: string
+        claimed:
+          type: boolean
+        email:
+          type: [string, "null"]
+      required:
+        - id
+        - claimed
+        - email
+    HabitAnswersRequest:
+      type: object
+      properties:
+        claimToken:
+          type: string
+          minLength: 8
+          maxLength: 64
+        habitAnswers:
+          $ref: "#/components/schemas/HabitAnswersMap"
+      required:
+        - claimToken
+        - habitAnswers
+    HabitAnswersResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        habitScore:
+          type: integer
+        combinedScore:
+          type: integer
+      required:
+        - id
+        - habitScore
+        - combinedScore
+    MyReportsRequestBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+        - email
+    MyReportsRequestResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        devToken:
+          type: string
+          description: Present only when NODE_ENV is not production
+      required:
+        - ok
+    MyReportsListResponse:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/MyReportSummary"
+      required:
+        - email
+        - reports
+    MyReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        result:
+          $ref: "#/components/schemas/JsonObject"
+        habitScore:
+          type: [integer, "null"]
+        combinedScore:
+          type: [integer, "null"]
+      required:
+        - id
+        - createdAt
+        - result
+        - habitScore
+        - combinedScore
+    PairSessionCreated:
+      type: object
+      properties:
+        code:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - code
+        - expiresAt
+    PairSessionPollResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, ready, expired]
+        reportId:
+          type: string
+        claimToken:
+          type: string
+      required:
+        - status
+    PairPushRequest:
+      type: object
+      properties:
+        pairCode:
+          type: string
+          minLength: 4
+          maxLength: 12
+        rawJson:
+          $ref: "#/components/schemas/JsonObject"
+      required:
+        - pairCode
+        - rawJson
+    PairPushOk:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        reportId:
+          type: string
+      required:
+        - ok
+        - reportId
+    PairPushCreated:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        reportId:
+          type: string
+        claimToken:
+          type: string
+      required:
+        - ok
+        - reportId
+        - claimToken
+    DevicePairInitResponse:
+      type: object
+      properties:
+        pairToken:
+          type: string
+        deviceToken:
+          type: string
+      required:
+        - pairToken
+        - deviceToken
+    DeviceClaimRequest:
+      type: object
+      properties:
+        pairToken:
+          type: string
+          minLength: 10
+          maxLength: 128
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+        - pairToken
+        - email
+    DeviceClaimResponse:
+      type: object
+      properties:
+        deviceId:
+          type: string
+        email:
+          type: string
+        alreadyClaimed:
+          type: boolean
+        claimed:
+          type: boolean
+      required:
+        - deviceId
+    DevicePairStatusResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        claimed:
+          type: boolean
+      required:
+        - valid
+    AgentVersionResponse:
+      type: object
+      properties:
+        minVersion:
+          type: string
+        latestVersion:
+          type: string
+        downloadUrl:
+          type: string
+          format: uri
+      required:
+        - minVersion
+        - latestVersion
+        - downloadUrl
+    LatestReleaseMetadata:
+      type: object
+      properties:
+        version:
+          type: string
+        name:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        releaseUrl:
+          type: string
+          format: uri
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseAsset"
+      required:
+        - version
+        - name
+        - publishedAt
+        - releaseUrl
+        - assets
+    ReleaseAsset:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        downloadUrl:
+          type: string
+          format: uri
+        downloads:
+          type: integer
+      required:
+        - name
+        - size
+        - downloadUrl
+        - downloads
+    CreateOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - name
+    OrganizationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        ownerId:
+          type: string
+        status:
+          type: [string, "null"]
+      required:
+        - id
+        - name
+        - ownerId
+        - status
+    CheckoutSessionRequest:
+      type: object
+      properties:
+        priceId:
+          type: string
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+      required:
+        - priceId
+        - successUrl
+        - cancelUrl
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        url:
+          type: string
+      required:
+        - sessionId
+        - url
+    BillingStatusResponse:
+      type: object
+      properties:
+        status:
+          type: [string, "null"]
+        currentPeriodEnd:
+          type: [string, "null"]
+          format: date-time
+        portalUrl:
+          type: [string, "null"]
+      required:
+        - status
+        - currentPeriodEnd
+        - portalUrl

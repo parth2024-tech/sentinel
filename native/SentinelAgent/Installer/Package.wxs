@@ -1,0 +1,45 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Sentinel" Manufacturer="Sentinel" Version="1.0.0" UpgradeCode="B5C3F2B1-4A29-4A92-9C1D-5B2E8A3F9D1C" Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Sentinel is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ORG_TOKEN" Secure="yes" />
+
+    <Feature Id="Main">
+      <ComponentGroupRef Id="AppComponents" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Sentinel" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="StartMenuFolder" Name="Sentinel" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
+      <Component Id="SentinelAgentExe" Guid="E6B1D2A4-3F8C-4B9D-A1E2-5C4D7F8A9B0C">
+        <!-- Assume binary is built to the artifacts folder -->
+        <File Id="SentinelAgentExeFile" Source="..\..\..\artifacts\bin\SentinelAgent\SentinelAgent.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="OrgTokenRegistry" Guid="A1B2C3D4-E5F6-1234-5678-90ABCDEF1234">
+        <RegistryValue Root="HKLM" Key="Software\Sentinel" Name="OrgToken" Type="string" Value="[ORG_TOKEN]" KeyPath="yes" />
+        <Condition>ORG_TOKEN</Condition>
+      </Component>
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcutComponent" Directory="StartMenuFolder" Guid="D4F1E2C3-A1B2-4C3D-B4E5-6D7F8A9B0C1D">
+      <Shortcut Id="ApplicationShortcut" Name="Sentinel Agent" Description="Hardware Telemetry Agent" Target="[#SentinelAgentExeFile]" WorkingDirectory="INSTALLFOLDER"/>
+      <RemoveFolder Id="CleanUpShortCut" Directory="StartMenuFolder" On="uninstall"/>
+      <RegistryValue Root="HKCU" Key="Software\Sentinel" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+    </Component>
+
+    <!-- Run the post-install routine which handles pairing, scheduled tasks, and the first scan -->
+    <CustomAction Id="RunPostInstall" FileRef="SentinelAgentExeFile" ExeCommand="--post-install" Execute="deferred" Impersonate="yes" Return="asyncNoWait" />
+    
+    <InstallExecuteSequence>
+      <Custom Action="RunPostInstall" Before="InstallFinalize" Condition="NOT Installed" />
+    </InstallExecuteSequence>
+  </Package>
+</Wix>

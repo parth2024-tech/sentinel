@@ -1,0 +1,441 @@
+# ============================================================
+#  native.yml — Sentinel Native Build, Test, Sign & Release
+#
+#  Push to main (native/** changes):
+#    → Build both binaries on Windows Server 2022
+#    → Run real hardware collection on the runner (WMI is available)
+#    → Validate collector JSON against SentinelReportSchema.safeParse()
+#    → Sign all binaries
+#    → Upload signed artifacts
+#
+#  Tagged release (v*):
+#    → All of the above
+#    → Create GitHub Release with signed binaries attached
+#
+#  Required secrets:
+#    SIGNING_CERT_PFX_BASE64  — base64-encoded .pfx certificate
+#    SIGNING_CERT_PASSWORD    — password for the .pfx
+#
+#  Optional secrets (for EV signing on self-hosted runner):
+#    SIGNING_CERT_THUMBPRINT  — thumbprint for hardware-token signing
+# ============================================================
+
+name: Native Build, Test & Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'lib/report-engine/**'
+      - 'build-native.ps1'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      sign_profile:
+        description: 'Signing profile'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - production
+          - development
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20'
+
+jobs:
+  # ════════════════════════════════════════════════════════════
+  # Job 1: Build all binaries
+  # ════════════════════════════════════════════════════════════
+  build:
+    name: Build
+    runs-on: windows-2022
+    outputs:
+      agent-version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -match "^refs/tags/v(.+)$") {
+            $ver = $Matches[1]
+          } else {
+            $ver = "0.0.0-ci.${{ github.run_number }}"
+          }
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $ver"
+
+      # ── Build Tier 2: SentinelOneShot ──────────────────────
+      - name: Build SentinelOneShot
+        run: |
+          dotnet publish native\SentinelOneShot\SentinelOneShot.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -o artifacts\bin\SentinelOneShot
+
+      # ── Build Tier 1: SentinelAgent ────────────────────────
+      - name: Build SentinelAgent
+        run: |
+          dotnet publish native\SentinelAgent\SentinelAgent.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -o artifacts\bin\SentinelAgent
+
+      # ── Build Installer (WiX) ─────────────────────────────
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
+
+      - name: Build Installer
+        run: |
+          dotnet build native\SentinelAgent\Installer\Installer.wixproj `
+            -c Release `
+            -o artifacts\bin\
+
+      # ── Build Test Harness ─────────────────────────────────
+      - name: Build Test Harness
+        run: |
+          dotnet publish native\SentinelTestHarness\SentinelTestHarness.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -o artifacts\bin\SentinelTestHarness
+
+      # ── Upload build outputs for downstream jobs ───────────
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: |
+            artifacts/bin/SentinelOneShot/SentinelOneShot.exe
+            artifacts/bin/SentinelAgent/SentinelAgent.exe
+            artifacts/bin/SentinelSetup.msi
+            artifacts/bin/SentinelTestHarness/SentinelTestHarness.exe
+          retention-days: 7
+
+  # ════════════════════════════════════════════════════════════
+  # Job 2: Run real hardware collection and validate schema
+  # ════════════════════════════════════════════════════════════
+  test:
+    name: Test Collection & Schema
+    needs: build
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: artifacts/bin
+
+      # ── Run the actual Collector on the CI runner ──────────
+      - name: Run hardware collection
+        shell: pwsh
+        run: |
+          Write-Host "Running SentinelTestHarness on Windows Server 2022 runner..."
+          $reportPath = "artifacts\bin\ci-report.json"
+
+          # The harness writes JSON to stdout, diagnostics to stderr
+          $proc = Start-Process `
+            -FilePath "artifacts\bin\SentinelTestHarness\SentinelTestHarness.exe" `
+            -ArgumentList "--output", $reportPath `
+            -NoNewWindow `
+            -Wait `
+            -PassThru `
+            -RedirectStandardOutput "artifacts\bin\harness-stdout.txt" `
+            -RedirectStandardError "artifacts\bin\harness-stderr.txt"
+
+          # Print diagnostics
+          if (Test-Path "artifacts\bin\harness-stderr.txt") {
+            Get-Content "artifacts\bin\harness-stderr.txt" | Write-Host
+          }
+
+          if ($proc.ExitCode -ne 0) {
+            Write-Error "Test harness exited with code $($proc.ExitCode)"
+            if (Test-Path "artifacts\bin\harness-stdout.txt") {
+              Get-Content "artifacts\bin\harness-stdout.txt" | Write-Host
+            }
+            exit 1
+          }
+
+          # Verify the report file exists and is non-empty
+          if (-not (Test-Path $reportPath)) {
+            Write-Error "Report file was not created at $reportPath"
+            exit 1
+          }
+
+          $size = (Get-Item $reportPath).Length
+          Write-Host "Report file size: $size bytes"
+          if ($size -lt 50) {
+            Write-Error "Report file is suspiciously small ($size bytes)"
+            exit 1
+          }
+
+          # Quick structural checks before schema validation
+          $json = Get-Content $reportPath -Raw | ConvertFrom-Json
+          if ($json.sentinelSchema -ne 1) {
+            Write-Error "sentinelSchema field is $($json.sentinelSchema), expected 1"
+            exit 1
+          }
+          if ([string]::IsNullOrEmpty($json.system.hostname)) {
+            Write-Error "system.hostname is empty"
+            exit 1
+          }
+          if ([string]::IsNullOrEmpty($json.generatedAt)) {
+            Write-Error "generatedAt is empty"
+            exit 1
+          }
+
+          Write-Host "Structural checks passed."
+
+      # ── Validate against Zod schema ────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate report against SentinelReportSchema
+        shell: pwsh
+        run: |
+          # Use tsx to handle the TypeScript import in the validator
+          npx tsx native/ci/validate-report.mjs artifacts/bin/ci-report.json
+
+      # ── Upload test report as artifact ─────────────────────
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-report-${{ github.sha }}
+          path: |
+            artifacts/bin/ci-report.json
+            artifacts/bin/harness-stderr.txt
+          retention-days: 7
+
+  # ════════════════════════════════════════════════════════════
+  # Job 3: Sign all binaries
+  # ════════════════════════════════════════════════════════════
+  sign:
+    name: Sign Binaries
+    needs: [build, test]
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: artifacts/bin
+
+      # ── Decode signing certificate ─────────────────────────
+      - name: Decode signing certificate
+        id: cert
+        env:
+          SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:SIGNING_CERT_PFX_BASE64)) {
+            Write-Host "No signing certificate available."
+            echo "has_cert=false" >> $env:GITHUB_OUTPUT
+          } else {
+            $certBytes = [Convert]::FromBase64String($env:SIGNING_CERT_PFX_BASE64)
+            $certPath = Join-Path $env:RUNNER_TEMP "sentinel-signing.pfx"
+            [IO.File]::WriteAllBytes($certPath, $certBytes)
+            echo "SENTINEL_CERT_PATH=$certPath" >> $env:GITHUB_ENV
+            echo "has_cert=true" >> $env:GITHUB_OUTPUT
+          }
+
+      # ── Sign ───────────────────────────────────────────────
+      - name: Sign binaries
+        if: steps.cert.outputs.has_cert == 'true'
+        env:
+          SENTINEL_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+          SENTINEL_SIGN_PROFILE: ${{ github.event.inputs.sign_profile || 'production' }}
+        shell: pwsh
+        run: |
+          .\native\sign-binaries.ps1 `
+            -CertPath $env:SENTINEL_CERT_PATH `
+            -CertPassword $env:SENTINEL_CERT_PASSWORD `
+            -SignProfile $env:SENTINEL_SIGN_PROFILE
+
+      # ── Guard: tagged releases MUST be signed ──────────────
+      - name: Fail if release is unsigned
+        if: startsWith(github.ref, 'refs/tags/v') && steps.cert.outputs.has_cert != 'true'
+        shell: pwsh
+        run: |
+          Write-Error "Tagged releases MUST be signed. Set SIGNING_CERT_PFX_BASE64 and SIGNING_CERT_PASSWORD secrets."
+          exit 1
+
+      # ── Clean up certificate ───────────────────────────────
+      - name: Remove certificate from runner
+        if: always()
+        shell: pwsh
+        run: |
+          $p = $env:SENTINEL_CERT_PATH
+          if ($p -and (Test-Path $p -ErrorAction SilentlyContinue)) {
+            Remove-Item $p -Force
+          }
+
+      # ── Upload signed binaries ─────────────────────────────
+      - name: Upload signed SentinelOneShot
+        uses: actions/upload-artifact@v4
+        with:
+          name: SentinelOneShot-signed-${{ github.sha }}
+          path: artifacts/bin/SentinelOneShot/SentinelOneShot.exe
+          retention-days: 30
+
+      - name: Upload signed SentinelAgent
+        uses: actions/upload-artifact@v4
+        with:
+          name: SentinelAgent-signed-${{ github.sha }}
+          path: artifacts/bin/SentinelAgent/SentinelAgent.exe
+          retention-days: 30
+
+      - name: Upload signed Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SentinelSetup-signed-${{ github.sha }}
+          path: artifacts/bin/SentinelSetup.msi
+          retention-days: 30
+
+  # ════════════════════════════════════════════════════════════
+  # Job 4: Rolling CI downloads (main branch — keeps /get-started working)
+  # ════════════════════════════════════════════════════════════
+  publish-ci-downloads:
+    name: Publish CI Downloads
+    needs: [build, sign]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download signed SentinelOneShot
+        uses: actions/download-artifact@v4
+        with:
+          name: SentinelOneShot-signed-${{ github.sha }}
+          path: release-assets/
+
+      - name: Download signed SentinelAgent
+        uses: actions/download-artifact@v4
+        with:
+          name: SentinelAgent-signed-${{ github.sha }}
+          path: release-assets/
+
+      - name: Download signed Installer
+        uses: actions/download-artifact@v4
+        with:
+          name: SentinelSetup-signed-${{ github.sha }}
+          path: release-assets/
+
+      - name: Publish prerelease for website download API
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ci-downloads
+          name: CI Downloads (latest main)
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Rolling prerelease updated on every successful `main` native build.
+            The marketing site resolves `/api/downloads/latest/*` from this release
+            when no semver tag exists yet.
+          files: |
+            release-assets/SentinelOneShot.exe
+            release-assets/SentinelAgent.exe
+            release-assets/SentinelSetup.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ════════════════════════════════════════════════════════════
+  # Job 5: Create GitHub Release (only on tagged pushes)
+  # ════════════════════════════════════════════════════════════
+  release:
+    name: Create Release
+    needs: [build, sign]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download signed SentinelOneShot
+        uses: actions/download-artifact@v4
+        with:
+          name: SentinelOneShot-signed-${{ github.sha }}
+          path: release-assets/
+
+      - name: Download signed SentinelAgent
+        uses: actions/download-artifact@v4
+        with:
+          name: SentinelAgent-signed-${{ github.sha }}
+          path: release-assets/
+
+      - name: Download signed Installer
+        uses: actions/download-artifact@v4
+        with:
+          name: SentinelSetup-signed-${{ github.sha }}
+          path: release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Sentinel ${{ github.ref_name }}
+          body: |
+            ## Sentinel ${{ github.ref_name }}
+
+            ### Downloads
+            - **SentinelOneShot.exe** — One-time hardware diagnostic (Tier 2). Download, double-click, done.
+            - **SentinelSetup.msi** — Full installer with background monitoring (Tier 1).
+            - **SentinelAgent.exe** — Standalone agent binary (included in installer).
+
+            ### What's New
+            See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            release-assets/SentinelOneShot.exe
+            release-assets/SentinelAgent.exe
+            release-assets/SentinelSetup.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

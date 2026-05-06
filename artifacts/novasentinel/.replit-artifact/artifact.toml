@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/nova/"
+title = "NovaSentinel — AI PC Diagnostics"
+version = "1.0.0"
+id = "artifacts/novasentinel"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/nova/" ]
+localPort = 21640
+
+[services.development]
+run = "pnpm --filter @workspace/novasentinel run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/novasentinel", "run", "build" ]
+publicDir = "artifacts/novasentinel/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21640"
+BASE_PATH = "/nova/"

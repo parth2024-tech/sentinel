@@ -1,0 +1,69 @@
+{
+  "name": "Sentinel",
+  "version": "1.0.0",
+  "description": "Enterprise-grade B2B SaaS Windows laptop hardware diagnostic monitor with deterministic server-side scoring, custom PowerShell/Python collection scripts, and a C# tray background agent, storing rich telemetry in PostgreSQL.",
+  "tech_stack": [
+    "TypeScript 5.9.3",
+    "Node.js 24",
+    "pnpm workspaces",
+    "React 19 + Vite",
+    "Tailwind CSS v4",
+    "Express 5",
+    "PostgreSQL + Drizzle ORM",
+    "C# / .NET (SentinelAgent & SentinelOneShot)",
+    "Zod (zod/v4) + drizzle-zod",
+    "Vitest for scoring engine testing"
+  ],
+  "conventions": [
+    "Database queries live exclusively in /lib/db/",
+    "Core scoring formulas must remain 100% deterministic (in @workspace/report-engine)",
+    "API routes must use Express router mounted in artifacts/api-server/src/routes/",
+    "Diagnostic reports generate on the server-side only for security",
+    "All sensor metrics from native tools must match unified sentinelSchema:1"
+  ],
+  "architecture_patterns": [
+    "Monorepo with decoupled frontend applications, shared libs, and native C# apps",
+    "Server-side deterministic scoring engine with versioned formula execution",
+    "Layered native collector fallbacks (WMI -> Performance Counters -> IOCTL)",
+    "Passwordless magic-link authentication with session cookies"
+  ],
+  "file_structure": {
+    "artifacts/api-server": "Express API server handling auth, scoring, and pair flow",
+    "artifacts/sentinel-site": "Main Vite/Tailwind marketing and interactive diagnostic flow",
+    "artifacts/novasentinel": "Enterprise Fleet Dashboard with 4s real-time telemetry polling",
+    "lib/db": "Shared database workspace utilizing Drizzle ORM and Postgres connection",
+    "lib/report-engine": "Shared schema validation and deterministic scoring engine",
+    "native/SentinelAgent": "Tier 1 C# Windows Service, tray application, and WiX installer",
+    "native/SentinelOneShot": "Tier 2 standalone C# diagnostic scanner executable"
+  },
+  "testing_strategy": {
+    "framework": "Vitest orchestrated via vitest.workspace.ts",
+    "coverage_target": "85%",
+    "patterns": [
+      "Rigorous unit testing for all formula weight and threshold variations",
+      "API request validation testing via Supertest or Vitest mock routes",
+      "Diagnostic schema compliance testing for JSON payloads"
+    ]
+  },
+  "deployment": {
+    "platform": "Node.js (API/Frontends) & GitHub Releases (Native MSI/Executables)",
+    "branch_strategy": "main -> production",
+    "environments": [
+      "development",
+      "production"
+    ]
+  },
+  "sprint_focus": "Fleet Dashboard real-time telemetry polling, parsing C# agent reports, and comprehensive README documentation.",
+  "never_do": [
+    "Never use Math.random or other non-deterministic logic for scoring calculations",
+    "Never store plain text passwords or secrets in the codebase",
+    "Never bypass Zod validation schema for ingested client reports",
+    "Never trust client-side score evaluations; always compute on the API server"
+  ],
+  "preferred_patterns": [
+    "Use Zod for input validation across the monorepo boundary",
+    "Use Drizzle ORM for PostgreSQL queries and schema migrations",
+    "Use wouter for routing in frontend projects",
+    "Use Framer Motion for responsive premium UI transitions"
+  ]
+}

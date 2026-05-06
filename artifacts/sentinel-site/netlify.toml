@@ -1,0 +1,9 @@
+[build]
+  publish = "dist/public"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://sentinel-api-gupta.loca.lt/api/:splat"
+  status = 200
+  force = true
+  headers = {Bypass-Tunnel-Reminder = "true"}
