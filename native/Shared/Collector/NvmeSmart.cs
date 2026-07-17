@@ -18,6 +18,9 @@ public class NvmeSmart {
         public int AvailableSpare;
         public int AvailableSpareThreshold;
         public int CriticalWarning;
+        public long MediaErrors;
+        public long DataUnitsRead;
+        public long DataUnitsWritten;
     }
 
     public static SmartData? GetSmartInfo(int physicalDriveNumber) {
@@ -49,6 +52,9 @@ public class NvmeSmart {
                     data.AvailableSpare = Marshal.ReadByte(logPagePtr, 3);
                     data.AvailableSpareThreshold = Marshal.ReadByte(logPagePtr, 4);
                     data.PercentageUsed = Marshal.ReadByte(logPagePtr, 5);
+                    data.DataUnitsRead = Marshal.ReadInt64(logPagePtr, 32);
+                    data.DataUnitsWritten = Marshal.ReadInt64(logPagePtr, 48);
+                    data.MediaErrors = Marshal.ReadInt64(logPagePtr, 160);
                     return data;
                 }
                 return null;

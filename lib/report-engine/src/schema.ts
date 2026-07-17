@@ -16,6 +16,10 @@ export const StorageDeviceSchema = z.object({
   totalGB: z.number().nullish(),
   powerOnHours: z.number().nullish(),
   dataSource: z.string().nullish(),
+  mediaErrors: z.number().nullish(),
+  dataUnitsRead: z.number().nullish(),
+  dataUnitsWritten: z.number().nullish(),
+  criticalWarningFlags: z.number().nullish(),
 });
 
 export const ThermalZoneSchema = z.object({
@@ -71,6 +75,10 @@ export const SecuritySchema = z.object({
   lastFullScan: z.string().nullish(),
   antivirusSignatureDate: z.string().nullish(),
   firewallProfilesActive: z.string().nullish(),
+  tpmActive: z.boolean().nullish(),
+  tpmVersion: z.string().nullish(),
+  secureBootEnabled: z.boolean().nullish(),
+  lsaProtectionEnabled: z.boolean().nullish(),
 });
 
 export const RecentSystemErrorSchema = z.object({
@@ -98,6 +106,8 @@ export const SentinelReportSchema = z.object({
       health: z.number().nullish(),
       status: z.union([z.string(), z.number()]).nullish(),
       dischargeRateMw: z.number().nullish(),
+      batteryTempC: z.number().nullish(),
+      batteryVoltageV: z.number().nullish(),
     })
     .nullish(),
   thermals: z
@@ -116,6 +126,9 @@ export const SentinelReportSchema = z.object({
       totalGB: z.number(),
       usedPct: z.number(),
       pageFaultsPerSec: z.number().nullish(),
+      dpcTimePct: z.number().nullish(),
+      interruptTimePct: z.number().nullish(),
+      dpcsQueuedPerSec: z.number().nullish(),
     })
     .nullish(),
   cpu: z
@@ -126,6 +139,8 @@ export const SentinelReportSchema = z.object({
       avgLoadPct: z.number().nullish(),
       throttleEvents30min: z.number().nullish(),
       maxClockMhz: z.number().nullish(),
+      coreTempDeltaC: z.number().nullish(),
+      throttleReason: z.string().nullish(),
     })
     .nullish(),
   startup: z
@@ -141,6 +156,7 @@ export const SentinelReportSchema = z.object({
   startupList: z.array(StartupItemSchema).nullish(),
   security: SecuritySchema.nullish(),
   recentErrors: z.array(RecentSystemErrorSchema).nullish(),
+  runningOemServicesCount: z.number().nullish(),
 });
 
 /**

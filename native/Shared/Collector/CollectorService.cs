@@ -74,7 +74,8 @@ public class CollectorService
 
             // Collect CPU thermal throttle events from the last 30 minutes
             // via Windows Event Log (Event ID 37 = CPU throttle due to thermal)
-            report.Cpu.ThrottleEvents30min = GetCpuThrottleEvents30Min();
+            report.Cpu.ThrottleEvents30min = GetCpuThrottleEvents30Min(out string? throttleReason);
+            report.Cpu.ThrottleReason = throttleReason;
         }
         catch (Exception ex) { Debug.WriteLine($"Collection error: {ex.Message}"); }
     }
@@ -94,12 +95,14 @@ public class CollectorService
         catch { return 0; }
     }
 
-    private static int GetCpuThrottleEvents30Min()
+    private static int GetCpuThrottleEvents30Min(out string? reason)
     {
         // Event 37 in Microsoft-Windows-Kernel-Processor-Power/Operational
         // = processor performance reduced due to thermal/power constraint.
         // Event 19 in System = power source changed (used as secondary signal).
         int count = 0;
+        int thermal = 0, power = 0, current = 0;
+        reason = null;
         try
         {
             var cutoff = DateTime.UtcNow.AddMinutes(-30);
@@ -112,7 +115,31 @@ public class CollectorService
             };
             using var reader = new System.Diagnostics.Eventing.Reader.EventLogReader(query);
             System.Diagnostics.Eventing.Reader.EventRecord? ev;
-            while ((ev = reader.ReadEvent()) != null) { count++; ev.Dispose(); }
+            while ((ev = reader.ReadEvent()) != null)
+            {
+                count++;
+                try
+                {
+                    if (ev.Properties.Count > 1)
+                    {
+                        var reasonVal = ev.Properties[1].Value?.ToString();
+                        if (reasonVal == "1") thermal++;
+                        else if (reasonVal == "2") power++;
+                        else if (reasonVal == "4") current++;
+                    }
+                }
+                catch {}
+                ev.Dispose();
+            }
+
+            var reasonsList = new List<string>();
+            if (thermal > 0) reasonsList.Add("Thermal");
+            if (power > 0) reasonsList.Add("Power Limit");
+            if (current > 0) reasonsList.Add("Current Limit");
+            if (reasonsList.Count > 0)
+            {
+                reason = string.Join(", ", reasonsList);
+            }
         }
         catch { /* Event log unavailable or access denied — return 0 */ }
         return count;
@@ -155,11 +182,32 @@ public class CollectorService
                     }
                     catch { /* Performance counters unavailable */ }
 
+                    double? dpcTime = null;
+                    double? interruptTime = null;
+                    int? dpcsQueued = null;
+                    try
+                    {
+                        using var pcDpc = new PerformanceCounter("Processor Information", "% DPC Time", "_Total");
+                        using var pcInt = new PerformanceCounter("Processor Information", "% Interrupt Time", "_Total");
+                        using var pcQueue = new PerformanceCounter("Processor Information", "DPCs Queued/sec", "_Total");
+                        _ = pcDpc.NextValue();
+                        _ = pcInt.NextValue();
+                        _ = pcQueue.NextValue();
+                        System.Threading.Thread.Sleep(500);
+                        dpcTime = Math.Round(pcDpc.NextValue(), 2);
+                        interruptTime = Math.Round(pcInt.NextValue(), 2);
+                        dpcsQueued = (int)Math.Round(pcQueue.NextValue());
+                    }
+                    catch { /* Performance counters unavailable */ }
+
                     report.Memory = new MemoryInfo
                     {
                         TotalGB = Math.Round(totalGb, 1),
                         UsedPct = Math.Round(usedPct, 1),
-                        PageFaultsPerSec = pageFaultsPerSec
+                        PageFaultsPerSec = pageFaultsPerSec,
+                        DpcTimePct = dpcTime,
+                        InterruptTimePct = interruptTime,
+                        DpcsQueuedPerSec = dpcsQueued
                     };
                 }
                 break;
@@ -221,13 +269,31 @@ public class CollectorService
 
             if (designCap != null || fullCap != null || cycleCount != null || status != null)
             {
+                double? battTemp = null;
+                double? battVolt = null;
+                try
+                {
+                    using var battStatus = new ManagementObjectSearcher(@"root\wmi", "SELECT Temperature, Voltage FROM BatteryStatus");
+                    foreach (var obj in battStatus.Get())
+                    {
+                        if (double.TryParse(obj["Temperature"]?.ToString(), out double temp) && temp > 0)
+                            battTemp = Math.Round((temp / 10.0) - 273.15, 1);
+                        if (double.TryParse(obj["Voltage"]?.ToString(), out double volt) && volt > 0)
+                            battVolt = Math.Round(volt / 1000.0, 2);
+                        break;
+                    }
+                }
+                catch {}
+
                 report.Battery = new BatteryInfo
                 {
                     DesignCapacity = designCap,
                     FullChargeCapacity = fullCap,
                     CycleCount = cycleCount,
                     Status = status,
-                    DischargeRateMw = dischargeRateMw
+                    DischargeRateMw = dischargeRateMw,
+                    BatteryTempC = battTemp,
+                    BatteryVoltageV = battVolt
                 };
 
                 if (designCap > 0 && fullCap != null)
@@ -362,6 +428,11 @@ public class CollectorService
             if (zones.Count > 0 && source != "unavailable" && source != "acpi_static_suspect")
             {
                 report.Thermals.MaxTempC = zones.Max(z => z.TempC);
+
+                if (zones.Count > 1 && report.Cpu != null)
+                {
+                    report.Cpu.CoreTempDeltaC = Math.Round(zones.Max(z => z.TempC) - zones.Min(z => z.TempC), 1);
+                }
             }
         }
         catch (Exception ex) { Debug.WriteLine($"Collection error: {ex.Message}"); }
@@ -432,6 +503,10 @@ public class CollectorService
                                         if (smart != null)
                                         {
                                             device.WearLevelPct = smart.PercentageUsed > 100 ? 0 : 100 - smart.PercentageUsed;
+                                            device.MediaErrors = smart.MediaErrors;
+                                            device.DataUnitsRead = smart.DataUnitsRead;
+                                            device.DataUnitsWritten = smart.DataUnitsWritten;
+                                            device.CriticalWarningFlags = smart.CriticalWarning;
                                             device.DataSource = "nvme_smart_ioctl";
                                         }
                                         else
@@ -640,6 +715,60 @@ public class CollectorService
                     : "None (Firewall disabled on all profiles)";
             }
             catch (Exception ex) { Debug.WriteLine($"Collection error (firewall profiles): {ex.Message}"); }
+
+            // Collect TPM and version
+            try
+            {
+                using var tpmSearcher = new ManagementObjectSearcher(@"root\CIMV2\Security\MicrosoftTpm", "SELECT IsEnabled_InitialValue, SpecVersion FROM Win32_Tpm");
+                foreach (var obj in tpmSearcher.Get())
+                {
+                    secInfo.TpmActive = (bool?)obj["IsEnabled_InitialValue"];
+                    secInfo.TpmVersion = obj["SpecVersion"]?.ToString();
+                    break;
+                }
+            }
+            catch { secInfo.TpmActive = false; }
+
+            // Collect Secure Boot
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\SecureBoot\State");
+                if (key != null)
+                {
+                    int enabled = (int)(key.GetValue("UEFISecureBootEnabled") ?? 0);
+                    secInfo.SecureBootEnabled = enabled == 1;
+                }
+                else { secInfo.SecureBootEnabled = false; }
+            }
+            catch { secInfo.SecureBootEnabled = false; }
+
+            // Collect LSA Protection
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Lsa");
+                if (key != null)
+                {
+                    int val = (int)(key.GetValue("RunAsPPL") ?? 0);
+                    secInfo.LsaProtectionEnabled = val == 1 || val == 2;
+                }
+                else { secInfo.LsaProtectionEnabled = false; }
+            }
+            catch { secInfo.LsaProtectionEnabled = false; }
+
+            // Count running OEM services
+            try
+            {
+                int oemCount = 0;
+                using var svcSearcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Service WHERE StartMode='Auto' AND State='Running'");
+                string[] oemKeywords = { "dell", "supportassist", "lenovo", "vantage", "hpcomm", "hpsupport", "asus", "armoury", "myasus", "acer", "intel(r) content protection" };
+                foreach (var obj in svcSearcher.Get())
+                {
+                    string name = obj["Name"]?.ToString()?.ToLower() ?? "";
+                    if (oemKeywords.Any(k => name.Contains(k))) oemCount++;
+                }
+                report.RunningOemServicesCount = oemCount;
+            }
+            catch { report.RunningOemServicesCount = 0; }
 
             report.Security = secInfo;
         }

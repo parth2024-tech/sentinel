@@ -214,5 +214,108 @@ describe('Scoring Engine Algorithms', () => {
       expect(correlationFinding!.pro).toBe(true);
     });
 
+    it('should penalise battery score for high temperature and voltage drops', () => {
+      const report = createBaseReport();
+      report.battery = {
+        health: 100,
+        cycleCount: 10,
+        batteryTempC: 55, // 55 - 45 = 10 -> penalty 10 * 1.5 = 15
+        batteryVoltageV: 9.2 // < 9.5 -> penalty 5
+      };
+
+      const result = generateReport(report);
+      const batteryComponent = result.components.find(c => c.name === 'Battery');
+      expect(batteryComponent).toBeDefined();
+      expect(batteryComponent!.score).toBe(80); // 100 - 15 - 5
+
+      const tempFinding = result.findings.find(f => f.title.includes('High battery temperature'));
+      expect(tempFinding).toBeDefined();
+    });
+
+    it('should penalise storage score for NVMe warning flags and media errors', () => {
+      const report = createBaseReport();
+      report.storage = [{
+        model: 'NVMe Drive',
+        healthPct: 100,
+        wearLevelPct: 100,
+        freeSpacePct: 50,
+        mediaErrors: 2, // penalty = 10
+        criticalWarningFlags: 4, // bit 2 set -> penalty = 40
+        dataSource: 'nvme_smart_ioctl'
+      }];
+
+      const result = generateReport(report);
+      const storageComponent = result.components.find(c => c.name === 'Storage');
+      expect(storageComponent).toBeDefined();
+      expect(storageComponent!.score).toBe(50); // 100 - 10 - 40
+
+      const mediaFinding = result.findings.find(f => f.title.includes('NVMe media errors'));
+      expect(mediaFinding).toBeDefined();
+      const warningFinding = result.findings.find(f => f.title.includes('NVMe controller critical warnings'));
+      expect(warningFinding).toBeDefined();
+    });
+
+    it('should penalise CPU score for core temperature delta and report throttle reason', () => {
+      const report = createBaseReport();
+      report.thermals = { maxTempC: 80, zones: [], thermalSource: 'wmi' };
+      report.cpu = {
+        name: 'Core i7',
+        avgLoadPct: 30,
+        throttleEvents30min: 5,
+        coreTempDeltaC: 20, // delta 20 - 15 = 5 penalty (since maxTempC 80 > 65)
+        throttleReason: 'Power Limit'
+      };
+
+      const result = generateReport(report);
+      const cpuComponent = result.components.find(c => c.name === 'CPU');
+      expect(cpuComponent).toBeDefined();
+      expect(cpuComponent!.score).toBe(85); // 100 - 10 (throttle events) - 5 (delta)
+
+      expect(cpuComponent!.detail).toContain('(Power Limit)');
+      const deltaFinding = result.findings.find(f => f.title.includes('High CPU core temperature delta'));
+      expect(deltaFinding).toBeDefined();
+    });
+
+    it('should penalise memory score for elevated DPC latency and OEM service bloat', () => {
+      const report = createBaseReport();
+      report.memory = {
+        totalGB: 16,
+        usedPct: 40,
+        dpcTimePct: 2.5, // 2.5 - 1.0 = 1.5 -> penalty 15
+      };
+      report.runningOemServicesCount = 8; // 8 - 3 = 5 penalty
+
+      const result = generateReport(report);
+      const memoryComponent = result.components.find(c => c.name === 'Memory');
+      expect(memoryComponent).toBeDefined();
+      expect(memoryComponent!.score).toBe(80); // 100 - 15 - 5
+
+      const dpcFinding = result.findings.find(f => f.title.includes('Elevated DPC/ISR execution time'));
+      expect(dpcFinding).toBeDefined();
+      const bloatFinding = result.findings.find(f => f.title.includes('OEM background services running'));
+      expect(bloatFinding).toBeDefined();
+    });
+
+    it('should generate findings for security TPM, Secure Boot, and LSA configurations', () => {
+      const report = createBaseReport();
+      report.security = {
+        antivirusEnabled: true,
+        realTimeProtection: true,
+        tpmActive: false,
+        secureBootEnabled: false,
+        lsaProtectionEnabled: false
+      };
+
+      const result = generateReport(report);
+      
+      const tpmFinding = result.findings.find(f => f.title.includes('TPM 2.0 disabled'));
+      expect(tpmFinding).toBeDefined();
+      const sbFinding = result.findings.find(f => f.title.includes('Secure Boot is disabled'));
+      expect(sbFinding).toBeDefined();
+      const lsaFinding = result.findings.find(f => f.title.includes('LSA Protection is disabled'));
+      expect(lsaFinding).toBeDefined();
+    });
+
   });
 });
+

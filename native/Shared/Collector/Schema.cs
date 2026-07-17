@@ -15,6 +15,10 @@ public class StorageDevice
     public double? TotalGB { get; set; }
     public int? PowerOnHours { get; set; }
     public string? DataSource { get; set; }
+    public long? MediaErrors { get; set; }
+    public long? DataUnitsRead { get; set; }
+    public long? DataUnitsWritten { get; set; }
+    public int? CriticalWarningFlags { get; set; }
 }
 
 public class ThermalZone
@@ -41,6 +45,8 @@ public class BatteryInfo
     public double? Health { get; set; }
     public object? Status { get; set; } // string or int
     public int? DischargeRateMw { get; set; }
+    public double? BatteryTempC { get; set; }
+    public double? BatteryVoltageV { get; set; }
 }
 
 public class ThermalsInfo
@@ -58,6 +64,9 @@ public class MemoryInfo
     public double TotalGB { get; set; }
     public double UsedPct { get; set; }
     public int? PageFaultsPerSec { get; set; }
+    public double? DpcTimePct { get; set; }
+    public double? InterruptTimePct { get; set; }
+    public int? DpcsQueuedPerSec { get; set; }
 }
 
 public class CpuInfo
@@ -68,6 +77,8 @@ public class CpuInfo
     public double? AvgLoadPct { get; set; }
     public int? ThrottleEvents30min { get; set; }
     public int? MaxClockMhz { get; set; }
+    public double? CoreTempDeltaC { get; set; }
+    public string? ThrottleReason { get; set; }
 }
 
 public class StartupInfo
@@ -89,6 +100,7 @@ public class SentinelReport
     public StartupInfo? Startup { get; set; }
     public List<StartupItem>? StartupList { get; set; }
     public SecurityInfo? Security { get; set; }
+    public int? RunningOemServicesCount { get; set; }
 }
 
 public class StartupItem
@@ -104,4 +116,9 @@ public class SecurityInfo
     public string? LastFullScan { get; set; }
     public string? AntivirusSignatureDate { get; set; }
     public string? FirewallProfilesActive { get; set; }
+    public bool? TpmActive { get; set; }
+    public string? TpmVersion { get; set; }
+    public bool? SecureBootEnabled { get; set; }
+    public bool? LsaProtectionEnabled { get; set; }
 }
+

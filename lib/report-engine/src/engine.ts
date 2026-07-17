@@ -137,6 +137,16 @@ function batteryScore(r: SentinelReport): ComponentScore | null {
   else if (cycles > 700) score -= 7;
   else if (cycles > 500) score -= 3;
 
+  // Temperature penalty: >45°C accelerates degradation
+  if (b.batteryTempC != null && b.batteryTempC > 45) {
+    score -= Math.min(15, Math.round((b.batteryTempC - 45) * 1.5));
+  }
+
+  // Voltage penalty: <9.5V suggests cell degradation / instability under load
+  if (b.batteryVoltageV != null && b.batteryVoltageV < 9.5) {
+    score -= 5;
+  }
+
   // Cap: a battery at pristine health scores 100. Floor: dead battery still has some score.
   // Only cap at 97 when there is actual wear (health < 100) — pristine systems should score perfectly.
   if (health < 100) score = clamp(score, 20, 97);
@@ -152,6 +162,9 @@ function batteryScore(r: SentinelReport): ComponentScore | null {
   }
   if (drainMw != null && drainMw < 0) {
     detail += ` · ${(Math.abs(drainMw) / 1000).toFixed(1)}W draw`;
+  }
+  if (b.batteryTempC != null) {
+    detail += ` · ${b.batteryTempC.toFixed(1)}°C`;
   }
   return { name: "Battery", score, status: scoreStatus(score), detail };
 }
@@ -221,6 +234,22 @@ function storageScore(r: SentinelReport): ComponentScore | null {
     // Multiplier of 5 per sector, capped at 40 to avoid over-penalising.
     if (realloc > 0) score -= Math.min(40, realloc * 5);
 
+    // Penalise NVMe media errors (bad flash pages/integrity issues)
+    const mediaErrors = primary.mediaErrors ?? 0;
+    if (mediaErrors > 0) {
+      score -= Math.min(30, mediaErrors * 5);
+    }
+
+    // Penalise NVMe critical warning flags
+    const warningFlags = primary.criticalWarningFlags ?? 0;
+    if (warningFlags > 0) {
+      if ((warningFlags & 0x04) !== 0 || (warningFlags & 0x01) !== 0) {
+        score -= 40; // critical read-only or severe wear
+      } else {
+        score -= 15; // temperature or backup device warnings
+      }
+    }
+
     // Power-on hours penalty — drives with very high hours are statistically riskier
     if (poh > 50000) score -= 15;
     else if (poh > 30000) score -= 8;
@@ -247,6 +276,10 @@ function storageScore(r: SentinelReport): ComponentScore | null {
   if (wear != null) detail += ` · ${wear}% endurance`;
   if (free != null) detail += ` · ${free.toFixed(1)}% free`;
   else detail += ` · free space unknown`;
+  if (primary.dataUnitsWritten != null) {
+    const tbWritten = ((primary.dataUnitsWritten * 500 * 1000) / 1e12).toFixed(1);
+    detail += ` · ${tbWritten}TB written`;
+  }
   if (poh > 0) detail += ` · ${poh.toLocaleString()}h runtime`;
   if (realloc) detail += ` · ${realloc} bad sectors`;
   return { name: "Storage", score, status: scoreStatus(score), detail };
@@ -291,6 +324,17 @@ function memoryScore(r: SentinelReport): ComponentScore | null {
 
   let score = clamp(Math.round(100 - finalPenalty));
 
+  // Elevated DPC latency penalty (>1.0% DPC time suggested driver latency issue)
+  if (m.dpcTimePct != null && m.dpcTimePct > 1.0) {
+    score -= Math.min(20, Math.round((m.dpcTimePct - 1.0) * 10));
+  }
+
+  // Running OEM service bloat penalty
+  const oemSvcCount = r.runningOemServicesCount ?? 0;
+  if (oemSvcCount > 3) {
+    score -= Math.min(10, oemSvcCount - 3);
+  }
+
   // Capacity hard caps — physical RAM size creates a ceiling on how well
   // memory can ever perform regardless of current usage percentage.
   // NOTE: conditions ordered from most-severe to least — each must be mutually exclusive.
@@ -324,17 +368,29 @@ function cpuScore(r: SentinelReport): ComponentScore | null {
   else if (load > 50) score -= 3;
 
   // Throttle penalties — these are real hardware events from Windows Event Log
-  if (throttle > 30) score -= 35;
-  else if (throttle > 20) score -= 25;
-  else if (throttle > 10) score -= 18;
-  else if (throttle > 5) score -= 10;
-  else if (throttle > 2) score -= 5;
+  if (throttle >= 30) score -= 35;
+  else if (throttle >= 20) score -= 25;
+  else if (throttle >= 10) score -= 18;
+  else if (throttle >= 5) score -= 10;
+  else if (throttle >= 2) score -= 5;
   else if (throttle > 0) score -= 2;
+
+  // Core temp delta check: unequal contact / thermal paste degradation
+  const delta = c.coreTempDeltaC ?? 0;
+  if (delta > 15) {
+    const maxTemp = r.thermals?.maxTempC ?? 0;
+    if (maxTemp > 65) {
+      score -= Math.min(15, Math.round(delta - 15));
+    }
+  }
 
   score = clamp(score);
   let detail = c.name ?? "CPU";
   if (load) detail += ` · ${load.toFixed(1)}% avg load`;
-  if (throttle > 0) detail += ` · ${throttle} throttle events/30min`;
+  if (throttle > 0) {
+    detail += ` · ${throttle} throttle events/30min`;
+    if (c.throttleReason) detail += ` (${c.throttleReason})`;
+  }
   return { name: "CPU", score, status: scoreStatus(score), detail };
 }
 
@@ -731,6 +787,136 @@ function generateFindings(r: SentinelReport): Finding[] {
         }
       } catch { /* ignore date parse errors */ }
     }
+
+    // TPM finding
+    if (sec.tpmActive === false) {
+      findings.push({
+        component: "Security",
+        title: "TPM 2.0 disabled or missing",
+        body: "Trusted Platform Module (TPM) is disabled or not present. TPM is required for Windows 11 compatibility and key hardware-level cryptographic operations.",
+        oemContext: "OEM diagnostics only check if TPM hardware is present; they do not flag if it is disabled in BIOS.",
+        urgency: "warning",
+        pro: false
+      });
+    }
+
+    // Secure Boot finding
+    if (sec.secureBootEnabled === false) {
+      findings.push({
+        component: "Security",
+        title: "Secure Boot is disabled",
+        body: "Secure Boot is currently disabled. Secure Boot protects the system boot sequence from unsigned malware and rootkits.",
+        oemContext: "OEM diagnostic tools test motherboard firmware integrity but do not alert the user to disabled Secure Boot configuration.",
+        urgency: "warning",
+        pro: false
+      });
+    }
+
+    // LSA Protection finding
+    if (sec.lsaProtectionEnabled === false) {
+      findings.push({
+        component: "Security",
+        title: "LSA Protection is disabled",
+        body: "Local Security Authority (LSA) protection is disabled. Enabling LSA prevents credentials extraction from memory.",
+        oemContext: "LSA Protection is a Windows Enterprise security feature completely ignored by OEM hardware diagnostics.",
+        urgency: "info",
+        pro: false
+      });
+    }
+  }
+
+  // Battery Temperature finding
+  if (b?.batteryTempC != null && b.batteryTempC > 45) {
+    findings.push({
+      component: "Battery",
+      title: `High battery temperature — ${b.batteryTempC.toFixed(1)}°C`,
+      body: `Your battery temperature is currently ${b.batteryTempC.toFixed(1)}°C. Temperatures above 45°C during high load or charging cause rapid permanent chemical degradation and raise the risk of cell swelling.`,
+      oemContext: "OEM diagnostics only measure battery health as a raw capacity percentage. They do not warn about thermal threshold excursions.",
+      urgency: "warning",
+      pro: false
+    });
+  }
+
+  // NVMe SMART findings
+  if (s) {
+    const mediaErrors = s.mediaErrors ?? 0;
+    if (mediaErrors > 0) {
+      findings.push({
+        component: "Storage",
+        title: `NVMe media errors detected`,
+        body: `Your NVMe drive has reported ${mediaErrors} media/data integrity errors. This indicates unrecoverable read/write operations on physical NAND blocks. Back up your data immediately.`,
+        oemContext: "Windows built-in utilities and OEM diagnostics report SATA/NVMe status as a simple binary pass/fail, hiding cumulative bad block read/write failures.",
+        urgency: "critical",
+        pro: false
+      });
+    }
+
+    const warningFlags = s.criticalWarningFlags ?? 0;
+    if (warningFlags > 0) {
+      const warningsList = [];
+      if ((warningFlags & 0x01) !== 0) warningsList.push("Spare space below threshold");
+      if ((warningFlags & 0x02) !== 0) warningsList.push("Critical temperature exceeded");
+      if ((warningFlags & 0x04) !== 0) warningsList.push("Reliability compromised (read-only)");
+      if ((warningFlags & 0x08) !== 0) warningsList.push("Volatile backup device failed");
+      findings.push({
+        component: "Storage",
+        title: `NVMe controller critical warnings`,
+        body: `NVMe controller reported critical warning flags: ${warningsList.join(", ") || "General controller failure"}.`,
+        oemContext: "OEM utilities do not parse NVMe controller register flags for early warnings.",
+        urgency: "critical",
+        pro: false
+      });
+    }
+  }
+
+  // CPU Core Temperature Delta finding
+  const delta = r.cpu?.coreTempDeltaC ?? 0;
+  if (delta > 15 && t?.maxTempC != null && t.maxTempC > 65) {
+    findings.push({
+      component: "Thermals",
+      title: `High CPU core temperature delta — ${delta.toFixed(1)}°C`,
+      body: `Core temperature delta of ${delta.toFixed(1)}°C detected under load. This indicates dried thermal paste or uneven mounting contact between the heatsink and CPU die.`,
+      oemContext: "OEM tools perform brief, single-sensor thermal tests and do not compare core-to-core thermal differentials.",
+      urgency: "warning",
+      pro: true
+    });
+  }
+
+  // CPU Motherboard Limit Throttling finding
+  if (r.cpu?.throttleReason != null && (r.cpu.throttleReason.includes("Power") || r.cpu.throttleReason.includes("Current"))) {
+    findings.push({
+      component: "CPU",
+      title: `CPU throttling due to motherboard limits`,
+      body: `Your CPU is being restricted by motherboard ${r.cpu.throttleReason} limits, suggesting VRM thermal saturation.`,
+      oemContext: "OEM diagnostic suites do not check for motherboard VRM throttling constraints.",
+      urgency: "info",
+      pro: false
+    });
+  }
+
+  // DPC Latency finding
+  if (r.memory?.dpcTimePct != null && r.memory.dpcTimePct > 1.0) {
+    findings.push({
+      component: "System",
+      title: `Elevated DPC/ISR execution time`,
+      body: `DPC/ISR execution time is at ${r.memory.dpcTimePct.toFixed(2)}% of CPU capacity. This commonly points to driver-level latency issues causing mouse or audio stuttering.`,
+      oemContext: "Real-time driver deferred procedure call latency is never evaluated by OEM diagnostic tools.",
+      urgency: "warning",
+      pro: false
+    });
+  }
+
+  // OEM Service Bloat finding
+  const oemServices = r.runningOemServicesCount ?? 0;
+  if (oemServices > 5) {
+    findings.push({
+      component: "System",
+      title: `${oemServices} OEM background services running`,
+      body: `We detected ${oemServices} active OEM support services. These services increase idle CPU wakeups and reduce battery runtime.`,
+      oemContext: "OEM diagnostic tools run as background services themselves and do not analyze cumulative vendor bloat.",
+      urgency: "info",
+      pro: false
+    });
   }
 
   return findings;
