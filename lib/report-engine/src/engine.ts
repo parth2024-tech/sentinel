@@ -115,9 +115,10 @@ function batteryScore(r: SentinelReport): ComponentScore | null {
   const expected = expectedBatteryHealth(cycles);
   let score = health;
 
-  // Penalise faster-than-expected degradation relative to the population curve
+  // Penalise faster-than-expected degradation relative to the population curve.
+  // Threshold of 10 points to ignore minor variance; cap penalty at 20 points.
   const gap = expected - health;
-  if (gap > 5) score -= Math.min(25, (gap - 5) * 1.5);
+  if (gap > 10) score -= Math.min(20, gap - 10);
 
   // Discharge rate penalty:
   // BatteryStatus.DischargeRate from WMI can be positive or negative depending
@@ -136,8 +137,10 @@ function batteryScore(r: SentinelReport): ComponentScore | null {
   else if (cycles > 700) score -= 7;
   else if (cycles > 500) score -= 3;
 
-  // Cap: no battery ever scores 100. Floor: dead battery still has some score for being present
-  score = clamp(score, 20, 97);
+  // Cap: a battery at pristine health scores 100. Floor: dead battery still has some score.
+  // Only cap at 97 when there is actual wear (health < 100) — pristine systems should score perfectly.
+  if (health < 100) score = clamp(score, 20, 97);
+  else score = clamp(score, 20, 100);
 
   let detail = `${health.toFixed(1)}% capacity`;
   if (cycles) detail += ` · ${cycles} cycles`;
@@ -160,14 +163,15 @@ function thermalScore(r: SentinelReport): ComponentScore | null {
   const max = t.maxTempC;
 
   // Strict temperature thresholds — based on real-world throttle data:
-  // Intel/AMD consumer chips throttle at 100°C, sustained 85°C+ causes measurable degradation
+  // Intel/AMD consumer chips throttle at 100°C, sustained 85°C+ causes measurable degradation.
+  // ≤72°C is genuinely cool/healthy — score 100 for pristine thermals.
   let score =
     max > 98 ? 5 :
     max > 93 ? 20 :
     max > 88 ? 40 :
     max > 83 ? 60 :
     max > 78 ? 75 :
-    max > 72 ? 88 : 97;
+    max > 72 ? 88 : 100;
 
   const throttle = t.throttleEvents30min ?? 0;
   // Throttle penalties are compounded on top of the temperature-based score
@@ -213,8 +217,9 @@ function storageScore(r: SentinelReport): ComponentScore | null {
     // wear = percentage of endurance REMAINING (100 = brand new, 0 = end of life)
     score = clamp(wear);
 
-    // Penalise reallocated sectors heavily — serious early failure signal
-    if (realloc > 0) score -= Math.min(50, realloc * 8);
+    // Penalise reallocated sectors — serious early failure signal.
+    // Multiplier of 5 per sector, capped at 40 to avoid over-penalising.
+    if (realloc > 0) score -= Math.min(40, realloc * 5);
 
     // Power-on hours penalty — drives with very high hours are statistically riskier
     if (poh > 50000) score -= 15;
@@ -224,16 +229,16 @@ function storageScore(r: SentinelReport): ComponentScore | null {
     // We can't verify wear — don't be generous.
     // Cap at 78 (watch range) to signal uncertainty honestly.
     score = 78;
-    if (realloc > 0) score -= Math.min(50, realloc * 10);
+    if (realloc > 0) score -= Math.min(40, realloc * 5);
     score = clamp(score, 0, 78);
   }
 
   // Free space penalties — SSDs need headroom for garbage collection
   // Only apply when we actually have the data (null = partition letter not found)
   if (free != null) {
-    if (free < 5) score -= 25;
-    else if (free < 10) score -= 15;
-    else if (free < 15) score -= 7;
+    if (free < 5) score -= 20;
+    else if (free < 10) score -= 12;
+    else if (free < 15) score -= 6;
     else if (free < 20) score -= 3;
   }
 
@@ -248,15 +253,14 @@ function storageScore(r: SentinelReport): ComponentScore | null {
 }
 
 export function expectedMemoryPenalty(usedPct: number): number {
-  // Penalty starts at 55% used — that's a realistic "normal" idle for Windows 11
-  // Previously started at 70% which let 60–69% pass as perfect, which is wrong.
-  if (usedPct <= 55) return 0;
+  // Penalty starts at 70% — Windows 11 at idle sits at 55–65%, so we only
+  // penalise when usage is meaningfully above that baseline.
+  if (usedPct <= 70) return 0;
   const anchors: [number, number][] = [
-    [55, 0],
-    [70, 8],
-    [80, 18],
-    [90, 32],
-    [100, 55]
+    [70,  0],
+    [85, 15],
+    [95, 30],
+    [100, 50]
   ];
   for (let i = 1; i < anchors.length; i++) {
     const [u0, p0] = anchors[i - 1];
@@ -278,14 +282,11 @@ function memoryScore(r: SentinelReport): ComponentScore | null {
   let finalPenalty = basePenalty;
   if (m.pageFaultsPerSec != null && m.pageFaultsPerSec > 0) {
     // High page faults = active pagefile use = SSD wear + latency spikes
-    // Apply a multiplier based on the severity of page fault rate
-    const pfMultiplier = 1 + Math.min(0.6, m.pageFaultsPerSec / 250);
+    // Multiplier: each 500 pf/s = +20% extra penalty (capped at +60%).
+    // Formula: finalPenalty = basePenalty * (1 + min(0.6, pf/500 * 0.20))
+    // This keeps the multiplier proportional and predictable.
+    const pfMultiplier = 1 + Math.min(0.6, (m.pageFaultsPerSec / 500) * 0.20);
     finalPenalty = basePenalty * pfMultiplier;
-    // Also add direct penalty tiers for extreme page fault rates
-    if (m.pageFaultsPerSec > 1000) finalPenalty += 25;
-    else if (m.pageFaultsPerSec > 500) finalPenalty += 15;
-    else if (m.pageFaultsPerSec > 200) finalPenalty += 8;
-    else if (m.pageFaultsPerSec > 50) finalPenalty += 3;
   }
 
   let score = clamp(Math.round(100 - finalPenalty));
@@ -300,7 +301,8 @@ function memoryScore(r: SentinelReport): ComponentScore | null {
 
   let detail = `${m.totalGB} GB RAM · ${used.toFixed(1)}% used`;
   if (m.pageFaultsPerSec != null && m.pageFaultsPerSec > 10) {
-    detail += ` · ${m.pageFaultsPerSec.toLocaleString()} page faults/s`;
+    // Compact format: '250 pg/s' — keeps detail string scannable
+    detail += ` · ${m.pageFaultsPerSec.toLocaleString()} pg/s`;
   }
 
   return { name: "Memory", score, status: scoreStatus(score), detail };
@@ -309,7 +311,8 @@ function memoryScore(r: SentinelReport): ComponentScore | null {
 function cpuScore(r: SentinelReport): ComponentScore | null {
   const c = r.cpu;
   if (!c) return null;
-  let score = 97; // Start at 97, not 100 — no CPU is ever perfect
+  // Start at 100 for a pristine CPU. Penalties bring it down from there.
+  let score = 100;
   const load = c.avgLoadPct ?? 0;
   const throttle = c.throttleEvents30min ?? 0;
 
@@ -361,7 +364,7 @@ function generateFindings(r: SentinelReport): Finding[] {
       const lostWh = b.designCapacity != null && b.fullChargeCapacity != null
         ? ` You've lost ${((b.designCapacity - b.fullChargeCapacity) / 1000).toFixed(1)} Wh of original ${(b.designCapacity / 1000).toFixed(1)} Wh capacity.`
         : "";
-      findings.push({ component: "Battery", title: `Battery capacity critically low — ${b.health.toFixed(1)}%`,
+      findings.push({ component: "Battery", title: `Battery capacity critically low`,
         body: `Your battery retains only ${b.health.toFixed(1)}% of its original capacity.${lostWh}${runtimeStr} At this degradation level, unexpected shutdowns at 10–20% reported charge are common.`,
         oemContext: oemCtx,
         urgency: "critical", pro: false });
@@ -414,7 +417,8 @@ function generateFindings(r: SentinelReport): Finding[] {
       ? ` Only ${headroomC.toFixed(0)}°C of headroom before the processor's thermal throttle limit (${THROTTLE_TEMP}°C TJ Max).`
       : ` System has exceeded the thermal throttle threshold.`;
     if (t.maxTempC > 90) {
-      findings.push({ component: "Thermals", title: `Critical peak temperature — ${t.maxTempC.toFixed(1)}°C recorded`,
+      findings.push({ component: "Thermals", title: `Critical peak temperature recorded`,
+        /* full detail in body — title kept concise for list scan */
         body: `Your system reached ${t.maxTempC.toFixed(1)}°C.${headroomStr} Sustained operation at this temperature accelerates thermal paste degradation, reduces fan bearing lifespan, and causes the CPU to permanently reduce its maximum clock speed over time.`,
         oemContext: "OEM tools like Dell SupportAssist only run a brief 30-second thermal stress test and report pass/fail. They don't measure real-world peak temperatures under your actual workload — a system that passes OEM thermal testing can still be throttling continuously during normal use.",
         urgency: "critical", pro: false });
