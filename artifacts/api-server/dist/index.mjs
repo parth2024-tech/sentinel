@@ -90555,6 +90555,7 @@ __export(schema_exports, {
   reportPayloadsTable: () => reportPayloadsTable,
   reportsTable: () => reportsTable,
   scansTable: () => scansTable,
+  suspectPayloadsTable: () => suspectPayloadsTable,
   usersTable: () => usersTable,
   waitlistTable: () => waitlistTable
 });
@@ -102153,6 +102154,18 @@ var reportPayloadsTable = pgTable(
   }
 );
 
+// ../../lib/db/src/schema/suspectPayloads.ts
+var suspectPayloadsTable = pgTable(
+  "suspect_payloads",
+  {
+    id: text("id").primaryKey(),
+    rawJson: jsonb("raw_json").notNull(),
+    failureReason: text("failure_reason").notNull(),
+    ipHash: text("ip_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+  }
+);
+
 // ../../lib/db/src/index.ts
 var { Pool: Pool3 } = esm_default;
 if (!process.env.DATABASE_URL) {
@@ -102415,7 +102428,11 @@ var StorageDeviceSchema = external_exports.object({
   freeSpacePct: external_exports.number().nullish(),
   totalGB: external_exports.number().nullish(),
   powerOnHours: external_exports.number().nullish(),
-  dataSource: external_exports.string().nullish()
+  dataSource: external_exports.string().nullish(),
+  mediaErrors: external_exports.number().nullish(),
+  dataUnitsRead: external_exports.number().nullish(),
+  dataUnitsWritten: external_exports.number().nullish(),
+  criticalWarningFlags: external_exports.number().nullish()
 });
 var ThermalZoneSchema = external_exports.object({
   name: external_exports.string(),
@@ -102461,7 +102478,11 @@ var SecuritySchema = external_exports.object({
   realTimeProtection: external_exports.boolean().nullish(),
   lastFullScan: external_exports.string().nullish(),
   antivirusSignatureDate: external_exports.string().nullish(),
-  firewallProfilesActive: external_exports.string().nullish()
+  firewallProfilesActive: external_exports.string().nullish(),
+  tpmActive: external_exports.boolean().nullish(),
+  tpmVersion: external_exports.string().nullish(),
+  secureBootEnabled: external_exports.boolean().nullish(),
+  lsaProtectionEnabled: external_exports.boolean().nullish()
 });
 var RecentSystemErrorSchema = external_exports.object({
   time: external_exports.string().nullish(),
@@ -102485,7 +102506,9 @@ var SentinelReportSchema = external_exports.object({
     cycleCount: external_exports.number().nullish(),
     health: external_exports.number().nullish(),
     status: external_exports.union([external_exports.string(), external_exports.number()]).nullish(),
-    dischargeRateMw: external_exports.number().nullish()
+    dischargeRateMw: external_exports.number().nullish(),
+    batteryTempC: external_exports.number().nullish(),
+    batteryVoltageV: external_exports.number().nullish()
   }).nullish(),
   thermals: external_exports.object({
     maxTempC: external_exports.number().nullish(),
@@ -102499,7 +102522,10 @@ var SentinelReportSchema = external_exports.object({
   memory: external_exports.object({
     totalGB: external_exports.number(),
     usedPct: external_exports.number(),
-    pageFaultsPerSec: external_exports.number().nullish()
+    pageFaultsPerSec: external_exports.number().nullish(),
+    dpcTimePct: external_exports.number().nullish(),
+    interruptTimePct: external_exports.number().nullish(),
+    dpcsQueuedPerSec: external_exports.number().nullish()
   }).nullish(),
   cpu: external_exports.object({
     name: external_exports.string().nullish(),
@@ -102507,7 +102533,9 @@ var SentinelReportSchema = external_exports.object({
     threads: external_exports.number().nullish(),
     avgLoadPct: external_exports.number().nullish(),
     throttleEvents30min: external_exports.number().nullish(),
-    maxClockMhz: external_exports.number().nullish()
+    maxClockMhz: external_exports.number().nullish(),
+    coreTempDeltaC: external_exports.number().nullish(),
+    throttleReason: external_exports.string().nullish()
   }).nullish(),
   startup: external_exports.object({
     lastBootTime: external_exports.string().nullish(),
@@ -102519,11 +102547,12 @@ var SentinelReportSchema = external_exports.object({
   topProcesses: TopProcessesSchema.nullish(),
   startupList: external_exports.array(StartupItemSchema).nullish(),
   security: SecuritySchema.nullish(),
-  recentErrors: external_exports.array(RecentSystemErrorSchema).nullish()
+  recentErrors: external_exports.array(RecentSystemErrorSchema).nullish(),
+  runningOemServicesCount: external_exports.number().nullish()
 });
 
 // ../../lib/report-engine/src/engine.ts
-var ALGORITHM_VERSION = 2;
+var ALGORITHM_VERSION = 3;
 function clamp(n2, min = 0, max = 100) {
   return Math.min(max, Math.max(min, n2));
 }
@@ -102556,31 +102585,47 @@ function expectedBatteryHealth(cycles) {
 function batteryScore(r2) {
   const b3 = r2.battery;
   if (!b3) return null;
-  if (b3.health == null && b3.fullChargeCapacity == null && b3.designCapacity == null) return null;
-  const health = b3.health ?? 85;
+  if (b3.health == null) {
+    if (b3.cycleCount == null) return null;
+    if (b3.cycleCount > 800) return { name: "Battery", score: 55, status: "watch", detail: `${b3.cycleCount} cycles \xB7 health data unavailable` };
+    if (b3.cycleCount > 600) return { name: "Battery", score: 65, status: "watch", detail: `${b3.cycleCount} cycles \xB7 health data unavailable` };
+    return null;
+  }
+  const health = b3.health;
   const cycles = b3.cycleCount ?? 0;
   const expected = expectedBatteryHealth(cycles);
   let score = health;
   const gap = expected - health;
-  if (gap > 5) score -= Math.min(25, (gap - 5) * 1.5);
-  if (b3.dischargeRateMw != null && b3.dischargeRateMw < -8e3) {
+  if (gap > 10) score -= Math.min(20, gap - 10);
+  const drainMw = b3.dischargeRateMw != null ? -Math.abs(b3.dischargeRateMw) : null;
+  if (drainMw != null && drainMw < -8e3) {
     score -= 8;
-  } else if (b3.dischargeRateMw != null && b3.dischargeRateMw < -5e3) {
+  } else if (drainMw != null && drainMw < -5e3) {
     score -= 4;
   }
-  if (cycles > 900) score -= 10;
-  else if (cycles > 700) score -= 5;
-  else if (cycles > 500) score -= 2;
-  score = clamp(score, 20, 97);
-  let detail = health != null ? `${health.toFixed(1)}% capacity` : "Capacity unknown";
+  if (cycles > 900) score -= 12;
+  else if (cycles > 700) score -= 7;
+  else if (cycles > 500) score -= 3;
+  if (b3.batteryTempC != null && b3.batteryTempC > 45) {
+    score -= Math.min(15, Math.round((b3.batteryTempC - 45) * 1.5));
+  }
+  if (b3.batteryVoltageV != null && b3.batteryVoltageV < 9.5) {
+    score -= 5;
+  }
+  if (health < 100) score = clamp(score, 20, 97);
+  else score = clamp(score, 20, 100);
+  let detail = `${health.toFixed(1)}% capacity`;
   if (cycles) detail += ` \xB7 ${cycles} cycles`;
   if (b3.fullChargeCapacity && b3.designCapacity) {
-    const full = Math.round(b3.fullChargeCapacity / 1e3);
-    const design = Math.round(b3.designCapacity / 1e3);
-    detail += ` \xB7 ${full}/${design} Wh`;
+    const fullWh = (b3.fullChargeCapacity / 1e3).toFixed(1);
+    const designWh = (b3.designCapacity / 1e3).toFixed(1);
+    detail += ` \xB7 ${fullWh}/${designWh} Wh`;
   }
-  if (b3.dischargeRateMw != null && b3.dischargeRateMw < 0) {
-    detail += ` \xB7 ${(Math.abs(b3.dischargeRateMw) / 1e3).toFixed(1)}W draw`;
+  if (drainMw != null && drainMw < 0) {
+    detail += ` \xB7 ${(Math.abs(drainMw) / 1e3).toFixed(1)}W draw`;
+  }
+  if (b3.batteryTempC != null) {
+    detail += ` \xB7 ${b3.batteryTempC.toFixed(1)}\xB0C`;
   }
   return { name: "Battery", score, status: scoreStatus(score), detail };
 }
@@ -102589,7 +102634,7 @@ function thermalScore(r2) {
   if (!t2 || t2.maxTempC == null) return null;
   if (t2.thermalSource === "unavailable" || t2.thermalSource === "acpi_static_suspect") return null;
   const max = t2.maxTempC;
-  let score = max > 98 ? 5 : max > 93 ? 20 : max > 88 ? 40 : max > 83 ? 60 : max > 78 ? 75 : max > 72 ? 88 : 97;
+  let score = max > 98 ? 5 : max > 93 ? 20 : max > 88 ? 40 : max > 83 ? 60 : max > 78 ? 75 : max > 72 ? 88 : 100;
   const throttle = t2.throttleEvents30min ?? 0;
   if (throttle > 30) score -= 35;
   else if (throttle > 20) score -= 25;
@@ -102598,7 +102643,14 @@ function thermalScore(r2) {
   else if (throttle > 2) score -= 5;
   else if (throttle > 0) score -= 2;
   score = clamp(score);
-  const detail = `${max.toFixed(1)}\xB0C peak \xB7 source: ${t2.thermalSource ?? "unknown"}${throttle ? ` \xB7 ${throttle} throttle events/30min` : ""}`;
+  const sourceLabel = {
+    performance_counter: "Win32 Performance Counter",
+    acpi_wmi: "ACPI/WMI",
+    ohm: "OpenHardwareMonitor",
+    lhm: "LibreHardwareMonitor"
+  };
+  const source = sourceLabel[t2.thermalSource ?? ""] ?? t2.thermalSource ?? "unknown";
+  const detail = `${max.toFixed(1)}\xB0C peak \xB7 source: ${source}${throttle ? ` \xB7 ${throttle} throttle events/30min` : ""}`;
   return { name: "Thermals", score, status: scoreStatus(score), detail };
 }
 function storageScore(r2) {
@@ -102612,19 +102664,31 @@ function storageScore(r2) {
   let score;
   if (wear != null) {
     score = clamp(wear);
-    if (realloc > 0) score -= Math.min(50, realloc * 8);
+    if (realloc > 0) score -= Math.min(40, realloc * 5);
+    const mediaErrors = primary.mediaErrors ?? 0;
+    if (mediaErrors > 0) {
+      score -= Math.min(30, mediaErrors * 5);
+    }
+    const warningFlags = primary.criticalWarningFlags ?? 0;
+    if (warningFlags > 0) {
+      if ((warningFlags & 4) !== 0 || (warningFlags & 1) !== 0) {
+        score -= 40;
+      } else {
+        score -= 15;
+      }
+    }
     if (poh > 5e4) score -= 15;
     else if (poh > 3e4) score -= 8;
     else if (poh > 2e4) score -= 4;
   } else {
     score = 78;
-    if (realloc > 0) score -= Math.min(50, realloc * 10);
+    if (realloc > 0) score -= Math.min(40, realloc * 5);
     score = clamp(score, 0, 78);
   }
   if (free != null) {
-    if (free < 5) score -= 25;
-    else if (free < 10) score -= 15;
-    else if (free < 15) score -= 7;
+    if (free < 5) score -= 20;
+    else if (free < 10) score -= 12;
+    else if (free < 15) score -= 6;
     else if (free < 20) score -= 3;
   }
   score = clamp(score);
@@ -102632,18 +102696,21 @@ function storageScore(r2) {
   if (wear != null) detail += ` \xB7 ${wear}% endurance`;
   if (free != null) detail += ` \xB7 ${free.toFixed(1)}% free`;
   else detail += ` \xB7 free space unknown`;
+  if (primary.dataUnitsWritten != null) {
+    const tbWritten = (primary.dataUnitsWritten * 500 * 1e3 / 1e12).toFixed(1);
+    detail += ` \xB7 ${tbWritten}TB written`;
+  }
   if (poh > 0) detail += ` \xB7 ${poh.toLocaleString()}h runtime`;
   if (realloc) detail += ` \xB7 ${realloc} bad sectors`;
   return { name: "Storage", score, status: scoreStatus(score), detail };
 }
 function expectedMemoryPenalty(usedPct) {
-  if (usedPct <= 55) return 0;
+  if (usedPct <= 70) return 0;
   const anchors = [
-    [55, 0],
-    [70, 8],
-    [80, 18],
-    [90, 32],
-    [100, 55]
+    [70, 0],
+    [85, 15],
+    [95, 30],
+    [100, 50]
   ];
   for (let i = 1; i < anchors.length; i++) {
     const [u0, p0] = anchors[i - 1];
@@ -102662,26 +102729,31 @@ function memoryScore(r2) {
   const basePenalty = expectedMemoryPenalty(used);
   let finalPenalty = basePenalty;
   if (m.pageFaultsPerSec != null && m.pageFaultsPerSec > 0) {
-    const pfMultiplier = 1 + Math.min(0.5, m.pageFaultsPerSec / 300);
+    const pfMultiplier = 1 + Math.min(0.6, m.pageFaultsPerSec / 500 * 0.2);
     finalPenalty = basePenalty * pfMultiplier;
-    if (m.pageFaultsPerSec > 500) finalPenalty += 15;
-    else if (m.pageFaultsPerSec > 200) finalPenalty += 8;
-    else if (m.pageFaultsPerSec > 50) finalPenalty += 3;
   }
   let score = clamp(Math.round(100 - finalPenalty));
-  if (m.totalGB <= 4) score = Math.min(score, 55);
-  else if (m.totalGB <= 6) score = Math.min(score, 70);
-  else if (m.totalGB <= 8 && used > 80) score = Math.min(score, 75);
+  if (m.dpcTimePct != null && m.dpcTimePct > 1) {
+    score -= Math.min(20, Math.round((m.dpcTimePct - 1) * 10));
+  }
+  const oemSvcCount = r2.runningOemServicesCount ?? 0;
+  if (oemSvcCount > 3) {
+    score -= Math.min(10, oemSvcCount - 3);
+  }
+  if (m.totalGB <= 4) score = Math.min(score, 50);
+  else if (m.totalGB <= 6) score = Math.min(score, 68);
+  else if (m.totalGB <= 8 && used > 85) score = Math.min(score, 65);
+  else if (m.totalGB <= 8 && used > 75) score = Math.min(score, 75);
   let detail = `${m.totalGB} GB RAM \xB7 ${used.toFixed(1)}% used`;
-  if (m.pageFaultsPerSec != null && m.pageFaultsPerSec > 0) {
-    detail += ` \xB7 ${m.pageFaultsPerSec.toLocaleString()} page faults/s`;
+  if (m.pageFaultsPerSec != null && m.pageFaultsPerSec > 10) {
+    detail += ` \xB7 ${m.pageFaultsPerSec.toLocaleString()} pg/s`;
   }
   return { name: "Memory", score, status: scoreStatus(score), detail };
 }
 function cpuScore(r2) {
   const c2 = r2.cpu;
   if (!c2) return null;
-  let score = 97;
+  let score = 100;
   const load = c2.avgLoadPct ?? 0;
   const throttle = c2.throttleEvents30min ?? 0;
   if (load > 90) score -= 30;
@@ -102689,16 +102761,26 @@ function cpuScore(r2) {
   else if (load > 70) score -= 13;
   else if (load > 60) score -= 7;
   else if (load > 50) score -= 3;
-  if (throttle > 30) score -= 35;
-  else if (throttle > 20) score -= 25;
-  else if (throttle > 10) score -= 18;
-  else if (throttle > 5) score -= 10;
-  else if (throttle > 2) score -= 5;
+  if (throttle >= 30) score -= 35;
+  else if (throttle >= 20) score -= 25;
+  else if (throttle >= 10) score -= 18;
+  else if (throttle >= 5) score -= 10;
+  else if (throttle >= 2) score -= 5;
   else if (throttle > 0) score -= 2;
+  const delta = c2.coreTempDeltaC ?? 0;
+  if (delta > 15) {
+    const maxTemp = r2.thermals?.maxTempC ?? 0;
+    if (maxTemp > 65) {
+      score -= Math.min(15, Math.round(delta - 15));
+    }
+  }
   score = clamp(score);
   let detail = c2.name ?? "CPU";
   if (load) detail += ` \xB7 ${load.toFixed(1)}% avg load`;
-  if (throttle > 0) detail += ` \xB7 ${throttle} throttle events/30min`;
+  if (throttle > 0) {
+    detail += ` \xB7 ${throttle} throttle events/30min`;
+    if (c2.throttleReason) detail += ` (${c2.throttleReason})`;
+  }
   return { name: "CPU", score, status: scoreStatus(score), detail };
 }
 function generateFindings(r2) {
@@ -102707,14 +102789,20 @@ function generateFindings(r2) {
   const t2 = r2.thermals;
   const s2 = r2.storage?.[0];
   if (b3?.health != null) {
+    const runtimeStr = b3.dischargeRateMw != null && b3.fullChargeCapacity != null && b3.dischargeRateMw < 0 ? (() => {
+      const drainMw = Math.abs(b3.dischargeRateMw);
+      const runtimeHrs = b3.fullChargeCapacity / drainMw;
+      return ` At current draw of ${(drainMw / 1e3).toFixed(1)}W, estimated remaining runtime is approximately ${runtimeHrs.toFixed(1)} hours.`;
+    })() : "";
     if (b3.health < 60) {
       const cycles = b3.cycleCount ?? 0;
       const expected = cycles > 0 ? expectedBatteryHealth(cycles) : null;
       const oemCtx = expected ? `Your OEM tool (e.g. Dell SupportAssist, Lenovo Vantage) reports raw capacity only \u2014 it does not adjust for cycle count. At ${cycles} cycles, a healthy battery should retain ~${expected.toFixed(0)}% capacity. Yours is at ${b3.health.toFixed(1)}%. That ${(expected - b3.health).toFixed(0)}-point gap is invisible to OEM diagnostics.` : `OEM tools like Dell SupportAssist or Lenovo Vantage only report raw capacity percentage. They don't compare against expected degradation curves for your cycle count, so they can't tell you if your battery is wearing faster than normal.`;
+      const lostWh = b3.designCapacity != null && b3.fullChargeCapacity != null ? ` You've lost ${((b3.designCapacity - b3.fullChargeCapacity) / 1e3).toFixed(1)} Wh of original ${(b3.designCapacity / 1e3).toFixed(1)} Wh capacity.` : "";
       findings.push({
         component: "Battery",
-        title: "Battery capacity critically low",
-        body: `Your battery retains only ${b3.health.toFixed(1)}% of its original capacity. At this level, runtime is severely reduced and unexpected shutdowns may occur.`,
+        title: `Battery capacity critically low`,
+        body: `Your battery retains only ${b3.health.toFixed(1)}% of its original capacity.${lostWh}${runtimeStr} At this degradation level, unexpected shutdowns at 10\u201320% reported charge are common.`,
         oemContext: oemCtx,
         urgency: "critical",
         pro: false
@@ -102725,8 +102813,8 @@ function generateFindings(r2) {
       const oemCtx = expected ? `Your OEM tool doesn't check cycle-adjusted degradation \u2014 it only reports raw capacity. At your cycle count (${cycles}), your battery should be at ~${expected.toFixed(0)}%. It's at ${b3.health.toFixed(1)}%. That ${(expected - b3.health).toFixed(0)}-point gap is what SupportAssist misses.` : `OEM battery diagnostics only show raw capacity percentage. They don't track whether degradation is faster than expected for your usage pattern.`;
       findings.push({
         component: "Battery",
-        title: "Battery degrading faster than expected",
-        body: `Current capacity: ${b3.health.toFixed(1)}% of original. You're losing measurable runtime per charge cycle. Battery replacement is worth planning.`,
+        title: `Battery degrading \u2014 ${b3.health.toFixed(1)}% capacity remaining`,
+        body: `Current capacity: ${b3.health.toFixed(1)}% of original.${runtimeStr} You're losing measurable runtime per charge cycle. Plan for battery replacement within 6\u201312 months.`,
         oemContext: oemCtx,
         urgency: "warning",
         pro: false
@@ -102734,58 +102822,91 @@ function generateFindings(r2) {
     }
   }
   if (b3?.cycleCount != null && b3.cycleCount > 500) {
+    const ratedCycles = 500;
+    const overBy = b3.cycleCount - ratedCycles;
     findings.push({
       component: "Battery",
-      title: "High cycle count detected",
-      body: `${b3.cycleCount} charge cycles recorded. Most laptop batteries are rated for 300\u2013500 full cycles before significant degradation. You're past this threshold.`,
-      oemContext: "OEM tools like HP Support Assistant show cycle count but don't flag when you've exceeded the manufacturer's rated cycle life. They treat 1,000 cycles the same as 100.",
+      title: `High cycle count \u2014 ${b3.cycleCount} cycles (${overBy} past rated life)`,
+      body: `${b3.cycleCount} charge cycles recorded. Most laptop batteries are rated for 300\u2013500 full cycles before significant degradation. You are ${overBy} cycles past the typical rated life \u2014 statistical failure risk increases meaningfully past this point.`,
+      oemContext: "OEM tools like HP Support Assistant show cycle count but don't flag when you've exceeded the manufacturer's rated cycle life. They treat 1,000 cycles the same as 100 cycles \u2014 there is no threshold alert.",
       urgency: b3.cycleCount > 800 ? "critical" : "warning",
       pro: false
     });
   }
   if (b3?.health != null && b3?.cycleCount != null) {
     const expected = expectedBatteryHealth(b3.cycleCount);
-    if (expected - b3.health > 8) {
+    const gap = expected - b3.health;
+    if (gap > 8) {
+      const extraDegradationPerCycle = gap / b3.cycleCount;
+      const cyclesUntil60 = b3.health > 60 ? Math.round((b3.health - 60) / (extraDegradationPerCycle + 0.04)) : 0;
+      const monthsEstimate = Math.round(cyclesUntil60 / 2);
       findings.push({
         component: "Battery",
         title: "Degradation trajectory: faster-than-normal wear detected",
-        body: `At ${b3.cycleCount} cycles, a typical battery retains ~${expected.toFixed(0)}% capacity. Yours is at ${b3.health.toFixed(1)}% \u2014 ${(expected - b3.health).toFixed(1)} points below baseline. Sentinel projects replacement-grade degradation approximately 3\u20134 months earlier than average.`,
-        oemContext: `No OEM diagnostic tool performs cycle-adjusted degradation analysis. Dell SupportAssist, Lenovo Vantage, and HP Support Assistant all report raw capacity without comparing against expected wear curves. The ${(expected - b3.health).toFixed(0)}-point gap between expected (${expected.toFixed(0)}%) and actual (${b3.health.toFixed(1)}%) health is entirely invisible to these tools.`,
+        body: `At ${b3.cycleCount} cycles, a typical battery retains ~${expected.toFixed(0)}% capacity. Yours is at ${b3.health.toFixed(1)}% \u2014 ${gap.toFixed(1)} points below the population baseline. Sentinel projects the battery will reach replacement-grade degradation (60%) approximately ${monthsEstimate > 0 ? `${monthsEstimate} months` : "soon"} sooner than average.`,
+        oemContext: `No OEM diagnostic tool performs cycle-adjusted degradation analysis. Dell SupportAssist, Lenovo Vantage, and HP Support Assistant all report raw capacity without comparing against expected wear curves. The ${gap.toFixed(0)}-point gap between expected (${expected.toFixed(0)}%) and actual (${b3.health.toFixed(1)}%) health is entirely invisible to these tools.`,
         urgency: "warning",
         pro: true
       });
     }
   }
+  const THROTTLE_TEMP = 100;
   if (t2?.maxTempC != null) {
+    const headroomC = THROTTLE_TEMP - t2.maxTempC;
+    const headroomStr = headroomC > 0 ? ` Only ${headroomC.toFixed(0)}\xB0C of headroom before the processor's thermal throttle limit (${THROTTLE_TEMP}\xB0C TJ Max).` : ` System has exceeded the thermal throttle threshold.`;
     if (t2.maxTempC > 90) {
       findings.push({
         component: "Thermals",
-        title: "Critical peak temperature recorded",
-        body: `Your system reached ${t2.maxTempC.toFixed(1)}\xB0C. Sustained temperatures above 90\xB0C accelerate thermal paste degradation, reduce fan bearing lifespan, and can trigger permanent CPU performance reduction.`,
-        oemContext: "OEM tools like Dell SupportAssist only run a brief thermal stress test and report pass/fail. They don't measure real-world peak temperatures under your actual workload, so a system that passes the OEM test can still be thermally throttling daily.",
+        title: `Critical peak temperature recorded`,
+        /* full detail in body — title kept concise for list scan */
+        body: `Your system reached ${t2.maxTempC.toFixed(1)}\xB0C.${headroomStr} Sustained operation at this temperature accelerates thermal paste degradation, reduces fan bearing lifespan, and causes the CPU to permanently reduce its maximum clock speed over time.`,
+        oemContext: "OEM tools like Dell SupportAssist only run a brief 30-second thermal stress test and report pass/fail. They don't measure real-world peak temperatures under your actual workload \u2014 a system that passes OEM thermal testing can still be throttling continuously during normal use.",
         urgency: "critical",
         pro: false
       });
     } else if (t2.maxTempC > 80) {
       findings.push({
         component: "Thermals",
-        title: "Elevated peak temperature",
-        body: `Peak temperature of ${t2.maxTempC.toFixed(1)}\xB0C detected. This is above the recommended sustained operating range for most consumer processors. Check vent clearance.`,
-        oemContext: "OEM thermal tests use artificial stress loads for 30\u201360 seconds. Your actual workload produces sustained temperatures that OEM tests never simulate.",
+        title: `Elevated peak temperature \u2014 ${t2.maxTempC.toFixed(1)}\xB0C`,
+        body: `Peak temperature of ${t2.maxTempC.toFixed(1)}\xB0C detected.${headroomStr} This is above the recommended sustained operating range for most consumer processors. Ensure vents are unobstructed and the system is on a hard flat surface.`,
+        oemContext: "OEM thermal tests use artificial stress loads for 30\u201360 seconds. Your actual workload generates sustained heat that OEM benchmarks never replicate.",
         urgency: "warning",
         pro: false
       });
     }
   }
   if (t2?.throttleEvents30min != null && t2.throttleEvents30min > 5) {
+    const throttleImpact = t2.throttleEvents30min > 20 ? "Your CPU has been running at a significantly reduced clock speed, which can cut performance by 30\u201360% during burst workloads." : "Your CPU is intermittently dropping to lower clock speeds, causing noticeable lag spikes during intensive tasks.";
     findings.push({
       component: "Thermals",
-      title: `${t2.throttleEvents30min} thermal throttle events detected`,
-      body: "CPU throttling reduces performance and indicates the cooling system is struggling to dissipate heat. Common causes: blocked vents, degraded thermal paste, or dust accumulation.",
-      oemContext: "OEM tools don't count throttle events. They report CPU temperature at a single point in time, not the pattern of thermal throttling that reveals cooling system degradation.",
+      title: `${t2.throttleEvents30min} thermal throttle events in the last 30 minutes`,
+      body: `${throttleImpact} Common causes: blocked air vents, degraded thermal compound (paste dries out after 3\u20135 years), or dust accumulation in the heatsink fins.`,
+      oemContext: "OEM diagnostic tools report CPU temperature at a single snapshot \u2014 they never count throttle events. Windows Task Manager doesn't display throttling either: it shows CPU usage as a percentage of the reduced clock speed, making throttled performance look identical to full performance.",
       urgency: t2.throttleEvents30min > 15 ? "critical" : "warning",
       pro: false
     });
+  }
+  const gpu = r2.gpus?.[0];
+  if (gpu?.tempC != null) {
+    if (gpu.tempC > 90) {
+      findings.push({
+        component: "GPU",
+        title: `GPU critically hot \u2014 ${gpu.tempC}\xB0C`,
+        body: `${gpu.name ?? "Your GPU"} is running at ${gpu.tempC}\xB0C. Most GPUs begin throttling between 83\u201390\xB0C, and sustained operation above 90\xB0C accelerates VRAM degradation and reduces the GPU's effective lifespan. Check that GPU fan is spinning and air vents are clear.`,
+        oemContext: "OEM diagnostic tools rarely include GPU thermal analysis in their automated health checks. Dell SupportAssist and HP Support Assistant do not flag GPU overtemperature in their standard diagnostic flows.",
+        urgency: "critical",
+        pro: false
+      });
+    } else if (gpu.tempC > 80) {
+      findings.push({
+        component: "GPU",
+        title: `GPU temperature elevated \u2014 ${gpu.tempC}\xB0C`,
+        body: `${gpu.name ?? "Your GPU"} is running at ${gpu.tempC}\xB0C \u2014 approaching the typical thermal throttle threshold. Ensure the laptop is on a hard, flat surface and vents are unobstructed.`,
+        oemContext: "GPU thermal data is not part of standard OEM diagnostic checks. HP, Dell, and Lenovo tools do not surface GPU temperature or GPU throttle events.",
+        urgency: "warning",
+        pro: false
+      });
+    }
   }
   if (t2?.maxTempC != null && b3?.health != null && t2.maxTempC > 78) {
     findings.push({
@@ -102829,24 +102950,40 @@ function generateFindings(r2) {
     });
   }
   const m = r2.memory;
-  if (m && m.totalGB <= 4) {
-    findings.push({
-      component: "Memory",
-      title: "4 GB RAM \u2014 insufficient for modern workloads",
-      body: `Your system has only ${m.totalGB} GB of RAM. Windows 11 alone can consume 3\u20134 GB at idle. With just ${m.totalGB} GB, every additional app causes heavy pagefile use, significantly slowing your system and accelerating SSD wear.`,
-      oemContext: "OEM diagnostics do not flag low total RAM \u2014 they only test whether installed RAM is functional. A 4 GB system will pass every OEM memory test while delivering a noticeably degraded experience.",
-      urgency: "warning",
-      pro: false
-    });
-  } else if (m && m.totalGB <= 6 && m.usedPct > 70) {
-    findings.push({
-      component: "Memory",
-      title: `${m.totalGB} GB RAM under pressure`,
-      body: `With ${m.totalGB} GB RAM and ${m.usedPct.toFixed(0)}% utilisation, your system is frequently near its memory limit. Adding browser tabs or background apps will push it into pagefile territory.`,
-      oemContext: "OEM tools test RAM for hardware defects, not capacity sufficiency. They will pass a 6 GB system with 80% utilisation as 'Memory: OK'.",
-      urgency: "info",
-      pro: false
-    });
+  const PF_HEALTHY_BASELINE = 500;
+  if (m) {
+    const pfContext = m.pageFaultsPerSec != null && m.pageFaultsPerSec > PF_HEALTHY_BASELINE ? (() => {
+      const multiplier = (m.pageFaultsPerSec / PF_HEALTHY_BASELINE).toFixed(1);
+      return ` Current page fault rate is ${m.pageFaultsPerSec.toLocaleString()}/s \u2014 ${multiplier}\xD7 above the healthy idle baseline of ${PF_HEALTHY_BASELINE}/s. This means your SSD is being used as an active memory extension, causing measurable wear and latency spikes.`;
+    })() : "";
+    if (m.totalGB <= 4) {
+      findings.push({
+        component: "Memory",
+        title: `${m.totalGB} GB RAM \u2014 insufficient for modern workloads`,
+        body: `Your system has only ${m.totalGB} GB of RAM. Windows 11 alone consumes 3\u20134 GB at idle, leaving less than 1 GB for any open applications.${pfContext} Every additional app forces heavy pagefile use, accelerating SSD wear and causing severe slowdowns.`,
+        oemContext: "OEM diagnostics test whether installed RAM modules are functional \u2014 not whether the installed capacity is adequate for the OS workload. A 4 GB system will pass every OEM memory test while delivering a noticeably degraded real-world experience.",
+        urgency: "warning",
+        pro: false
+      });
+    } else if (m.totalGB <= 6 && m.usedPct > 70) {
+      findings.push({
+        component: "Memory",
+        title: `${m.totalGB} GB RAM under pressure \u2014 ${m.usedPct.toFixed(0)}% utilised`,
+        body: `With ${m.totalGB} GB RAM and ${m.usedPct.toFixed(0)}% current utilisation, your system is frequently near its physical memory limit.${pfContext} Adding more browser tabs or opening additional applications will push it into active pagefile territory.`,
+        oemContext: "OEM tools test RAM for hardware defects \u2014 not capacity sufficiency under real workloads. A 6 GB system at 80% utilisation passes every OEM memory diagnostic as 'Memory: OK'.",
+        urgency: "info",
+        pro: false
+      });
+    } else if (m.pageFaultsPerSec != null && m.pageFaultsPerSec > 1e3) {
+      findings.push({
+        component: "Memory",
+        title: `Excessive page fault rate \u2014 ${m.pageFaultsPerSec.toLocaleString()}/s`,
+        body: `Your system is generating ${m.pageFaultsPerSec.toLocaleString()} page faults per second \u2014 ${(m.pageFaultsPerSec / PF_HEALTHY_BASELINE).toFixed(1)}\xD7 above the healthy idle baseline. This indicates the OS is actively swapping memory to the SSD (pagefile), causing latency spikes and accelerating drive wear even though you have ${m.totalGB} GB of RAM installed.`,
+        oemContext: "OEM memory diagnostics test hardware integrity, not runtime behaviour. Page fault rate is never reported in Dell SupportAssist, Lenovo Vantage, or HP Support Assistant.",
+        urgency: m.pageFaultsPerSec > 2e3 ? "warning" : "info",
+        pro: false
+      });
+    }
   }
   if (b3?.health != null && b3.health >= 50 && b3.health < 80) {
     findings.push({
@@ -102929,12 +103066,13 @@ function generateFindings(r2) {
     });
   }
   const startupCount = (r2.startupList ?? []).length;
+  const estRamOverheadMb = startupCount * 80;
   if (startupCount > 15) {
     findings.push({
       component: "CPU",
-      title: `${startupCount} startup programs \u2014 impacting boot time`,
-      body: `Your system has ${startupCount} programs set to launch at startup. This increases boot time, raises idle CPU usage, and reduces available RAM from the first moment you log in. Review and disable non-essential startup items in Task Manager.`,
-      oemContext: "OEM diagnostic tools do not audit startup programs. Task Manager's Startup tab shows them, but no OEM tool aggregates startup impact on system health scoring.",
+      title: `${startupCount} startup programs \u2014 impacting boot time and idle performance`,
+      body: `Your system launches ${startupCount} programs automatically at login. Collectively, these consume an estimated ${estRamOverheadMb} MB of RAM before you open a single application, increase boot time, and keep idle CPU usage elevated. Open Task Manager \u2192 Startup Apps and disable anything you don't need at login.`,
+      oemContext: "OEM diagnostic tools do not audit startup programs. Task Manager's Startup tab shows them, but no OEM tool aggregates their impact on system health scoring or correlates startup count with observed memory pressure.",
       urgency: startupCount > 25 ? "warning" : "info",
       pro: false
     });
@@ -102942,11 +103080,29 @@ function generateFindings(r2) {
     findings.push({
       component: "CPU",
       title: `${startupCount} startup programs \u2014 moderate boot impact`,
-      body: `${startupCount} programs launch at startup. Consider reviewing which are essential to reduce boot time and idle resource use.`,
+      body: `${startupCount} programs launch at login, consuming an estimated ${estRamOverheadMb} MB of RAM before your first app is opened. Review which are essential to reduce boot time and idle resource consumption.`,
       oemContext: "Startup program auditing is absent from all major OEM diagnostic tools.",
       urgency: "info",
       pro: false
     });
+  }
+  if (r2.system.biosVersion) {
+    const yearMatch = r2.system.biosVersion.match(/20(1[5-9]|2[0-9])/);
+    if (yearMatch) {
+      const biosYear = parseInt(`20${yearMatch[1]}`);
+      const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+      const biosAge = currentYear - biosYear;
+      if (biosAge >= 3) {
+        findings.push({
+          component: "System",
+          title: `BIOS version dated ${biosYear} \u2014 ${biosAge} years old`,
+          body: `Your system firmware (BIOS/UEFI) is from ${biosYear} \u2014 ${biosAge} year${biosAge > 1 ? "s" : ""} old. Outdated firmware can cause thermal management inefficiencies, hardware compatibility issues, and missing security patches (e.g. Spectre/Meltdown mitigations). Visit your manufacturer's support page and search for your model to check for firmware updates.`,
+          oemContext: "While OEM tools like Dell SupportAssist and Lenovo Vantage do check for BIOS updates, they won't always surface a firmware that's 'current but old' as a health concern \u2014 they only flag when a newer version is available.",
+          urgency: biosAge >= 5 ? "warning" : "info",
+          pro: false
+        });
+      }
+    }
   }
   const sec = r2.security;
   if (sec) {
@@ -102986,6 +103142,117 @@ function generateFindings(r2) {
       } catch {
       }
     }
+    if (sec.tpmActive === false) {
+      findings.push({
+        component: "Security",
+        title: "TPM 2.0 disabled or missing",
+        body: "Trusted Platform Module (TPM) is disabled or not present. TPM is required for Windows 11 compatibility and key hardware-level cryptographic operations.",
+        oemContext: "OEM diagnostics only check if TPM hardware is present; they do not flag if it is disabled in BIOS.",
+        urgency: "warning",
+        pro: false
+      });
+    }
+    if (sec.secureBootEnabled === false) {
+      findings.push({
+        component: "Security",
+        title: "Secure Boot is disabled",
+        body: "Secure Boot is currently disabled. Secure Boot protects the system boot sequence from unsigned malware and rootkits.",
+        oemContext: "OEM diagnostic tools test motherboard firmware integrity but do not alert the user to disabled Secure Boot configuration.",
+        urgency: "warning",
+        pro: false
+      });
+    }
+    if (sec.lsaProtectionEnabled === false) {
+      findings.push({
+        component: "Security",
+        title: "LSA Protection is disabled",
+        body: "Local Security Authority (LSA) protection is disabled. Enabling LSA prevents credentials extraction from memory.",
+        oemContext: "LSA Protection is a Windows Enterprise security feature completely ignored by OEM hardware diagnostics.",
+        urgency: "info",
+        pro: false
+      });
+    }
+  }
+  if (b3?.batteryTempC != null && b3.batteryTempC > 45) {
+    findings.push({
+      component: "Battery",
+      title: `High battery temperature \u2014 ${b3.batteryTempC.toFixed(1)}\xB0C`,
+      body: `Your battery temperature is currently ${b3.batteryTempC.toFixed(1)}\xB0C. Temperatures above 45\xB0C during high load or charging cause rapid permanent chemical degradation and raise the risk of cell swelling.`,
+      oemContext: "OEM diagnostics only measure battery health as a raw capacity percentage. They do not warn about thermal threshold excursions.",
+      urgency: "warning",
+      pro: false
+    });
+  }
+  if (s2) {
+    const mediaErrors = s2.mediaErrors ?? 0;
+    if (mediaErrors > 0) {
+      findings.push({
+        component: "Storage",
+        title: `NVMe media errors detected`,
+        body: `Your NVMe drive has reported ${mediaErrors} media/data integrity errors. This indicates unrecoverable read/write operations on physical NAND blocks. Back up your data immediately.`,
+        oemContext: "Windows built-in utilities and OEM diagnostics report SATA/NVMe status as a simple binary pass/fail, hiding cumulative bad block read/write failures.",
+        urgency: "critical",
+        pro: false
+      });
+    }
+    const warningFlags = s2.criticalWarningFlags ?? 0;
+    if (warningFlags > 0) {
+      const warningsList = [];
+      if ((warningFlags & 1) !== 0) warningsList.push("Spare space below threshold");
+      if ((warningFlags & 2) !== 0) warningsList.push("Critical temperature exceeded");
+      if ((warningFlags & 4) !== 0) warningsList.push("Reliability compromised (read-only)");
+      if ((warningFlags & 8) !== 0) warningsList.push("Volatile backup device failed");
+      findings.push({
+        component: "Storage",
+        title: `NVMe controller critical warnings`,
+        body: `NVMe controller reported critical warning flags: ${warningsList.join(", ") || "General controller failure"}.`,
+        oemContext: "OEM utilities do not parse NVMe controller register flags for early warnings.",
+        urgency: "critical",
+        pro: false
+      });
+    }
+  }
+  const delta = r2.cpu?.coreTempDeltaC ?? 0;
+  if (delta > 15 && t2?.maxTempC != null && t2.maxTempC > 65) {
+    findings.push({
+      component: "Thermals",
+      title: `High CPU core temperature delta \u2014 ${delta.toFixed(1)}\xB0C`,
+      body: `Core temperature delta of ${delta.toFixed(1)}\xB0C detected under load. This indicates dried thermal paste or uneven mounting contact between the heatsink and CPU die.`,
+      oemContext: "OEM tools perform brief, single-sensor thermal tests and do not compare core-to-core thermal differentials.",
+      urgency: "warning",
+      pro: true
+    });
+  }
+  if (r2.cpu?.throttleReason != null && (r2.cpu.throttleReason.includes("Power") || r2.cpu.throttleReason.includes("Current"))) {
+    findings.push({
+      component: "CPU",
+      title: `CPU throttling due to motherboard limits`,
+      body: `Your CPU is being restricted by motherboard ${r2.cpu.throttleReason} limits, suggesting VRM thermal saturation.`,
+      oemContext: "OEM diagnostic suites do not check for motherboard VRM throttling constraints.",
+      urgency: "info",
+      pro: false
+    });
+  }
+  if (r2.memory?.dpcTimePct != null && r2.memory.dpcTimePct > 1) {
+    findings.push({
+      component: "System",
+      title: `Elevated DPC/ISR execution time`,
+      body: `DPC/ISR execution time is at ${r2.memory.dpcTimePct.toFixed(2)}% of CPU capacity. This commonly points to driver-level latency issues causing mouse or audio stuttering.`,
+      oemContext: "Real-time driver deferred procedure call latency is never evaluated by OEM diagnostic tools.",
+      urgency: "warning",
+      pro: false
+    });
+  }
+  const oemServices = r2.runningOemServicesCount ?? 0;
+  if (oemServices > 5) {
+    findings.push({
+      component: "System",
+      title: `${oemServices} OEM background services running`,
+      body: `We detected ${oemServices} active OEM support services. These services increase idle CPU wakeups and reduce battery runtime.`,
+      oemContext: "OEM diagnostic tools run as background services themselves and do not analyze cumulative vendor bloat.",
+      urgency: "info",
+      pro: false
+    });
   }
   return findings;
 }
@@ -102999,41 +103266,49 @@ function generatePredictions(r2) {
   if (b3?.health != null) {
     const health = b3.health;
     const cycles = b3.cycleCount ?? 0;
+    const AVG_CYCLES_PER_MONTH = 45;
+    const REPLACE_THRESHOLD = 60;
+    const healthAtCurrent = expectedBatteryHealth(cycles);
+    const healthAt100More = expectedBatteryHealth(cycles + 100);
+    const baselineDropPer100Cycles = Math.max(0.1, healthAtCurrent - healthAt100More);
+    const baselineDropPerCycle = baselineDropPer100Cycles / 100;
+    const gap = healthAtCurrent - health;
+    const actualDropPerCycle = Math.max(baselineDropPerCycle, baselineDropPerCycle + gap / Math.max(cycles, 100));
+    const cyclesUntilThreshold = health > REPLACE_THRESHOLD ? (health - REPLACE_THRESHOLD) / actualDropPerCycle : 0;
+    const monthsUntil = Math.round(cyclesUntilThreshold / AVG_CYCLES_PER_MONTH);
+    const currentValueStr = cycles > 0 ? `${health.toFixed(1)}% capacity \xB7 ${cycles} cycles` : `${health.toFixed(1)}% capacity`;
     if (health >= 90) {
       predictions.push({
         component: "Battery",
-        currentValue: `${health.toFixed(1)}% capacity`,
-        projectedTimeline: "18\u201324 months before noticeable degradation",
+        currentValue: currentValueStr,
+        projectedTimeline: monthsUntil > 0 ? `~${monthsUntil} months before reaching replacement threshold` : "Long-term stable",
         severity: "stable",
-        insight: "Battery is in excellent condition. At current usage patterns, expect reliable performance for the next 1.5\u20132 years."
+        insight: `Battery is in excellent condition. Based on the population degradation curve and ${cycles > 0 ? `your ${cycles} current cycles` : "usage patterns"}, expect reliable performance for approximately ${monthsUntil > 0 ? `${monthsUntil} more months` : "the foreseeable future"} before reaching the 60% capacity replacement threshold.`
       });
     } else if (health >= 75) {
-      const gap = expectedBatteryHealth(cycles) - health;
-      const baseMonths = Math.max(3, Math.round((health - 50) * 0.6));
-      const adjustedMonths = gap > 10 ? Math.max(2, baseMonths - Math.round(gap * 0.3)) : baseMonths;
+      const gapNote = gap > 10 ? ` Battery is degrading ${(gap / Math.max(cycles, 1) * 100).toFixed(2)}% faster per 100 cycles than the population average.` : "";
       predictions.push({
         component: "Battery",
-        currentValue: `${health.toFixed(1)}% capacity \xB7 ${cycles} cycles`,
-        projectedTimeline: `${adjustedMonths}\u2013${adjustedMonths + 4} months before performance becomes unreliable`,
+        currentValue: currentValueStr,
+        projectedTimeline: `~${monthsUntil} months before reaching replacement threshold (60% capacity)`,
         severity: "declining",
-        insight: `At current degradation rate${gap > 10 ? ` (${gap.toFixed(0)}pts below expected for ${cycles} cycles)` : ""}, battery performance may become unstable within ${adjustedMonths}\u2013${adjustedMonths + 4} months. Runtime per charge will decrease noticeably. Plan for replacement within this window.`
+        insight: `At the current degradation rate, your battery will reach the 60% replacement threshold in approximately ${monthsUntil} months (assuming ~${AVG_CYCLES_PER_MONTH} charge cycles/month).${gapNote} Runtime per charge will decrease noticeably before then. Plan for replacement within this window.`
       });
     } else if (health >= 50) {
-      const monthsLeft = Math.max(1, Math.round((health - 40) * 0.4));
       predictions.push({
         component: "Battery",
-        currentValue: `${health.toFixed(1)}% capacity \xB7 ${cycles} cycles`,
-        projectedTimeline: `${monthsLeft}\u2013${monthsLeft + 2} months before unexpected shutdowns likely`,
+        currentValue: currentValueStr,
+        projectedTimeline: monthsUntil > 0 ? `~${monthsUntil} months to complete end-of-life` : "Replacement overdue",
         severity: "urgent",
-        insight: `Battery is degrading at an accelerated rate. Random shutdowns at 10\u201320% reported charge are likely within ${monthsLeft}\u2013${monthsLeft + 2} months. Replacement is strongly recommended.`
+        insight: `Battery is below the recommended replacement threshold. Random shutdowns at 10\u201320% reported charge are likely \u2014 the battery's fuel gauge is no longer accurate at low state-of-charge. Replacement is strongly recommended within the next ${Math.max(1, monthsUntil)} month${monthsUntil !== 1 ? "s" : ""}.`
       });
     } else {
       predictions.push({
         component: "Battery",
-        currentValue: `${health.toFixed(1)}% capacity \xB7 ${cycles} cycles`,
+        currentValue: currentValueStr,
         projectedTimeline: "Immediate \u2014 replacement overdue",
         severity: "urgent",
-        insight: "Battery has reached end-of-life. Unexpected shutdowns, swelling risk, and severely reduced runtime are expected. Replace as soon as possible."
+        insight: "Battery has reached end-of-life by all standard metrics. Unexpected shutdowns, potential cell swelling, and severely reduced runtime are expected. Replace the battery as soon as possible."
       });
     }
   }
@@ -103068,26 +103343,26 @@ function generatePredictions(r2) {
   }
   if (s2) {
     const wear = s2.wearLevelPct ?? s2.healthPct;
-    const free = s2.freeSpacePct ?? 100;
+    const free = s2.freeSpacePct;
     const realloc = s2.reallocatedSectors ?? 0;
     if (realloc > 0) {
       predictions.push({
         component: "Storage",
-        currentValue: `${realloc} reallocated sectors \xB7 ${free.toFixed(0)}% free`,
+        currentValue: `${realloc} reallocated sector${realloc > 1 ? "s" : ""}${free != null ? ` \xB7 ${free.toFixed(0)}% free` : ""}`,
         projectedTimeline: "Unpredictable \u2014 failure possible at any time",
         severity: "urgent",
-        insight: "Reallocated sectors indicate physical media damage. Drive failure becomes increasingly likely. Back up all data immediately and plan for drive replacement."
+        insight: "Reallocated sectors indicate physical media damage. Drive failure is unpredictable from this point. Back up all data immediately and replace the drive."
       });
     } else if (wear != null && wear < 60) {
       const monthsLeft = Math.max(2, Math.round(wear * 0.3));
       predictions.push({
         component: "Storage",
-        currentValue: `${wear}% endurance remaining \xB7 ${free.toFixed(0)}% free`,
+        currentValue: `${wear}% endurance remaining${free != null ? ` \xB7 ${free.toFixed(0)}% free` : ""}`,
         projectedTimeline: `${monthsLeft}\u2013${monthsLeft + 6} months of write endurance remaining`,
         severity: "declining",
         insight: `SSD write endurance is below 60%. At current write patterns, the drive will reach its rated endurance limit within ${monthsLeft}\u2013${monthsLeft + 6} months. Performance may degrade before then.`
       });
-    } else if (free < 10) {
+    } else if (free != null && free < 10) {
       predictions.push({
         component: "Storage",
         currentValue: `${free.toFixed(1)}% free space`,
@@ -103098,10 +103373,10 @@ function generatePredictions(r2) {
     } else {
       predictions.push({
         component: "Storage",
-        currentValue: wear != null ? `${wear}% endurance remaining \xB7 ${free.toFixed(0)}% free` : `${free.toFixed(0)}% free`,
+        currentValue: wear != null ? `${wear}% endurance remaining${free != null ? ` \xB7 ${free.toFixed(0)}% free` : " \xB7 free space unknown"}` : free != null ? `${free.toFixed(0)}% free` : "Data limited",
         projectedTimeline: "No storage concerns for 12+ months",
         severity: "stable",
-        insight: "Storage health and free space are both in good condition. No action needed."
+        insight: "Storage health and free space are in good condition. No action needed."
       });
     }
   }
@@ -103324,6 +103599,85 @@ function computeHabitScore(answers) {
   }, 0);
   const maxPossible = HABIT_QUESTIONS.length * 10;
   return Math.round(total / maxPossible * 100);
+}
+
+// ../../lib/report-engine/src/plausibilityGuard.ts
+function validatePlausibility(report) {
+  const errors = [];
+  if (report.battery) {
+    const b3 = report.battery;
+    if (b3.health != null && (b3.health < 0 || b3.health > 100)) {
+      errors.push(`battery.health must be between 0 and 100 (got ${b3.health})`);
+    }
+    if (b3.batteryTempC != null && (b3.batteryTempC < -20 || b3.batteryTempC > 100)) {
+      errors.push(`battery.batteryTempC must be between -20 and 100 (got ${b3.batteryTempC})`);
+    }
+    if (b3.batteryVoltageV != null && (b3.batteryVoltageV < 0 || b3.batteryVoltageV > 30)) {
+      errors.push(`battery.batteryVoltageV must be between 0 and 30 (got ${b3.batteryVoltageV})`);
+    }
+    if (b3.cycleCount != null && b3.cycleCount < 0) {
+      errors.push(`battery.cycleCount cannot be negative (got ${b3.cycleCount})`);
+    }
+  }
+  if (report.thermals) {
+    const t2 = report.thermals;
+    if (t2.maxTempC != null && (t2.maxTempC < -20 || t2.maxTempC > 125)) {
+      errors.push(`thermals.maxTempC must be between -20 and 125 (got ${t2.maxTempC})`);
+    }
+    if (t2.throttleEvents30min != null && t2.throttleEvents30min < 0) {
+      errors.push(`thermals.throttleEvents30min cannot be negative (got ${t2.throttleEvents30min})`);
+    }
+    if (t2.zones) {
+      for (let i = 0; i < t2.zones.length; i++) {
+        const zone = t2.zones[i];
+        if (zone.tempC < -20 || zone.tempC > 125) {
+          errors.push(`thermals.zones[${i}].tempC must be between -20 and 125 (got ${zone.tempC})`);
+        }
+      }
+    }
+  }
+  if (report.storage) {
+    for (let i = 0; i < report.storage.length; i++) {
+      const s2 = report.storage[i];
+      if (s2.healthPct != null && (s2.healthPct < 0 || s2.healthPct > 100)) {
+        errors.push(`storage[${i}].healthPct must be between 0 and 100 (got ${s2.healthPct})`);
+      }
+      if (s2.wearLevelPct != null && (s2.wearLevelPct < 0 || s2.wearLevelPct > 100)) {
+        errors.push(`storage[${i}].wearLevelPct must be between 0 and 100 (got ${s2.wearLevelPct})`);
+      }
+      if (s2.freeSpacePct != null && (s2.freeSpacePct < 0 || s2.freeSpacePct > 100)) {
+        errors.push(`storage[${i}].freeSpacePct must be between 0 and 100 (got ${s2.freeSpacePct})`);
+      }
+      if (s2.reallocatedSectors != null && s2.reallocatedSectors < 0) {
+        errors.push(`storage[${i}].reallocatedSectors cannot be negative (got ${s2.reallocatedSectors})`);
+      }
+    }
+  }
+  if (report.memory) {
+    const m = report.memory;
+    if (m.totalGB != null && m.totalGB <= 0) {
+      errors.push(`memory.totalGB must be greater than 0 (got ${m.totalGB})`);
+    }
+    if (m.usedPct != null && (m.usedPct < 0 || m.usedPct > 100)) {
+      errors.push(`memory.usedPct must be between 0 and 100 (got ${m.usedPct})`);
+    }
+  }
+  if (report.cpu) {
+    const c2 = report.cpu;
+    if (c2.cores != null && c2.cores <= 0) {
+      errors.push(`cpu.cores must be greater than 0 (got ${c2.cores})`);
+    }
+    if (c2.threads != null && c2.threads <= 0) {
+      errors.push(`cpu.threads must be greater than 0 (got ${c2.threads})`);
+    }
+    if (c2.avgLoadPct != null && (c2.avgLoadPct < 0 || c2.avgLoadPct > 100)) {
+      errors.push(`cpu.avgLoadPct must be between 0 and 100 (got ${c2.avgLoadPct})`);
+    }
+  }
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 }
 
 // ../../node_modules/.pnpm/@noble+hashes@2.2.0/node_modules/@noble/hashes/_u64.js
@@ -110638,6 +110992,23 @@ var ReportsService = class {
     if (!reportParsed.success) {
       const first = reportParsed.error.issues[0];
       throw new Error(`Invalid report data: ${first.path.join(".")}: ${first.message}`);
+    }
+    const plausibility = validatePlausibility(reportParsed.data);
+    if (!plausibility.valid) {
+      const failureReason = plausibility.errors.join("; ");
+      const suspectId = createId();
+      const ipHash2 = await sha256hex(ip);
+      try {
+        await db.insert(suspectPayloadsTable).values({
+          id: suspectId,
+          rawJson,
+          failureReason,
+          ipHash: ipHash2
+        });
+      } catch (dbErr) {
+        logger2.error({ err: dbErr }, "Failed to write to suspect_payloads table");
+      }
+      throw new Error(`Invalid report data (quarantined): ${failureReason}`);
     }
     const ipHash = await sha256hex(ip);
     const [perMinute, perDay] = await Promise.all([

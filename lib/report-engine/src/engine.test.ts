@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { expectedBatteryHealth, expectedMemoryPenalty, generateReport, combinedScore, ALGORITHM_VERSION } from './engine';
+import { validatePlausibility } from './plausibilityGuard';
 import type { SentinelReport } from './schema';
 
 describe('Scoring Engine Algorithms', () => {
@@ -317,5 +318,61 @@ describe('Scoring Engine Algorithms', () => {
     });
 
   });
+
+  describe('PlausibilityGuard', () => {
+    it('should pass healthy report with sane physical bounds', () => {
+      const report: SentinelReport = {
+        sentinelSchema: 1,
+        system: { manufacturer: 'TestCorp', model: 'TestBook Pro', hostname: 'test-pc', os: 'Windows 11' },
+        generatedAt: new Date().toISOString(),
+        battery: { health: 95, cycleCount: 120, batteryTempC: 35, batteryVoltageV: 12.1 },
+        thermals: { maxTempC: 50, zones: [{ name: 'CPU', tempC: 45 }], throttleEvents30min: 0 },
+        storage: [{ model: 'Test SSD', healthPct: 98, wearLevelPct: 98, freeSpacePct: 40, reallocatedSectors: 0 }],
+        memory: { totalGB: 16, usedPct: 60 },
+        cpu: { cores: 8, threads: 16, avgLoadPct: 30 }
+      };
+
+      const result = validatePlausibility(report);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should catch battery health or temperature outside sane physical bounds', () => {
+      const report: SentinelReport = {
+        sentinelSchema: 1,
+        system: { manufacturer: 'TestCorp', model: 'TestBook Pro', hostname: 'test-pc' },
+        generatedAt: new Date().toISOString(),
+        battery: { health: 150, batteryTempC: 110, batteryVoltageV: 35, cycleCount: -1 }
+      };
+
+      const result = validatePlausibility(report);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('battery.health must be between 0 and 100 (got 150)');
+      expect(result.errors).toContain('battery.batteryTempC must be between -20 and 100 (got 110)');
+      expect(result.errors).toContain('battery.batteryVoltageV must be between 0 and 30 (got 35)');
+      expect(result.errors).toContain('battery.cycleCount cannot be negative (got -1)');
+    });
+
+    it('should catch thermals and storage properties outside physical bounds', () => {
+      const report: SentinelReport = {
+        sentinelSchema: 1,
+        system: { manufacturer: 'TestCorp', model: 'TestBook Pro', hostname: 'test-pc' },
+        generatedAt: new Date().toISOString(),
+        thermals: { maxTempC: 150, throttleEvents30min: -5, zones: [{ name: 'GPU', tempC: -50 }] },
+        storage: [{ healthPct: -10, wearLevelPct: 110, freeSpacePct: 150, reallocatedSectors: -5 }]
+      };
+
+      const result = validatePlausibility(report);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('thermals.maxTempC must be between -20 and 125 (got 150)');
+      expect(result.errors).toContain('thermals.throttleEvents30min cannot be negative (got -5)');
+      expect(result.errors).toContain('thermals.zones[0].tempC must be between -20 and 125 (got -50)');
+      expect(result.errors).toContain('storage[0].healthPct must be between 0 and 100 (got -10)');
+      expect(result.errors).toContain('storage[0].wearLevelPct must be between 0 and 100 (got 110)');
+      expect(result.errors).toContain('storage[0].freeSpacePct must be between 0 and 100 (got 150)');
+      expect(result.errors).toContain('storage[0].reallocatedSectors cannot be negative (got -5)');
+    });
+  });
 });
+
 

@@ -1,5 +1,5 @@
-import { db, reportsTable, reportPayloadsTable, idempotencyKeysTable, reportHabitAnswersTable, devicesTable, usersTable } from "@workspace/db";
-import { SentinelReportSchema, generateReport, computeHabitScore, combinedScore } from "@workspace/report-engine";
+import { db, reportsTable, reportPayloadsTable, idempotencyKeysTable, reportHabitAnswersTable, devicesTable, usersTable, suspectPayloadsTable } from "@workspace/db";
+import { SentinelReportSchema, generateReport, computeHabitScore, combinedScore, validatePlausibility } from "@workspace/report-engine";
 import { eq, and, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import crypto from "node:crypto";
@@ -44,6 +44,25 @@ export class ReportsService {
     if (!reportParsed.success) {
       const first = reportParsed.error.issues[0];
       throw new Error(`Invalid report data: ${first.path.join(".")}: ${first.message}`);
+    }
+
+    // Stage 2: PlausibilityGuard bounds checking & quarantine
+    const plausibility = validatePlausibility(reportParsed.data);
+    if (!plausibility.valid) {
+      const failureReason = plausibility.errors.join("; ");
+      const suspectId = createId();
+      const ipHash = await sha256hex(ip);
+      try {
+        await db.insert(suspectPayloadsTable).values({
+          id: suspectId,
+          rawJson: rawJson as any,
+          failureReason,
+          ipHash,
+        });
+      } catch (dbErr) {
+        logger.error({ err: dbErr }, "Failed to write to suspect_payloads table");
+      }
+      throw new Error(`Invalid report data (quarantined): ${failureReason}`);
     }
 
     // 3. Rate Limiting
