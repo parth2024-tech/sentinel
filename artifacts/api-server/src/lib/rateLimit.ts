@@ -39,7 +39,7 @@ const CLEANUP_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 async function cleanupExpiredRateLimits(): Promise<void> {
   try {
     const cutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
-    const result = await db
+    await db
       .delete(rateLimitsTable)
       .where(lt(rateLimitsTable.windowStart, cutoff));
     logger.debug("rate_limit_cleanup_complete");

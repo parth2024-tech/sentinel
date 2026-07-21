@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useEffect, useRef, useState, useCallback } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { type Response } from "express";
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { sql, isNull, gte, and } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,12 +40,10 @@ const MAX_FEED_SIZE = 50;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: NodePgDatabase<any> | null = null;
-let _reportsTable: unknown = null;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function initLiveFeed(db: NodePgDatabase<any>, reportsTable: unknown) {
+export function initLiveFeed(db: NodePgDatabase<any>) {
   _db = db;
-  _reportsTable = reportsTable;
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────

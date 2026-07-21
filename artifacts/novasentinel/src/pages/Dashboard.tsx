@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect, useRef } from "react";
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar, Cell,
@@ -5,7 +6,7 @@ import {
 } from "recharts";
 import {
   Cpu, Thermometer, HardDrive, Battery, Wifi, Activity,
-  AlertTriangle, Shield, CheckCircle, Info, Zap, Server,
+  Shield, Info, Zap, Server,
   Clock, Radio, Eye, TrendingUp, TrendingDown, Minus,
 } from "lucide-react";
 

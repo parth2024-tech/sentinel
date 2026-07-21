@@ -6,7 +6,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'native/**', 'artifacts/mockup-sandbox/**'],
+    ignores: ['**/dist/**', '**/node_modules/**', 'native/**', 'artifacts/mockup-sandbox/**', '**/.vercel/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db, reportsTable, reportPayloadsTable, idempotencyKeysTable, reportHabitAnswersTable, devicesTable, usersTable, suspectPayloadsTable } from "@workspace/db";
 import { SentinelReportSchema, generateReport, computeHabitScore, combinedScore, validatePlausibility } from "@workspace/report-engine";
 import { eq, and, isNull } from "drizzle-orm";

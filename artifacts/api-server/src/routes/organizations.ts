@@ -60,7 +60,7 @@ router.post("/:orgId/checkout-session", async (req, res) => {
     return;
   }
 
-  const { priceId, successUrl, cancelUrl } = parsed.data;
+  const { successUrl } = parsed.data;
   const { orgId } = req.params;
 
   try {

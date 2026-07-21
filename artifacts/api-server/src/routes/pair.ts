@@ -1,9 +1,9 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
-import { db, pairSessionsTable, reportsTable } from "@workspace/db";
-import { SentinelReportSchema, generateReport } from "@workspace/report-engine";
-import { eq, lt } from "drizzle-orm";
-import { newPairCode, newReportId, newClaimToken, sha256hex } from "../lib/ids";
+import { db, pairSessionsTable } from "@workspace/db";
+import { SentinelReportSchema } from "@workspace/report-engine";
+import { eq } from "drizzle-orm";
+import { newPairCode, sha256hex } from "../lib/ids";
 import { ReportsService } from "../services/reports.service";
 import { consumeRateLimit } from "../lib/rateLimit";
 
@@ -192,8 +192,9 @@ router.post("/push", async (req, res) => {
 
     res.status(201).json({ ok: true, reportId, claimToken });
     return;
-  } catch (error: any) {
-    req.log.error({ err: error }, "Failed to create pair report");
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    req.log.error({ err }, "Failed to create pair report");
     res.status(500).json({ error: "Failed to create report" });
   }
 

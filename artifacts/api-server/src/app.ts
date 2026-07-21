@@ -84,6 +84,7 @@ app.use("/api", router);
 // ── Global error handler ──────────────────────────────────────────────────────
 // Must be 4-argument signature for Express to treat it as error handler.
 // Catches unhandled async errors and prevents stack trace leaks in production.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err, url: req.url, method: req.method }, "unhandled_error");
   if (res.headersSent) return;

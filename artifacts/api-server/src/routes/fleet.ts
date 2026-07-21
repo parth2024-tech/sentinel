@@ -34,11 +34,13 @@ router.get("/dashboard", async (req, res) => {
 
     let totalScore = 0;
     const componentSums: Record<string, { sum: number; count: number }> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const findingsList: any[] = [];
     const timeSeries = [];
 
     for (const report of recentReports) {
       const result = report.resultJson as unknown as ReportResult;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const raw = report.rawJson as any;
       if (!result) continue;
 

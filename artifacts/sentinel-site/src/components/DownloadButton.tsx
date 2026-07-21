@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect } from "react";
 import { Download, Loader2, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";

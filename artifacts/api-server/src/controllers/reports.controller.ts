@@ -48,19 +48,20 @@ const authHeader = req.headers["authorization"];
     try {
       const result = await ReportsService.createReport(parsed.data, ip, idempotencyKey, deviceToken, req.log);
       res.status(result.deduplicated ? 200 : 201).json(result);
-    } catch (err: any) {
-      if (err.message === "Invalid device token") {
-        res.status(401).json({ error: err.message });
-      } else if (err.message.startsWith("UPGRADE_REQUIRED")) {
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === "Invalid device token") {
+        res.status(401).json({ error: error.message });
+      } else if (error.message.startsWith("UPGRADE_REQUIRED")) {
         res.status(426).json({
           error: "Upgrade Required",
-          message: err.message.replace("UPGRADE_REQUIRED: ", ""),
+          message: error.message.replace("UPGRADE_REQUIRED: ", ""),
           minimumVersion: 1,
         });
-      } else if (err.message.startsWith("Invalid report data") || err.message === "Rate limit exceeded") {
-        res.status(422).json({ error: err.message });
+      } else if (error.message.startsWith("Invalid report data") || error.message === "Rate limit exceeded") {
+        res.status(422).json({ error: error.message });
       } else {
-        req.log.error({ err }, "Failed to create report");
+        req.log.error({ err: error }, "Failed to create report");
         res.status(500).json({ error: "Failed to process report" });
       }
     }
@@ -82,9 +83,10 @@ const authHeader = req.headers["authorization"];
     try {
       const result = await ReportsService.claimReport(id, parsed.data.claimToken, parsed.data.email, req.log);
       res.json(result);
-    } catch (err: any) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
-      else if (err.message === "Invalid claim token") res.status(403).json({ error: err.message });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === "Report not found") res.status(404).json({ error: error.message });
+      else if (error.message === "Invalid claim token") res.status(403).json({ error: error.message });
       else res.status(500).json({ error: "Failed to claim report" });
     }
   }
@@ -105,9 +107,10 @@ const authHeader = req.headers["authorization"];
     try {
       const result = await ReportsService.submitHabitAnswers(id, parsed.data.claimToken, parsed.data.habitAnswers, req.log);
       res.json(result);
-    } catch (err: any) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
-      else if (err.message === "Invalid claim token") res.status(403).json({ error: err.message });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === "Report not found") res.status(404).json({ error: error.message });
+      else if (error.message === "Invalid claim token") res.status(403).json({ error: error.message });
       else res.status(500).json({ error: "Failed to submit habit answers" });
     }
   }
@@ -122,8 +125,9 @@ const authHeader = req.headers["authorization"];
     try {
       const result = await ReportsService.getReport(id);
       res.json(result);
-    } catch (err: any) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === "Report not found") res.status(404).json({ error: error.message });
       else res.status(500).json({ error: "Failed to get report" });
     }
   }
@@ -144,9 +148,10 @@ const authHeader = req.headers["authorization"];
     try {
       const shareToken = await ReportsService.generateShareToken(id, parsed.data.claimToken, req.log);
       res.json({ shareToken });
-    } catch (err: any) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
-      else if (err.message === "Invalid claim token") res.status(403).json({ error: err.message });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === "Report not found") res.status(404).json({ error: error.message });
+      else if (error.message === "Invalid claim token") res.status(403).json({ error: error.message });
       else res.status(500).json({ error: "Failed to share report" });
     }
   }
@@ -161,8 +166,9 @@ const authHeader = req.headers["authorization"];
     try {
       const result = await ReportsService.getSharedReport(shareToken);
       res.json(result);
-    } catch (err: any) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.message === "Report not found") res.status(404).json({ error: error.message });
       else res.status(500).json({ error: "Failed to get shared report" });
     }
   }

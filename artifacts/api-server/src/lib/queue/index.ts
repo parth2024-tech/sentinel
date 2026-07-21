@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PgBoss } from "pg-boss";
 import { logger } from "../logger";
-import { pool } from "@workspace/db";
 import { isResendConfigured } from "../email/config";
 import { buildReportClaimedEmail } from "../email/templates/reportClaimed";
 import { sendTransactionalEmail } from "../email/resendMailer";
@@ -18,7 +18,7 @@ export async function initQueue() {
 
   boss = new PgBoss(process.env.DATABASE_URL);
 
-  boss.on("error", (error: any) => logger.error({ error }, "pg-boss error"));
+  boss.on("error", (error: unknown) => logger.error({ error }, "pg-boss error"));
 
   await boss.start();
   logger.info("Background queue started successfully");

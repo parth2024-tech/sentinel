@@ -4,7 +4,7 @@ import { getGithubReleaseRepo, getPublicSiteOrigin } from "../githubReleaseRepo.
 const router = Router();
 
 // In-memory cache to avoid hammering GitHub API on every agent check-in
-let versionCache: { data: any; fetchedAt: number } | null = null;
+let versionCache: { data: unknown; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 router.get("/", async (_req: Request, res: Response) => {

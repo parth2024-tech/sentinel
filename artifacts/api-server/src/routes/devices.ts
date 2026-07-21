@@ -77,7 +77,7 @@ router.post("/claim", async (req, res) => {
     return;
   }
 
-  const { pairToken, email } = parsed.data;
+  const { pairToken } = parsed.data;
   const now = new Date();
 
   const rows = await db

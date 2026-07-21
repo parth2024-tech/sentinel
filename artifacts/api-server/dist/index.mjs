@@ -105457,7 +105457,7 @@ var CLEANUP_INTERVAL_MS = 30 * 60 * 1e3;
 async function cleanupExpiredRateLimits() {
   try {
     const cutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1e3);
-    const result = await db.delete(rateLimitsTable).where(lt(rateLimitsTable.windowStart, cutoff));
+    await db.delete(rateLimitsTable).where(lt(rateLimitsTable.windowStart, cutoff));
     logger.debug("rate_limit_cleanup_complete");
   } catch (err) {
     logger.error({ err }, "rate_limit_cleanup_failed");
@@ -110783,10 +110783,8 @@ var STATS_TTL_MS = 3e4;
 var recentEvents = [];
 var MAX_FEED_SIZE = 50;
 var _db = null;
-var _reportsTable = null;
-function initLiveFeed(db2, reportsTable3) {
+function initLiveFeed(db2) {
   _db = db2;
-  _reportsTable = reportsTable3;
 }
 function normalizeOs(raw) {
   if (!raw) return "";
@@ -111249,18 +111247,19 @@ var ReportsController = class {
       const result = await ReportsService.createReport(parsed.data, ip, idempotencyKey, deviceToken, req.log);
       res.status(result.deduplicated ? 200 : 201).json(result);
     } catch (err) {
-      if (err.message === "Invalid device token") {
-        res.status(401).json({ error: err.message });
-      } else if (err.message.startsWith("UPGRADE_REQUIRED")) {
+      const error40 = err instanceof Error ? err : new Error(String(err));
+      if (error40.message === "Invalid device token") {
+        res.status(401).json({ error: error40.message });
+      } else if (error40.message.startsWith("UPGRADE_REQUIRED")) {
         res.status(426).json({
           error: "Upgrade Required",
-          message: err.message.replace("UPGRADE_REQUIRED: ", ""),
+          message: error40.message.replace("UPGRADE_REQUIRED: ", ""),
           minimumVersion: 1
         });
-      } else if (err.message.startsWith("Invalid report data") || err.message === "Rate limit exceeded") {
-        res.status(422).json({ error: err.message });
+      } else if (error40.message.startsWith("Invalid report data") || error40.message === "Rate limit exceeded") {
+        res.status(422).json({ error: error40.message });
       } else {
-        req.log.error({ err }, "Failed to create report");
+        req.log.error({ err: error40 }, "Failed to create report");
         res.status(500).json({ error: "Failed to process report" });
       }
     }
@@ -111280,8 +111279,9 @@ var ReportsController = class {
       const result = await ReportsService.claimReport(id, parsed.data.claimToken, parsed.data.email, req.log);
       res.json(result);
     } catch (err) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
-      else if (err.message === "Invalid claim token") res.status(403).json({ error: err.message });
+      const error40 = err instanceof Error ? err : new Error(String(err));
+      if (error40.message === "Report not found") res.status(404).json({ error: error40.message });
+      else if (error40.message === "Invalid claim token") res.status(403).json({ error: error40.message });
       else res.status(500).json({ error: "Failed to claim report" });
     }
   }
@@ -111300,8 +111300,9 @@ var ReportsController = class {
       const result = await ReportsService.submitHabitAnswers(id, parsed.data.claimToken, parsed.data.habitAnswers, req.log);
       res.json(result);
     } catch (err) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
-      else if (err.message === "Invalid claim token") res.status(403).json({ error: err.message });
+      const error40 = err instanceof Error ? err : new Error(String(err));
+      if (error40.message === "Report not found") res.status(404).json({ error: error40.message });
+      else if (error40.message === "Invalid claim token") res.status(403).json({ error: error40.message });
       else res.status(500).json({ error: "Failed to submit habit answers" });
     }
   }
@@ -111315,7 +111316,8 @@ var ReportsController = class {
       const result = await ReportsService.getReport(id);
       res.json(result);
     } catch (err) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
+      const error40 = err instanceof Error ? err : new Error(String(err));
+      if (error40.message === "Report not found") res.status(404).json({ error: error40.message });
       else res.status(500).json({ error: "Failed to get report" });
     }
   }
@@ -111334,8 +111336,9 @@ var ReportsController = class {
       const shareToken = await ReportsService.generateShareToken(id, parsed.data.claimToken, req.log);
       res.json({ shareToken });
     } catch (err) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
-      else if (err.message === "Invalid claim token") res.status(403).json({ error: err.message });
+      const error40 = err instanceof Error ? err : new Error(String(err));
+      if (error40.message === "Report not found") res.status(404).json({ error: error40.message });
+      else if (error40.message === "Invalid claim token") res.status(403).json({ error: error40.message });
       else res.status(500).json({ error: "Failed to share report" });
     }
   }
@@ -111349,7 +111352,8 @@ var ReportsController = class {
       const result = await ReportsService.getSharedReport(shareToken);
       res.json(result);
     } catch (err) {
-      if (err.message === "Report not found") res.status(404).json({ error: err.message });
+      const error40 = err instanceof Error ? err : new Error(String(err));
+      if (error40.message === "Report not found") res.status(404).json({ error: error40.message });
       else res.status(500).json({ error: "Failed to get shared report" });
     }
   }
@@ -111608,7 +111612,7 @@ router5.post("/claim", async (req, res) => {
     res.status(422).json({ error: "Invalid request", details: parsed.error.message });
     return;
   }
-  const { pairToken, email: email3 } = parsed.data;
+  const { pairToken } = parsed.data;
   const now = /* @__PURE__ */ new Date();
   const rows = await db.select().from(devicesTable).where(
     and(
@@ -111768,7 +111772,8 @@ router6.post("/push", async (req, res) => {
     res.status(201).json({ ok: true, reportId, claimToken });
     return;
   } catch (error40) {
-    req.log.error({ err: error40 }, "Failed to create pair report");
+    const err = error40 instanceof Error ? error40 : new Error(String(error40));
+    req.log.error({ err }, "Failed to create pair report");
     res.status(500).json({ error: "Failed to create report" });
   }
   res.status(500).json({ error: "Failed to generate unique report ID" });
@@ -112022,7 +112027,7 @@ router9.post("/:orgId/checkout-session", async (req, res) => {
     res.status(422).json({ error: "Validation failed", details: parsed.error.message });
     return;
   }
-  const { priceId, successUrl, cancelUrl } = parsed.data;
+  const { successUrl } = parsed.data;
   const { orgId } = req.params;
   try {
     const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, orgId)).limit(1);
