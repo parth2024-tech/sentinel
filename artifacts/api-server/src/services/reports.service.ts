@@ -25,6 +25,13 @@ export class ReportsService {
   ) {
     const { rawJson, habitAnswers, legacy } = payload;
 
+    // Schema Version Negotiation
+    const version = Number(rawJson.sentinelSchema || rawJson.schemaVersion);
+    const MIN_SUPPORTED_VERSION = 1;
+    if (!version || version < MIN_SUPPORTED_VERSION) {
+      throw new Error(`UPGRADE_REQUIRED: Agent schema version ${version || "unknown"} is no longer supported. Minimum required: ${MIN_SUPPORTED_VERSION}`);
+    }
+
     // 1. Device Token Auth
     let agentDeviceOrgId: string | null = null;
     if (deviceToken && deviceToken.length >= 10) {
@@ -75,32 +82,40 @@ export class ReportsService {
       throw new Error("Rate limit exceeded");
     }
 
-    // 4. Idempotency Check
-    if (idempotencyKey) {
-      const existing = await db
+    // 4. Idempotency Check (Computed as HMAC-SHA256 of device, timestamp, and payload hash)
+    const deviceId = rawJson.system?.hostname || rawJson.system?.model || "unknown-device";
+    const scanTimestamp = rawJson.generatedAt || "unknown-timestamp";
+    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(rawJson)).digest("hex");
+    const serverSecret = process.env.SERVER_SECRET || "sentinel-default-server-secret-key-32-chars-long";
+    
+    const computedIdempotencyKey = crypto
+      .createHmac("sha256", serverSecret)
+      .update(`${deviceId}||${scanTimestamp}||${payloadHash}`)
+      .digest("hex");
+
+    const existing = await db
+      .select()
+      .from(idempotencyKeysTable)
+      .where(eq(idempotencyKeysTable.key, computedIdempotencyKey))
+      .limit(1);
+    if (existing.length > 0) {
+      const report = await db
         .select()
-        .from(idempotencyKeysTable)
-        .where(eq(idempotencyKeysTable.key, idempotencyKey))
+        .from(reportsTable)
+        .where(eq(reportsTable.id, existing[0].reportId))
         .limit(1);
-      if (existing.length > 0) {
-        const report = await db
+      if (report.length > 0) {
+        const payloadRow = await db
           .select()
-          .from(reportsTable)
-          .where(eq(reportsTable.id, existing[0].reportId))
+          .from(reportPayloadsTable)
+          .where(eq(reportPayloadsTable.reportId, report[0].id))
           .limit(1);
-        if (report.length > 0) {
-          const payloadRow = await db
-            .select()
-            .from(reportPayloadsTable)
-            .where(eq(reportPayloadsTable.reportId, report[0].id))
-            .limit(1);
-          return {
-            id: report[0].id,
-            claimToken: report[0].claimToken,
-            result: payloadRow[0]?.resultJson,
-            deduplicated: true,
-          };
-        }
+        return {
+          id: report[0].id,
+          claimToken: report[0].claimToken,
+          result: payloadRow[0]?.resultJson,
+          deduplicated: true,
+        };
       }
     }
 
@@ -137,11 +152,9 @@ export class ReportsService {
         }).onConflictDoNothing();
       }
 
-      if (idempotencyKey) {
-        await tx.insert(idempotencyKeysTable)
-          .values({ key: idempotencyKey, reportId: id })
-          .onConflictDoNothing();
-      }
+      await tx.insert(idempotencyKeysTable)
+        .values({ key: computedIdempotencyKey, reportId: id })
+        .onConflictDoNothing();
     });
 
     logger.info({ reportId: id, hasHabit: !!habitAnswers }, "report_created");

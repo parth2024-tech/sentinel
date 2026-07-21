@@ -10,6 +10,7 @@ const EnvSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
   ALLOWED_ORIGINS: z.string().optional(),
+  SERVER_SECRET: z.string().default("sentinel-default-server-secret-key-32-chars-long"),
 });
 
 const env = EnvSchema.parse(process.env); // throws on startup if invalid

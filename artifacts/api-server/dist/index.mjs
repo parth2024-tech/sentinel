@@ -110980,6 +110980,11 @@ var ReportsService = class {
    */
   static async createReport(payload, ip, idempotencyKey, deviceToken, logger2 = defaultLogger) {
     const { rawJson, habitAnswers, legacy } = payload;
+    const version4 = Number(rawJson.sentinelSchema || rawJson.schemaVersion);
+    const MIN_SUPPORTED_VERSION = 1;
+    if (!version4 || version4 < MIN_SUPPORTED_VERSION) {
+      throw new Error(`UPGRADE_REQUIRED: Agent schema version ${version4 || "unknown"} is no longer supported. Minimum required: ${MIN_SUPPORTED_VERSION}`);
+    }
     let agentDeviceOrgId = null;
     if (deviceToken && deviceToken.length >= 10) {
       const deviceRows = await db.select().from(devicesTable).where(eq(devicesTable.deviceToken, deviceToken)).limit(1);
@@ -111018,19 +111023,22 @@ var ReportsService = class {
     if (!perMinute || !perDay) {
       throw new Error("Rate limit exceeded");
     }
-    if (idempotencyKey) {
-      const existing = await db.select().from(idempotencyKeysTable).where(eq(idempotencyKeysTable.key, idempotencyKey)).limit(1);
-      if (existing.length > 0) {
-        const report = await db.select().from(reportsTable).where(eq(reportsTable.id, existing[0].reportId)).limit(1);
-        if (report.length > 0) {
-          const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, report[0].id)).limit(1);
-          return {
-            id: report[0].id,
-            claimToken: report[0].claimToken,
-            result: payloadRow[0]?.resultJson,
-            deduplicated: true
-          };
-        }
+    const deviceId = rawJson.system?.hostname || rawJson.system?.model || "unknown-device";
+    const scanTimestamp = rawJson.generatedAt || "unknown-timestamp";
+    const payloadHash = crypto2.createHash("sha256").update(JSON.stringify(rawJson)).digest("hex");
+    const serverSecret = process.env.SERVER_SECRET || "sentinel-default-server-secret-key-32-chars-long";
+    const computedIdempotencyKey = crypto2.createHmac("sha256", serverSecret).update(`${deviceId}||${scanTimestamp}||${payloadHash}`).digest("hex");
+    const existing = await db.select().from(idempotencyKeysTable).where(eq(idempotencyKeysTable.key, computedIdempotencyKey)).limit(1);
+    if (existing.length > 0) {
+      const report = await db.select().from(reportsTable).where(eq(reportsTable.id, existing[0].reportId)).limit(1);
+      if (report.length > 0) {
+        const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, report[0].id)).limit(1);
+        return {
+          id: report[0].id,
+          claimToken: report[0].claimToken,
+          result: payloadRow[0]?.resultJson,
+          deduplicated: true
+        };
       }
     }
     const resultJson = generateReport(reportParsed.data);
@@ -111059,9 +111067,7 @@ var ReportsService = class {
           combinedScore: combined
         }).onConflictDoNothing();
       }
-      if (idempotencyKey) {
-        await tx.insert(idempotencyKeysTable).values({ key: idempotencyKey, reportId: id }).onConflictDoNothing();
-      }
+      await tx.insert(idempotencyKeysTable).values({ key: computedIdempotencyKey, reportId: id }).onConflictDoNothing();
     });
     logger2.info({ reportId: id, hasHabit: !!habitAnswers }, "report_created");
     const raw = reportParsed.data;
@@ -111245,6 +111251,12 @@ var ReportsController = class {
     } catch (err) {
       if (err.message === "Invalid device token") {
         res.status(401).json({ error: err.message });
+      } else if (err.message.startsWith("UPGRADE_REQUIRED")) {
+        res.status(426).json({
+          error: "Upgrade Required",
+          message: err.message.replace("UPGRADE_REQUIRED: ", ""),
+          minimumVersion: 1
+        });
       } else if (err.message.startsWith("Invalid report data") || err.message === "Rate limit exceeded") {
         res.status(422).json({ error: err.message });
       } else {
@@ -129587,7 +129599,8 @@ var EnvSchema = external_exports.object({
   NODE_ENV: external_exports.enum(["development", "production", "test"]).default("development"),
   RESEND_API_KEY: external_exports.string().optional(),
   RESEND_FROM_EMAIL: external_exports.string().email().optional(),
-  ALLOWED_ORIGINS: external_exports.string().optional()
+  ALLOWED_ORIGINS: external_exports.string().optional(),
+  SERVER_SECRET: external_exports.string().default("sentinel-default-server-secret-key-32-chars-long")
 });
 var env = EnvSchema.parse(process.env);
 var port = env.PORT;

@@ -51,6 +51,12 @@ const authHeader = req.headers["authorization"];
     } catch (err: any) {
       if (err.message === "Invalid device token") {
         res.status(401).json({ error: err.message });
+      } else if (err.message.startsWith("UPGRADE_REQUIRED")) {
+        res.status(426).json({
+          error: "Upgrade Required",
+          message: err.message.replace("UPGRADE_REQUIRED: ", ""),
+          minimumVersion: 1,
+        });
       } else if (err.message.startsWith("Invalid report data") || err.message === "Rate limit exceeded") {
         res.status(422).json({ error: err.message });
       } else {
