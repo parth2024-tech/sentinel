@@ -16,7 +16,7 @@ type FetchState =
   | { phase: "checking" }
   | { phase: "ready"; info: ReleaseInfo }
   | { phase: "downloading" }
-  | { phase: "error"; message: string; releasesUrl?: string }
+  | { phase: "error"; message: string; releasesUrl?: string | undefined }
   | { phase: "unavailable"; message: string };
 
 function formatBytes(bytes: number): string {
@@ -102,7 +102,7 @@ export default function DownloadButton({ slug, label, recommended, preload = tru
         setState({
           phase: "error",
           message: cleanErrorMessage(err?.message),
-          releasesUrl: err?.releasesUrl,
+          ...(err?.releasesUrl ? { releasesUrl: err.releasesUrl } : {}),
         });
       });
    

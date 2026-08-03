@@ -67,7 +67,8 @@ function seedFeed(): FeedEvent[] {
     while (used.has(idx)) idx = (idx + 1) % EVENT_POOL.length;
     used.add(idx);
     const d = new Date(now.getTime() - (8 - i) * 4500);
-    seeds.push({ id: globalId++, ts: formatTs(d), ...EVENT_POOL[idx] });
+    const item = EVENT_POOL[idx] ?? EVENT_POOL[0]!;
+    seeds.push({ id: globalId++, ts: formatTs(d), ...item });
   }
   return seeds;
 }
@@ -82,10 +83,11 @@ export default function HealthFeed() {
     const interval = setInterval(() => {
       const idx = pickNext(lastIdxRef.current);
       lastIdxRef.current = idx;
+      const item = EVENT_POOL[idx] ?? EVENT_POOL[0]!;
       const e: FeedEvent = {
         id: globalId++,
         ts: formatTs(new Date()),
-        ...EVENT_POOL[idx],
+        ...item,
       };
       setEvents((prev) => [e, ...prev].slice(0, 12));
     }, 3500);

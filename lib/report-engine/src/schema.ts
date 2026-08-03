@@ -97,6 +97,8 @@ export const SentinelReportSchema = z.object({
     os: z.string().nullish(),
     osVersion: z.string().nullish(),
     biosVersion: z.string().nullish(),
+    bootTime: z.string().nullish(),
+    uptimeHours: z.number().nullish(),
   }),
   battery: z
     .object({

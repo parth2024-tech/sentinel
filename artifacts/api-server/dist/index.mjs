@@ -102498,7 +102498,9 @@ var SentinelReportSchema = external_exports.object({
     manufacturer: external_exports.string(),
     os: external_exports.string().nullish(),
     osVersion: external_exports.string().nullish(),
-    biosVersion: external_exports.string().nullish()
+    biosVersion: external_exports.string().nullish(),
+    bootTime: external_exports.string().nullish(),
+    uptimeHours: external_exports.number().nullish()
   }),
   battery: external_exports.object({
     designCapacity: external_exports.number().nullish(),
@@ -111245,7 +111247,13 @@ var ReportsController = class {
     }
     const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
     try {
-      const result = await ReportsService.createReport(parsed.data, ip, idempotencyKey, deviceToken, req.log);
+      const result = await ReportsService.createReport(
+        { rawJson: parsed.data.rawJson, habitAnswers: parsed.data.habitAnswers, legacy: parsed.data.legacy },
+        ip,
+        idempotencyKey,
+        deviceToken,
+        req.log
+      );
       res.status(result.deduplicated ? 200 : 201).json(result);
     } catch (err) {
       const error40 = err instanceof Error ? err : new Error(String(err));
@@ -111626,6 +111634,10 @@ router5.post("/claim", async (req, res) => {
     return;
   }
   const device = rows[0];
+  if (!device) {
+    res.status(404).json({ error: "Invalid or expired pairing token" });
+    return;
+  }
   if (device.claimed) {
     res.json({ deviceId: device.id, claimed: true, alreadyClaimed: true });
     return;
@@ -111647,11 +111659,12 @@ router5.get("/pair-status", async (req, res) => {
       gt(devicesTable.expiresAt, now)
     )
   ).limit(1);
-  if (rows.length === 0) {
+  const foundDevice = rows[0];
+  if (!foundDevice) {
     res.status(404).json({ valid: false });
     return;
   }
-  res.json({ valid: true, claimed: rows[0].claimed });
+  res.json({ valid: true, claimed: foundDevice.claimed });
 });
 var devices_default = router5;
 
@@ -129334,9 +129347,10 @@ router11.get("/dashboard", async (req, res) => {
       totalScore += result.overall || 0;
       if (result.components) {
         for (const comp of result.components) {
-          if (!componentSums[comp.name]) componentSums[comp.name] = { sum: 0, count: 0 };
-          componentSums[comp.name].sum += comp.score;
-          componentSums[comp.name].count += 1;
+          const entry = componentSums[comp.name] ?? { sum: 0, count: 0 };
+          entry.sum += comp.score;
+          entry.count += 1;
+          componentSums[comp.name] = entry;
         }
       }
       if (result.findings) {

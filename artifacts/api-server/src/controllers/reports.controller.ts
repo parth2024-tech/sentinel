@@ -46,7 +46,13 @@ const authHeader = req.headers["authorization"];
     const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
 
     try {
-      const result = await ReportsService.createReport(parsed.data, ip, idempotencyKey, deviceToken, req.log);
+      const result = await ReportsService.createReport(
+        { rawJson: parsed.data.rawJson, habitAnswers: parsed.data.habitAnswers, legacy: parsed.data.legacy },
+        ip,
+        idempotencyKey,
+        deviceToken,
+        req.log
+      );
       res.status(result.deduplicated ? 200 : 201).json(result);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));

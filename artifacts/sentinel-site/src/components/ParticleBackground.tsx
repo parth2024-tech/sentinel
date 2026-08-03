@@ -76,17 +76,21 @@ export default function ParticleBackground() {
 
       // Connect particles
       for (let i = 0; i < particles.length; i++) {
+        const p1 = particles[i];
+        if (!p1) continue;
         for (let j = i; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
+          const p2 = particles[j];
+          if (!p2) continue;
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 120) {
             ctx.beginPath();
             ctx.strokeStyle = `rgba(34, 211, 238, ${0.15 - distance / 800})`;
             ctx.lineWidth = 0.5;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
             ctx.stroke();
           }
         }

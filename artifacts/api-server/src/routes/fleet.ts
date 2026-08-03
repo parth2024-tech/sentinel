@@ -48,9 +48,10 @@ router.get("/dashboard", async (req, res) => {
 
       if (result.components) {
         for (const comp of result.components) {
-          if (!componentSums[comp.name]) componentSums[comp.name] = { sum: 0, count: 0 };
-          componentSums[comp.name].sum += comp.score;
-          componentSums[comp.name].count += 1;
+          const entry = componentSums[comp.name] ?? { sum: 0, count: 0 };
+          entry.sum += comp.score;
+          entry.count += 1;
+          componentSums[comp.name] = entry;
         }
       }
 

@@ -97,6 +97,10 @@ router.post("/claim", async (req, res) => {
   }
 
   const device = rows[0];
+  if (!device) {
+    res.status(404).json({ error: "Invalid or expired pairing token" });
+    return;
+  }
 
   if (device.claimed) {
     res.json({ deviceId: device.id, claimed: true, alreadyClaimed: true });
@@ -137,12 +141,13 @@ router.get("/pair-status", async (req, res) => {
     )
     .limit(1);
 
-  if (rows.length === 0) {
+  const foundDevice = rows[0];
+  if (!foundDevice) {
     res.status(404).json({ valid: false });
     return;
   }
 
-  res.json({ valid: true, claimed: rows[0].claimed });
+  res.json({ valid: true, claimed: foundDevice.claimed });
 });
 
 export default router;
