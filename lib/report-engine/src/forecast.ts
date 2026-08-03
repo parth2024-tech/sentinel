@@ -70,9 +70,10 @@ function linearRegression(xs: number[], ys: number[]): {
 
   let ssXX = 0, ssXY = 0, ssYY = 0;
   for (let i = 0; i < n; i++) {
-    ssXX += (xs[i] - meanX) ** 2;
-    ssXY += (xs[i] - meanX) * (ys[i] - meanY);
-    ssYY += (ys[i] - meanY) ** 2;
+    // Non-null assertions safe: i is bounded by array length
+    ssXX += (xs[i]! - meanX) ** 2;
+    ssXY += (xs[i]! - meanX) * (ys[i]! - meanY);
+    ssYY += (ys[i]! - meanY) ** 2;
   }
 
   const slope = ssXX === 0 ? 0 : ssXY / ssXX;
@@ -81,7 +82,7 @@ function linearRegression(xs: number[], ys: number[]): {
   // Residual std error
   let sse = 0;
   for (let i = 0; i < n; i++) {
-    sse += (ys[i] - (intercept + slope * xs[i])) ** 2;
+    sse += (ys[i]! - (intercept + slope * xs[i]!)) ** 2;
   }
   const stdErr = n > 2 ? Math.sqrt(sse / (n - 2)) / (Math.sqrt(ssXX) || 1) : Infinity;
   const r2 = ssYY === 0 ? 1 : 1 - sse / ssYY;

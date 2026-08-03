@@ -62,6 +62,142 @@ export interface DataQualityWarning {
   excludedFromScoring: boolean;
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// CALIBRATION CONSTANTS (v3)
+// All scoring thresholds live here. Changing a number here is safe — no need to
+// hunt through the code. Each section maps to a hardware subsystem.
+// ──────────────────────────────────────────────────────────────────────────────
+export const SCORE_THRESHOLDS = {
+  // ── Battery ────────────────────────────────────────────────────────────────
+  /** Discharge rate (mW, negative = draining) above which heavy drain is flagged */
+  BATTERY_DRAIN_HEAVY_MW: -8000,
+  /** Discharge rate above which moderate drain is flagged */
+  BATTERY_DRAIN_MODERATE_MW: -5000,
+  /** Gap (points) between expected and actual battery health before gap penalty applies */
+  BATTERY_GAP_PENALTY_THRESHOLD: 10,
+  /** Maximum points the battery gap penalty can subtract */
+  BATTERY_GAP_PENALTY_CAP: 20,
+  /** Cycle counts for progressive cycle-age penalties */
+  BATTERY_CYCLE_PENALTY_HIGH: 900,
+  BATTERY_CYCLE_PENALTY_MED: 700,
+  BATTERY_CYCLE_PENALTY_LOW: 500,
+  /** °C above which battery temperature triggers degradation penalty */
+  BATTERY_TEMP_THRESHOLD_C: 45,
+  /** Voltage (V) below which cell instability penalty applies */
+  BATTERY_VOLTAGE_LOW_V: 9.5,
+
+  // ── Thermals ───────────────────────────────────────────────────────────────
+  /** Peak °C thresholds — maps to score ladder in thermalScore() */
+  THERMAL_SCORE_CRIT_C: 98,
+  THERMAL_SCORE_VERY_HOT_C: 93,
+  THERMAL_SCORE_HOT_C: 88,
+  THERMAL_SCORE_WARM_C: 83,
+  THERMAL_SCORE_ELEVATED_C: 78,
+  THERMAL_SCORE_MILD_C: 72,
+  /** °C — TJ Max for consumer Intel/AMD, used for headroom calculation */
+  THERMAL_TJ_MAX_C: 100,
+  /** °C above which the thermal-battery correlation finding fires */
+  THERMAL_BATTERY_CORRELATION_C: 78,
+  /** °C above which CPU core delta causes a penalty (uneven heatsink contact) */
+  THERMAL_CPU_DELTA_THRESHOLD_C: 15,
+  /** Max CPU core delta penalty (points) */
+  THERMAL_CPU_DELTA_PENALTY_CAP: 15,
+  /** Max temperature to co-apply core delta penalty */
+  THERMAL_CPU_DELTA_MAX_TEMP_C: 65,
+
+  // ── Storage ────────────────────────────────────────────────────────────────
+  /** Power-on hour thresholds for progressive age penalties */
+  STORAGE_POH_HIGH: 50000,
+  STORAGE_POH_MED: 30000,
+  STORAGE_POH_LOW: 20000,
+  /** Free space % thresholds — SSDs need headroom for garbage collection */
+  STORAGE_FREE_CRITICAL_PCT: 5,
+  STORAGE_FREE_LOW_PCT: 10,
+  STORAGE_FREE_WARN_PCT: 15,
+  STORAGE_FREE_CAUTION_PCT: 20,
+  /** Points per reallocated sector penalty, capped */
+  STORAGE_REALLOC_PER_SECTOR_PENALTY: 5,
+  STORAGE_REALLOC_PENALTY_CAP: 40,
+  /** Points per media error, capped */
+  STORAGE_MEDIA_ERROR_PER_ERROR_PENALTY: 5,
+  STORAGE_MEDIA_ERROR_PENALTY_CAP: 30,
+  /** Score cap when wear data is unavailable — avoid inflating unknown drives */
+  STORAGE_UNKNOWN_WEAR_SCORE_CAP: 78,
+
+  // ── Memory ─────────────────────────────────────────────────────────────────
+  /** % above which memory usage begins accruing penalty */
+  MEMORY_PENALTY_START_PCT: 70,
+  /** page faults/s considered healthy Windows 11 idle baseline */
+  MEMORY_PF_HEALTHY_BASELINE: 500,
+  /** DPC time % above which driver latency penalty fires */
+  MEMORY_DPC_PENALTY_THRESHOLD_PCT: 1.0,
+  /** Max DPC time penalty (points) */
+  MEMORY_DPC_PENALTY_CAP: 20,
+  /** OEM service count above which bloat penalty starts */
+  MEMORY_OEM_SERVICES_BLOAT_THRESHOLD: 3,
+  /** Max OEM bloat penalty (points) */
+  MEMORY_OEM_BLOAT_PENALTY_CAP: 10,
+
+  // ── CPU ────────────────────────────────────────────────────────────────────
+  /** avgLoadPct thresholds for CPU penalty steps */
+  CPU_LOAD_PENALTY_CRIT_PCT: 90,
+  CPU_LOAD_PENALTY_HIGH_PCT: 80,
+  CPU_LOAD_PENALTY_MED_PCT: 70,
+  CPU_LOAD_PENALTY_LOW_PCT: 60,
+  CPU_LOAD_PENALTY_MILD_PCT: 50,
+
+  // ── Throttle (shared by CPU + Thermal) ────────────────────────────────────
+  THROTTLE_EVENTS_CRIT: 30,
+  THROTTLE_EVENTS_VERY_HIGH: 20,
+  THROTTLE_EVENTS_HIGH: 10,
+  THROTTLE_EVENTS_MED: 5,
+  THROTTLE_EVENTS_LOW: 2,
+  THROTTLE_EVENTS_MIN: 0,
+
+  // ── Scores ────────────────────────────────────────────────────────────────
+  /** Score thresholds for grade labels */
+  GRADE_A_THRESHOLD: 85,
+  GRADE_B_THRESHOLD: 70,
+  GRADE_C_THRESHOLD: 50,
+  GRADE_D_THRESHOLD: 30,
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────
+  /** Estimated average charge cycles per month for battery projection */
+  BATTERY_AVG_CYCLES_PER_MONTH: 45,
+  /** Battery health % at which replacement is strongly recommended */
+  BATTERY_REPLACE_THRESHOLD_PCT: 60,
+  /** Industry standard rated cycle life for battery warnings */
+  BATTERY_RATED_CYCLE_LIFE: 500,
+
+  // ── Startup ───────────────────────────────────────────────────────────────
+  /** Startup program count thresholds */
+  STARTUP_WARN_THRESHOLD: 25,
+  STARTUP_INFO_HIGH_THRESHOLD: 15,
+  STARTUP_INFO_LOW_THRESHOLD: 8,
+  /** Estimated RAM per startup program (MB) */
+  STARTUP_EST_RAM_MB_PER_PROGRAM: 80,
+} as const;
+
+/**
+ * Applies the standardised thermal/CPU throttle penalty ladder.
+ * Identical thresholds are used for both thermal and CPU scorers to ensure
+ * consistent scoring across subsystems.
+ *
+ * @param events - Number of throttle events recorded in the last 30 minutes.
+ * @returns Points to subtract from the component score (always >= 0).
+ */
+function throttlePenalty(events: number): number {
+  const { THROTTLE_EVENTS_CRIT, THROTTLE_EVENTS_VERY_HIGH, THROTTLE_EVENTS_HIGH,
+          THROTTLE_EVENTS_MED, THROTTLE_EVENTS_LOW, THROTTLE_EVENTS_MIN } = SCORE_THRESHOLDS;
+  if (events > THROTTLE_EVENTS_CRIT) return 35;
+  if (events > THROTTLE_EVENTS_VERY_HIGH) return 25;
+  if (events > THROTTLE_EVENTS_HIGH) return 15;
+  if (events > THROTTLE_EVENTS_MED) return 9;
+  if (events > THROTTLE_EVENTS_LOW) return 5;
+  if (events > THROTTLE_EVENTS_MIN) return 2;
+  return 0;
+}
+
 function clamp(n: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, n));
 }
@@ -85,14 +221,15 @@ const cycleAnchors: [number, number][] = [
 
 export function expectedBatteryHealth(cycles: number): number {
   for (let i = 1; i < cycleAnchors.length; i++) {
-    const [c0, h0] = cycleAnchors[i - 1];
-    const [c1, h1] = cycleAnchors[i];
+    // Non-null assertions are safe here: i and i-1 are within bounds
+    const [c0, h0] = cycleAnchors[i - 1]!;
+    const [c1, h1] = cycleAnchors[i]!;
     if (cycles <= c1) {
       const t = (cycles - c0) / (c1 - c0);
       return h0 + t * (h1 - h0);
     }
   }
-  return cycleAnchors[cycleAnchors.length - 1][1];
+  return cycleAnchors[cycleAnchors.length - 1]![1];
 }
 
 function batteryScore(r: SentinelReport): ComponentScore | null {
@@ -212,7 +349,8 @@ function thermalScore(r: SentinelReport): ComponentScore | null {
 
 function storageScore(r: SentinelReport): ComponentScore | null {
   if (!r.storage?.length) return null;
-  const primary = r.storage[0];
+  // Non-null assertion safe: length is checked above
+  const primary = r.storage[0]!;
 
   // If the drive is explicitly unavailable (couldn't read health), exclude it
   // entirely rather than giving a fake healthy score
@@ -296,14 +434,15 @@ export function expectedMemoryPenalty(usedPct: number): number {
     [100, 50]
   ];
   for (let i = 1; i < anchors.length; i++) {
-    const [u0, p0] = anchors[i - 1];
-    const [u1, p1] = anchors[i];
+    // Non-null assertions are safe: i and i-1 are within declared bounds
+    const [u0, p0] = anchors[i - 1]!;
+    const [u1, p1] = anchors[i]!;
     if (usedPct <= u1) {
       const t = (usedPct - u0) / (u1 - u0);
       return p0 + t * (p1 - p0);
     }
   }
-  return anchors[anchors.length - 1][1];
+  return anchors[anchors.length - 1]![1];
 }
 
 function memoryScore(r: SentinelReport): ComponentScore | null {
@@ -1214,8 +1353,9 @@ export function generateReport(r: SentinelReport): ReportResult {
     algoVersion: ALGORITHM_VERSION,
     rawReport: r,
     dataQuality: {
-      thermalSource: t?.thermalSource ?? undefined,
-      storageSource: s?.dataSource ?? undefined,
+      // exactOptionalPropertyTypes: omit the key entirely when no value is available
+      ...(t?.thermalSource != null ? { thermalSource: t.thermalSource } : {}),
+      ...(s?.dataSource != null ? { storageSource: s.dataSource } : {}),
       warnings,
       structuredWarnings,
     },

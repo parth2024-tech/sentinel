@@ -30,6 +30,22 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Hidden source maps: present for error tracking (Sentry/Datadog) but not
+    // served to end users, preventing source code exposure in production.
+    sourcemap: "hidden",
+    rollupOptions: {
+      output: {
+        // Explicit chunk splitting keeps the initial bundle small.
+        // react + react-dom are cached separately — they never change between deploys.
+        // Recharts and Framer Motion are large; splitting them lets repeat visitors
+        // load them from cache even when app code changes.
+        manualChunks: {
+          "vendor-react": ["react", "react-dom"],
+          "vendor-recharts": ["recharts"],
+          "vendor-framer": ["framer-motion"],
+        },
+      },
+    },
   },
   server: {
     port,

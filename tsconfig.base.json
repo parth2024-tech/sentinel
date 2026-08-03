@@ -1,27 +1,31 @@
 {
   "compilerOptions": {
+    // ── Strictness (Industrial-grade) ──────────────────────────────────────
+    // `strict` enables the full suite: strictNullChecks, strictFunctionTypes,
+    // strictBindCallApply, strictPropertyInitialization, noImplicitAny,
+    // noImplicitThis, alwaysStrict, useUnknownInCatchVariables.
+    "strict": true,
+    // Prevents silent `undefined` from array/record index access (T[] → T | undefined)
+    "noUncheckedIndexedAccess": true,
+    // Prevents assigning `{ a: undefined }` to `{ a?: string }` (true optional)
+    "exactOptionalPropertyTypes": true,
+    // ── Control flow ────────────────────────────────────────────────────────
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    // ── Modules ─────────────────────────────────────────────────────────────
     "isolatedModules": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "lib": ["es2022"],
     "module": "esnext",
     "moduleResolution": "bundler",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "useUnknownInCatchVariables": true,
-    "alwaysStrict": true,
-    "skipLibCheck": true,
     "target": "es2022",
+    // ── Build ───────────────────────────────────────────────────────────────
+    "noEmitOnError": true,
+    "skipLibCheck": true,
     "types": [],
     "customConditions": ["workspace"]
   }

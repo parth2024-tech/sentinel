@@ -175,7 +175,7 @@ describe('Scoring Engine Algorithms', () => {
       
       // Data quality warning should be populated
       expect(result.dataQuality.structuredWarnings).toHaveLength(1);
-      expect(result.dataQuality.structuredWarnings[0].type).toBe('acpi_static');
+      expect(result.dataQuality.structuredWarnings[0]!.type).toBe('acpi_static');
     });
 
     it('should penalise storage score for reallocated sectors and low free space', () => {

@@ -84,11 +84,20 @@ app.use("/api", router);
 // ── Global error handler ──────────────────────────────────────────────────────
 // Must be 4-argument signature for Express to treat it as error handler.
 // Catches unhandled async errors and prevents stack trace leaks in production.
+// In development, stack traces are returned to the caller to aid debugging.
+// In production, only the correlation ID (req.id) is returned — link it to logs.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-  logger.error({ err, url: req.url, method: req.method }, "unhandled_error");
+  const reqId = (req as Request & { id?: string }).id ?? "unknown";
+  logger.error({ err, url: req.url, method: req.method, reqId }, "unhandled_error");
   if (res.headersSent) return;
-  res.status(500).json({ error: "Internal server error" });
+  // Always return the correlation ID so client support tickets can be matched to logs
+  res.setHeader("X-Request-Id", reqId);
+  if (process.env.NODE_ENV === "development" && err instanceof Error) {
+    res.status(500).json({ error: err.message, stack: err.stack, reqId });
+  } else {
+    res.status(500).json({ error: "Internal server error", reqId });
+  }
 });
 
 export default app;

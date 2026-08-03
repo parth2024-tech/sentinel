@@ -190,7 +190,8 @@ export function parseReport(raw: string): { data: SentinelReport | null; error: 
   }
   const result = SentinelReportSchema.safeParse(parsed);
   if (!result.success) {
-    const firstIssue = result.error.issues[0];
+    // issues[0] is safe to assert — Zod always populates at least one issue on failure
+    const firstIssue = result.error.issues[0]!;
     const path = firstIssue.path.join(".");
     return {
       data: null,

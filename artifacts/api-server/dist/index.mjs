@@ -103509,8 +103509,9 @@ function generateReport(r2) {
     algoVersion: ALGORITHM_VERSION,
     rawReport: r2,
     dataQuality: {
-      thermalSource: t2?.thermalSource ?? void 0,
-      storageSource: s2?.dataSource ?? void 0,
+      // exactOptionalPropertyTypes: omit the key entirely when no value is available
+      ...t2?.thermalSource != null ? { thermalSource: t2.thermalSource } : {},
+      ...s2?.dataSource != null ? { storageSource: s2.dataSource } : {},
       warnings,
       structuredWarnings
     }
@@ -129501,9 +129502,15 @@ app.get("/health", (_req, res) => {
 });
 app.use("/api", routes_default);
 app.use((err, req, res, _next) => {
-  logger.error({ err, url: req.url, method: req.method }, "unhandled_error");
+  const reqId = req.id ?? "unknown";
+  logger.error({ err, url: req.url, method: req.method, reqId }, "unhandled_error");
   if (res.headersSent) return;
-  res.status(500).json({ error: "Internal server error" });
+  res.setHeader("X-Request-Id", reqId);
+  if (process.env.NODE_ENV === "development" && err instanceof Error) {
+    res.status(500).json({ error: err.message, stack: err.stack, reqId });
+  } else {
+    res.status(500).json({ error: "Internal server error", reqId });
+  }
 });
 var app_default = app;
 

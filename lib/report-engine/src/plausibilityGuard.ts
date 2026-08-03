@@ -40,7 +40,8 @@ export function validatePlausibility(report: SentinelReport): PlausibilityResult
     }
     if (t.zones) {
       for (let i = 0; i < t.zones.length; i++) {
-        const zone = t.zones[i];
+        // Non-null assertion safe: i is bounded by zones.length
+        const zone = t.zones[i]!;
         if (zone.tempC < -20 || zone.tempC > 125) {
           errors.push(`thermals.zones[${i}].tempC must be between -20 and 125 (got ${zone.tempC})`);
         }
@@ -51,7 +52,8 @@ export function validatePlausibility(report: SentinelReport): PlausibilityResult
   // 3. Storage checks
   if (report.storage) {
     for (let i = 0; i < report.storage.length; i++) {
-      const s = report.storage[i];
+      // Non-null assertion safe: i is bounded by storage.length
+      const s = report.storage[i]!;
       if (s.healthPct != null && (s.healthPct < 0 || s.healthPct > 100)) {
         errors.push(`storage[${i}].healthPct must be between 0 and 100 (got ${s.healthPct})`);
       }
