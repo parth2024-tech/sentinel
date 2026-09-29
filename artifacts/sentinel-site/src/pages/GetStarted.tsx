@@ -268,7 +268,7 @@ export default function GetStarted() {
                 <CheckCircle className="w-4 h-4 text-primary shrink-0" />
                 <p className="text-sm text-foreground">
                   {isPersonal
-                    ? "For personal use, we recommend the One-Shot Scan — no install, no account needed, report in under a minute. The Agent is a great upgrade if you want automated weekly scans."
+                    ? "For personal use, we recommend the One-Shot Scan - no install, no account needed, report in under a minute. The Agent is a great upgrade if you want automated weekly scans."
                     : "For fleet management, the Sentinel Agent with org pairing is the right path. It deploys silently via MSI and auto-registers each machine to your dashboard."}
                 </p>
               </div>
@@ -291,7 +291,7 @@ export default function GetStarted() {
           staggerDelay={0.08}
         >
 
-          {/* Tier 2 — One-Shot (recommended for personal) */}
+          {/* Tier 2 - One-Shot (recommended for personal) */}
           {!isFleet && (
             <StaggerItem>
               <TierCard
@@ -300,7 +300,7 @@ export default function GetStarted() {
                 label="One-Shot Scan"
                 tagline="Run once. Report opens in your browser."
                 timeEstimate="~2 minutes"
-                description="The fastest path to your first report. Double-click the executable — it scans, uploads, and opens your report automatically. Nothing stays installed."
+                description="The fastest path to your first report. Double-click the executable - it scans, uploads, and opens your report automatically. Nothing stays installed."
                 prereqs={[
                   "Windows 10 or 11 (64-bit)",
                   "Internet connection to upload report",
@@ -308,10 +308,10 @@ export default function GetStarted() {
                 ]}
                 steps={[
                   "Download SentinelOneShot.exe from this page",
-                  "Double-click — approve the single UAC prompt",
+                  "Double-click - approve the single UAC prompt",
                   "Wait ~10 seconds while hardware is scanned",
                   "Your browser opens automatically to your report",
-                  "The executable removes itself — nothing persists",
+                  "The executable removes itself - nothing persists",
                 ]}
                 ctaSlot={<DownloadButton slug="oneshot" label="Download One-Shot Scan" recommended={isPersonal} />}
                 recommended={isPersonal}
@@ -321,7 +321,7 @@ export default function GetStarted() {
             </StaggerItem>
           )}
 
-          {/* Tier 1 — Agent (recommended for fleet, upgrade for personal) */}
+          {/* Tier 1 - Agent (recommended for fleet, upgrade for personal) */}
           <StaggerItem>
             <TierCard
               tier="TIER 1 · AGENT"
@@ -338,7 +338,7 @@ export default function GetStarted() {
               ]}
               steps={[
                 "Download SentinelSetup.msi from this page",
-                "Run installer — approve UAC, enter your email",
+                "Run installer - approve UAC, enter your email",
                 "Browser opens to pair the device to your account",
                 "First report runs immediately and opens in browser",
                 "Scheduled task runs every 7 days, you get an email",
@@ -362,9 +362,9 @@ export default function GetStarted() {
         <AnimateIn delay={0.2}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-14">
             {[
-              { icon: Shield,    label: "Code-signed binary",    sub: "OV certificate — no SmartScreen friction" },
+              { icon: Shield,    label: "Code-signed binary",    sub: "OV certificate - no SmartScreen friction" },
               { icon: Clock,     label: "~5–10 MB install size", sub: "No .NET runtime, no bundled JRE" },
-              { icon: RefreshCw, label: "Standard uninstaller",  sub: "Add/Remove Programs — one click to remove" },
+              { icon: RefreshCw, label: "Standard uninstaller",  sub: "Add/Remove Programs - one click to remove" },
             ].map(({ icon: Icon, label, sub }) => (
               <div key={label} className="flex items-center gap-3 px-5 py-4 rounded-xl bg-muted/10 border border-border/30">
                 <Icon className="w-4 h-4 text-primary shrink-0" />
@@ -388,7 +388,7 @@ export default function GetStarted() {
                 <Terminal className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <span className="text-sm font-medium text-muted-foreground">
-                    TIER 3 — Advanced / IT admin
+                    TIER 3 - Advanced / IT admin
                   </span>
                   <span className="ml-3 text-xs font-mono text-muted-foreground/50">
                     PowerShell script paste-back · ~8 minutes
@@ -404,7 +404,7 @@ export default function GetStarted() {
               <div className="px-6 pb-6 pt-2 border-t border-border/30 bg-muted/5 space-y-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   For locked-down corporate machines where executables are blocked by IT policy. You inspect the script, run it yourself, and paste the output into the web form.
-                  Every manual step is a drop-off point — we recommend this only when the options above are not available.
+                  Every manual step is a drop-off point - we recommend this only when the options above are not available.
                 </p>
 
                 {/* Prerequisites */}
@@ -423,7 +423,7 @@ export default function GetStarted() {
                   <StepList steps={[
                     "Download SentinelScan.ps1 from the links below",
                     "Run: Unblock-File .\\SentinelScan.ps1 in PowerShell",
-                    "Run: .\\SentinelScan.ps1 — it copies a base64 JSON blob to your clipboard",
+                    "Run: .\\SentinelScan.ps1 - it copies a base64 JSON blob to your clipboard",
                     "Open /health-test, paste the blob into the editor, click Analyse",
                     "Your report generates instantly in the browser",
                   ]} />

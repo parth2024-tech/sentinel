@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { ArrowRight, Battery, Thermometer, HardDrive, Cpu, Database, Calculator, GitCommit, AlertTriangle } from "lucide-react";
 
 const componentWeights = [
-  { name: "Battery", weight: 30, icon: Battery, color: "text-primary", detail: "Heaviest weight — runtime and unexpected shutdown risk are the primary end-user pain points." },
+  { name: "Battery", weight: 30, icon: Battery, color: "text-primary", detail: "Heaviest weight - runtime and unexpected shutdown risk are the primary end-user pain points." },
   { name: "Thermals", weight: 25, icon: Thermometer, color: "text-amber-400", detail: "Sustained heat accelerates every other component's degradation, making it a multiplier risk." },
   { name: "Storage", weight: 25, icon: HardDrive, color: "text-accent", detail: "Data loss risk. Reallocated sectors are a strong leading indicator of imminent failure." },
   { name: "Memory", weight: 10, icon: Database, color: "text-violet-400", detail: "RAM is rarely a degradation issue; utilisation is measured but rarely causes hardware failure." },
@@ -217,7 +217,7 @@ export default function Scoring() {
         {/* Header */}
         <AnimateIn>
           <div className="mb-16">
-            <span className="text-xs font-mono font-medium px-3 py-1 rounded-full border border-primary/30 text-primary bg-primary/10">
+            <span className="text-xs font-mono font-semibold tracking-wider uppercase px-3 py-1 rounded-md border border-primary/30 text-primary bg-primary/10">
               OPEN METHODOLOGY
             </span>
             <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mt-4 mb-6">
@@ -396,7 +396,7 @@ export default function Scoring() {
             <h2 className="text-xl font-bold mb-4">Health forecast timelines</h2>
             <div className="surface-card rounded-xl p-6 border border-amber-500/20 bg-amber-500/5">
               <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                Sentinel shows projected timelines — e.g. "battery may become unreliable in 8–14 months." These are estimates, not guarantees. Here's how they are produced:
+                Sentinel shows projected timelines - e.g. "battery may become unreliable in 8–14 months." These are estimates, not guarantees. Here's how they are produced:
               </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">

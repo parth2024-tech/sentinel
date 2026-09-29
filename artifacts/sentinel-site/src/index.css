@@ -122,8 +122,8 @@
 
   /* Custom sentinel vars */
   --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.4), 0 0 40px rgba(34, 211, 238, 0.15);
-  --glow-violet: 0 0 20px rgba(167, 139, 250, 0.4), 0 0 40px rgba(167, 139, 250, 0.15);
-  --gradient-pulse: linear-gradient(135deg, hsl(185 85% 55%), hsl(265 70% 65%));
+  --glow-emerald: 0 0 20px rgba(52, 211, 153, 0.4), 0 0 40px rgba(52, 211, 153, 0.15);
+  --gradient-pulse: linear-gradient(135deg, #38bdf8, #22d3ee);
   --gradient-surface: linear-gradient(135deg, hsl(222 40% 10%), hsl(220 35% 8%));
 
   --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.4);
@@ -280,16 +280,16 @@
   box-shadow: var(--glow-cyan);
 }
 
-.glow-violet {
-  box-shadow: var(--glow-violet);
+.glow-emerald {
+  box-shadow: var(--glow-emerald);
 }
 
 .text-glow-cyan {
   text-shadow: 0 0 20px rgba(34, 211, 238, 0.6), 0 0 40px rgba(34, 211, 238, 0.3);
 }
 
-.text-glow-violet {
-  text-shadow: 0 0 20px rgba(167, 139, 250, 0.6), 0 0 40px rgba(167, 139, 250, 0.3);
+.text-glow-emerald {
+  text-shadow: 0 0 20px rgba(52, 211, 153, 0.6), 0 0 40px rgba(52, 211, 153, 0.3);
 }
 
 .gradient-text {
@@ -421,7 +421,7 @@
   }
 
   /* Remove glows and shadows */
-  .glow-cyan, .glow-violet {
+  .glow-cyan, .glow-emerald {
     box-shadow: none !important;
   }
 

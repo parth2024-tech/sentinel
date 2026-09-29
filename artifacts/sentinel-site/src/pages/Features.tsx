@@ -8,21 +8,21 @@ const features = [
     title: "Deterministic diagnostics",
     badge: "CORE",
     badgeColor: "text-primary border-primary/30 bg-primary/10",
-    description: "Runs 40+ expert rules against your hardware readings. Every score is computed from a documented formula — not a black box. Same data always produces the same result.",
+    description: "Runs 40+ expert rules against your hardware readings. Every score is computed from a documented formula - not a black box. Same data always produces the same result.",
   },
   {
     icon: Fingerprint,
     title: "Baseline deviation detection",
     badge: "PRECISE",
     badgeColor: "text-accent border-accent/30 bg-accent/10",
-    description: "Every laptop behaves differently based on usage patterns, environment, and age. Sentinel builds a personalized baseline over the first few days — then alerts only when your machine deviates from its own normal.",
+    description: "Every laptop behaves differently based on usage patterns, environment, and age. Sentinel builds a personalized baseline over the first few days - then alerts only when your machine deviates from its own normal.",
   },
   {
     icon: BookOpen,
     title: "Habit coaching",
     badge: "ACCURATE",
     badgeColor: "text-primary border-primary/30 bg-primary/10",
-    description: "Identifies usage behaviors that accelerate wear — like always running at 100% charge or blocking vents during heavy workloads — and suggests simple changes to extend hardware life.",
+    description: "Identifies usage behaviors that accelerate wear - like always running at 100% charge or blocking vents during heavy workloads - and suggests simple changes to extend hardware life.",
   },
   {
     icon: MessageSquare,
@@ -43,7 +43,7 @@ const features = [
     title: "Explainable findings",
     badge: "TRANSPARENT",
     badgeColor: "text-accent border-accent/30 bg-accent/10",
-    description: "Every finding shows its reasoning. If your battery is degrading faster than expected for its cycle count, Sentinel shows you the gap — not just the conclusion.",
+    description: "Every finding shows its reasoning. If your battery is degrading faster than expected for its cycle count, Sentinel shows you the gap - not just the conclusion.",
   },
   {
     icon: GitBranch,
@@ -57,7 +57,7 @@ const features = [
     title: "Reproducible reports",
     badge: "OPEN METHODOLOGY",
     badgeColor: "text-accent border-accent/30 bg-accent/10",
-    description: "The scoring formulas are publicly documented. Any power user can verify Sentinel's output by hand. Transparency is the feature — not a footnote.",
+    description: "The scoring formulas are publicly documented. Any power user can verify Sentinel's output by hand. Transparency is the feature - not a footnote.",
   },
 ];
 
@@ -69,7 +69,7 @@ export default function Features() {
         <AnimateIn>
           <div className="max-w-2xl mb-20">
             <div className="mb-4">
-              <span className="text-xs font-mono font-medium px-3 py-1 rounded-full border border-primary/30 text-primary bg-primary/10">
+              <span className="text-xs font-mono font-semibold tracking-wider uppercase px-3 py-1 rounded-md border border-primary/30 text-primary bg-primary/10">
                 CAPABILITIES
               </span>
             </div>
@@ -78,12 +78,12 @@ export default function Features() {
               <span className="gradient-text">One quiet guardian.</span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Sentinel does things no other Windows diagnostic tool does — because it's built around explainable diagnostics, not observation.
+              Sentinel does things no other Windows diagnostic tool does - because it's built around explainable diagnostics, not observation.
             </p>
           </div>
         </AnimateIn>
 
-        {/* Feature grid — staggered */}
+        {/* Feature grid - staggered */}
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.07}>
           {features.map((f, i) => (
             <StaggerItem key={f.title}>
@@ -95,7 +95,7 @@ export default function Features() {
                   <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:border-primary/40 transition-colors">
                     <f.icon className="w-5 h-5" />
                   </div>
-                  <span className={`text-xs font-mono font-semibold px-2.5 py-1 rounded-full border ${f.badgeColor}`}>
+                  <span className={`text-xs font-mono font-semibold px-2.5 py-1 rounded-md border ${f.badgeColor}`}>
                     {f.badge}
                   </span>
                 </div>

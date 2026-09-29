@@ -35,7 +35,7 @@ const QUESTIONS: Question[] = [
     text: "Where do you usually use your laptop?",
     subtext: "Soft surfaces block vents and raise temps by 8–15°C on average.",
     options: [
-      { label: "Bed, couch, or pillow — always", penalty: 3 },
+      { label: "Bed, couch, or pillow - always", penalty: 3 },
       { label: "Mostly soft surfaces, sometimes desk", penalty: 2 },
       { label: "Mix of desk and lap", penalty: 1 },
       { label: "Almost always on a hard, flat surface", penalty: 0 },
@@ -57,9 +57,9 @@ const QUESTIONS: Question[] = [
     text: "How often do you let the battery drain below 20%?",
     subtext: "Deep discharges stress lithium cells and accelerate capacity loss.",
     options: [
-      { label: "Daily — I run it to empty regularly", penalty: 3 },
+      { label: "Daily - I run it to empty regularly", penalty: 3 },
       { label: "A few times a week", penalty: 2 },
-      { label: "Occasionally — maybe once a month", penalty: 1 },
+      { label: "Occasionally - maybe once a month", penalty: 1 },
       { label: "Rarely or never", penalty: 0 },
     ],
   },
@@ -69,9 +69,9 @@ const QUESTIONS: Question[] = [
     subtext: "High load while charging creates peak heat stress on both battery and CPU.",
     options: [
       { label: "Yes, this is my main use case", penalty: 2 },
-      { label: "Sometimes — for specific tasks", penalty: 1 },
+      { label: "Sometimes - for specific tasks", penalty: 1 },
       { label: "Rarely", penalty: 0 },
-      { label: "Never — I use it lightly", penalty: 0 },
+      { label: "Never - I use it lightly", penalty: 0 },
     ],
   },
   {
@@ -81,7 +81,7 @@ const QUESTIONS: Question[] = [
     options: [
       { label: "Multiple times", penalty: 3 },
       { label: "Once or twice", penalty: 1 },
-      { label: "Never — I'm careful", penalty: 0 },
+      { label: "Never - I'm careful", penalty: 0 },
     ],
   },
   {
@@ -89,7 +89,7 @@ const QUESTIONS: Question[] = [
     text: "How often do you fully restart your laptop?",
     subtext: "Sleep and hibernate don't clear memory leaks or apply driver updates.",
     options: [
-      { label: "Rarely or never — I just close the lid", penalty: 2 },
+      { label: "Rarely or never - I just close the lid", penalty: 2 },
       { label: "Monthly", penalty: 1 },
       { label: "Weekly", penalty: 0 },
       { label: "Daily or when prompted", penalty: 0 },
@@ -98,12 +98,12 @@ const QUESTIONS: Question[] = [
   {
     id: "heat",
     text: "Does your laptop feel uncomfortably hot during normal use?",
-    subtext: "Subjective heat is a reliable signal — human skin detects >40°C surface temp.",
+    subtext: "Subjective heat is a reliable signal - human skin detects >40°C surface temp.",
     options: [
-      { label: "Yes — it's hot to the touch regularly", penalty: 3 },
+      { label: "Yes - it's hot to the touch regularly", penalty: 3 },
       { label: "Sometimes warm, rarely hot", penalty: 1 },
       { label: "Occasionally warm during heavy tasks", penalty: 1 },
-      { label: "Rarely — it stays cool", penalty: 0 },
+      { label: "Rarely - it stays cool", penalty: 0 },
     ],
   },
 ];
@@ -134,14 +134,14 @@ function getGrade(score: number): { grade: string; label: string; color: string;
 function getFindingsForAnswers(answers: Record<string, number>): { title: string; advice: string; urgency: "high" | "medium" | "low" }[] {
   const findings: { title: string; advice: string; urgency: "high" | "medium" | "low" }[] = [];
 
-  if (answers["charging"] >= 2) findings.push({ title: "Charging to 100% is degrading your battery", advice: "Keeping lithium batteries at 100% charge for extended periods causes electrolyte oxidation. Enable Windows Battery Saver at 80%, or use your OEM's conservation mode (Dell: 85%, Lenovo: 80%, HP: 80%). This alone can extend battery life by 1–2 years.", urgency: "high" });
-  if (answers["surface"] >= 2) findings.push({ title: "Vent blockage from soft surfaces", advice: "Using the laptop on a bed or couch raises operating temperatures by 8–15°C by blocking the main exhaust vent. Over months, this accelerates thermal paste degradation and battery wear. A $10 laptop stand used consistently will lower your average CPU temp by 6–10°C.", urgency: answers["surface"] === 3 ? "high" : "medium" });
-  if (answers["cleaning"] >= 2) findings.push({ title: "Dust buildup is compressing your thermals", advice: "Dust accumulation reduces airflow efficiency by 30–50% within 18 months of daily use. At 2+ years without cleaning, many laptops throttle 15–20% of their peak performance. Compressed air through the vents takes 5 minutes. A professional clean costs $20–40 and restores full airflow.", urgency: answers["cleaning"] === 3 ? "high" : "medium" });
-  if (answers["drain"] >= 2) findings.push({ title: "Deep discharges are stressing your battery cells", advice: "Lithium batteries age faster at extreme state-of-charge levels. Letting the battery drain to 0% regularly removes approximately 3–5% of total capacity per 50 deep cycles compared to 20–80% cycling. Plug in before 20%.", urgency: "medium" });
-  if (answers["load"] >= 1) findings.push({ title: "High load while charging creates dual heat stress", advice: "Running demanding workloads while charging generates maximum heat at the exact moment the battery is also under charge stress. Schedule rendering, exports, or gaming to off-peak periods, or ensure your cooling solution is working properly first.", urgency: "low" });
-  if (answers["drops"] >= 1) findings.push({ title: "Physical shock history is a SMART risk factor", advice: "Even drops that don't visibly damage the laptop can cause SSD sector reallocation. Run a SMART check (CrystalDiskInfo, free) to confirm your drive shows 0 reallocated sectors. If it doesn't, back up now.", urgency: answers["drops"] === 3 ? "high" : "medium" });
-  if (answers["restart"] >= 1) findings.push({ title: "Infrequent restarts accumulate memory and driver issues", advice: "Long sleep chains (days or weeks without a full restart) accumulate memory leaks, delay driver updates, and prevent Windows maintenance tasks from running. A weekly full restart takes 2 minutes and keeps memory fresh.", urgency: "low" });
-  if (answers["heat"] >= 1) findings.push({ title: "Surface heat is a proxy for internal temperature", advice: "If the bottom of your laptop is uncomfortable to touch, the internal temperature near the battery is likely exceeding 45°C — a level associated with 2–4× faster capacity loss. Surface temperature above 40°C during light use is a ventilation problem.", urgency: answers["heat"] === 3 ? "high" : "medium" });
+  if ((answers["charging"] ?? 0) >= 2) findings.push({ title: "Charging to 100% is degrading your battery", advice: "Keeping lithium batteries at 100% charge for extended periods causes electrolyte oxidation. Enable Windows Battery Saver at 80%, or use your OEM's conservation mode (Dell: 85%, Lenovo: 80%, HP: 80%). This alone can extend battery life by 1–2 years.", urgency: "high" });
+  if ((answers["surface"] ?? 0) >= 2) findings.push({ title: "Vent blockage from soft surfaces", advice: "Using the laptop on a bed or couch raises operating temperatures by 8–15°C by blocking the main exhaust vent. Over months, this accelerates thermal paste degradation and battery wear. A $10 laptop stand used consistently will lower your average CPU temp by 6–10°C.", urgency: answers["surface"] === 3 ? "high" : "medium" });
+  if ((answers["cleaning"] ?? 0) >= 2) findings.push({ title: "Dust buildup is compressing your thermals", advice: "Dust accumulation reduces airflow efficiency by 30–50% within 18 months of daily use. At 2+ years without cleaning, many laptops throttle 15–20% of their peak performance. Compressed air through the vents takes 5 minutes. A professional clean costs $20–40 and restores full airflow.", urgency: answers["cleaning"] === 3 ? "high" : "medium" });
+  if ((answers["drain"] ?? 0) >= 2) findings.push({ title: "Deep discharges are stressing your battery cells", advice: "Lithium batteries age faster at extreme state-of-charge levels. Letting the battery drain to 0% regularly removes approximately 3–5% of total capacity per 50 deep cycles compared to 20–80% cycling. Plug in before 20%.", urgency: "medium" });
+  if ((answers["load"] ?? 0) >= 1) findings.push({ title: "High load while charging creates dual heat stress", advice: "Running demanding workloads while charging generates maximum heat at the exact moment the battery is also under charge stress. Schedule rendering, exports, or gaming to off-peak periods, or ensure your cooling solution is working properly first.", urgency: "low" });
+  if ((answers["drops"] ?? 0) >= 1) findings.push({ title: "Physical shock history is a SMART risk factor", advice: "Even drops that don't visibly damage the laptop can cause SSD sector reallocation. Run a SMART check (CrystalDiskInfo, free) to confirm your drive shows 0 reallocated sectors. If it doesn't, back up now.", urgency: answers["drops"] === 3 ? "high" : "medium" });
+  if ((answers["restart"] ?? 0) >= 1) findings.push({ title: "Infrequent restarts accumulate memory and driver issues", advice: "Long sleep chains (days or weeks without a full restart) accumulate memory leaks, delay driver updates, and prevent Windows maintenance tasks from running. A weekly full restart takes 2 minutes and keeps memory fresh.", urgency: "low" });
+  if ((answers["heat"] ?? 0) >= 1) findings.push({ title: "Surface heat is a proxy for internal temperature", advice: "If the bottom of your laptop is uncomfortable to touch, the internal temperature near the battery is likely exceeding 45°C - a level associated with 2–4× faster capacity loss. Surface temperature above 40°C during light use is a ventilation problem.", urgency: answers["heat"] === 3 ? "high" : "medium" });
 
   return findings;
 }
@@ -169,7 +169,7 @@ export default function HabitAudit() {
     return undefined;
   }, [step, score]);
 
-  const question = QUESTIONS[current];
+  const question = QUESTIONS[current] ?? QUESTIONS[0]!;
 
   function handleSelect(penalty: number) {
     setSelected(penalty);

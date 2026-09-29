@@ -16,6 +16,8 @@ const links = [
   { href: "/sample-report", label: "Sample Report" },
   { href: "/faq", label: "FAQ" },
   { href: "/waitlist", label: "Join Waitlist" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/terms", label: "Terms of Service" },
 ];
 
 export default function Footer() {
@@ -52,7 +54,7 @@ export default function Footer() {
           <span>&copy; {new Date().getFullYear()} Sentinel. All rights reserved.</span>
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-glow-pulse inline-block" />
-            All diagnostics run locally. Zero data sent to the cloud.
+            Diagnostics execute locally. Telemetry is transmitted only when syncing or saving reports.
           </span>
         </div>
       </div>

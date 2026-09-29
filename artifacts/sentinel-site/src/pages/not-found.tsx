@@ -24,7 +24,7 @@ export default function NotFound() {
           {/* Error code */}
           <div className="flex flex-col gap-2">
             <span className="text-xs font-mono text-primary/60 uppercase tracking-widest">
-              SENTINEL — ERROR 404
+              SENTINEL - ERROR 404
             </span>
             <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
               Page not found.
@@ -37,7 +37,7 @@ export default function NotFound() {
           {/* Warning chip */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 font-mono text-xs text-amber-400">
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Route not matched — returning to known state</span>
+            <span>Route not matched - returning to known state</span>
           </div>
 
           {/* CTAs */}

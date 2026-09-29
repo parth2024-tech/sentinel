@@ -128,12 +128,13 @@ router.get("/verify", async (req, res) => {
     )
     .limit(1);
 
-  if (rows.length === 0) {
+  const row = rows[0];
+  if (!row) {
     res.status(401).json({ error: "Invalid or expired magic link." });
     return;
   }
 
-  const { email } = rows[0];
+  const { email } = row;
 
   // Mark token used
   await db

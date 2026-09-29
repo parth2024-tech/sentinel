@@ -7,7 +7,7 @@ const steps = [
     number: "01",
     icon: Download,
     title: "Install silently",
-    description: "Sentinel installs as a lightweight background service. No taskbar icon, no splash screen, no interruptions. It starts collecting baseline data immediately — you'll never notice it's there.",
+    description: "Sentinel installs as a lightweight background service. No taskbar icon, no splash screen, no interruptions. It starts collecting baseline data immediately - you'll never notice it's there.",
     color: "text-primary",
     borderColor: "border-primary/30",
   },
@@ -15,7 +15,7 @@ const steps = [
     number: "02",
     icon: Eye,
     title: "Learns your normal",
-    description: "Over the first few days, Sentinel profiles how your machine behaves under your specific workloads. Your laptop's normal becomes the baseline — not a generic spec sheet.",
+    description: "Over the first few days, Sentinel profiles how your machine behaves under your specific workloads. Your laptop's normal becomes the baseline - not a generic spec sheet.",
     color: "text-accent",
     borderColor: "border-accent/30",
   },
@@ -23,7 +23,7 @@ const steps = [
     number: "03",
     icon: Zap,
     title: "Detects drift and correlations",
-    description: "Sentinel continuously compares current readings against your baseline. When it spots drift — a metric trending in the wrong direction — it cross-references it with other signals to confirm and score the risk.",
+    description: "Sentinel continuously compares current readings against your baseline. When it spots drift - a metric trending in the wrong direction - it cross-references it with other signals to confirm and score the risk.",
     color: "text-primary",
     borderColor: "border-primary/30",
   },
@@ -54,7 +54,7 @@ function AlertMock() {
             Battery capacity dropping faster than expected for its age.
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Detected a 12% capacity loss over 30 days — 3x the normal rate. Consider avoiding full charges to slow further degradation.
+            Detected a 12% capacity loss over 30 days - 3x the normal rate. Consider avoiding full charges to slow further degradation.
           </p>
           <div className="mt-3 flex items-center gap-3">
             <span className="text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
@@ -139,7 +139,7 @@ export default function HowItWorks() {
           </div>
         </AnimateIn>
 
-        {/* Steps — staggered */}
+        {/* Steps - staggered */}
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-24" staggerDelay={0.1}>
           {steps.map((step) => (
             <StaggerItem key={step.number}>
@@ -191,7 +191,7 @@ export default function HowItWorks() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Sentinel reads from Windows Management Instrumentation (WMI) and CIM — the same interfaces used by Dell Command Monitor and HP Support Assistant. These are read-only system calls. No kernel drivers are installed.
+                Sentinel reads from Windows Management Instrumentation (WMI) and CIM - the same interfaces used by Dell Command Monitor and HP Support Assistant. These are read-only system calls. No kernel drivers are installed.
               </p>
               <div className="rounded-lg bg-[#0a0e1a] border border-border/40 p-4 font-mono text-xs space-y-1">
                 <div className="text-muted-foreground/50"># Sources polled each cycle</div>
@@ -217,7 +217,7 @@ export default function HowItWorks() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Each metric is modelled as a distribution across your usage contexts — idle, light load, heavy load, charging, discharging. Your "normal" CPU temperature at idle is different from a generic spec sheet value. Anomaly detection uses your distribution, not a manufacturer threshold.
+                Each metric is modelled as a distribution across your usage contexts - idle, light load, heavy load, charging, discharging. Your "normal" CPU temperature at idle is different from a generic spec sheet value. Anomaly detection uses your distribution, not a manufacturer threshold.
               </p>
               <div className="rounded-lg bg-[#0a0e1a] border border-border/40 p-4 font-mono text-xs space-y-1">
                 <div className="text-muted-foreground/50"># Per-metric baseline model</div>
@@ -242,7 +242,7 @@ export default function HowItWorks() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                All baseline models, anomaly scoring, and report generation run on your machine. Sentinel makes no outbound HTTP requests during normal operation. Your hardware telemetry — serial numbers, temperatures, usage patterns — is never transmitted.
+                All baseline models, anomaly scoring, and report generation run on your machine. Sentinel makes no outbound HTTP requests during normal operation. Your hardware telemetry - serial numbers, temperatures, usage patterns - is never transmitted.
               </p>
               <div className="rounded-lg bg-[#0a0e1a] border border-border/40 p-4 font-mono text-xs space-y-1">
                 <div className="text-muted-foreground/50"># Sentinel network activity</div>

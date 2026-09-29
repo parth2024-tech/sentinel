@@ -59,7 +59,7 @@ export default function SharedReport() {
           setCreatedAt(body.createdAt);
 
           // Set OG tags
-          const title = `${body.result.system.model} — ${body.result.grade} (${body.result.overall}/100) · Sentinel`;
+          const title = `${body.result.system.model} - ${body.result.grade} (${body.result.overall}/100) · Sentinel`;
           document.title = title;
         } else if (res.status === 404) {
           setError("This shared report link is no longer valid or has been removed.");
@@ -107,7 +107,7 @@ export default function SharedReport() {
     ? new Date(result.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
     : createdAt
     ? new Date(createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
-    : "—";
+    : "-";
 
   const freeFindings = result.findings.filter((f) => !f.pro);
   const dqWarnings = result.dataQuality?.warnings ?? [];

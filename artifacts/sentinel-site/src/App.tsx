@@ -31,6 +31,8 @@ const Changelog = React.lazy(() => import("@/pages/Changelog"));
 const SharedReport = React.lazy(() => import("@/pages/SharedReport"));
 const BillingSettings = React.lazy(() => import("@/pages/BillingSettings"));
 const LiveDashboard = React.lazy(() => import("@/pages/LiveDashboard"));
+const Privacy = React.lazy(() => import("@/pages/Privacy"));
+const Terms = React.lazy(() => import("@/pages/Terms"));
 const NotFound = React.lazy(() => import("@/pages/not-found"));
 
 const queryClient = new QueryClient();
@@ -98,6 +100,8 @@ function AnimatedRoutes() {
             <Route path="/changelog"       component={Changelog} />
             <Route path="/billing"         component={BillingSettings} />
             <Route path="/live"            component={LiveDashboard} />
+            <Route path="/privacy"         component={Privacy} />
+            <Route path="/terms"           component={Terms} />
             <Route                         component={NotFound} />
           </Switch>
         </Suspense>

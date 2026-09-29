@@ -19,14 +19,14 @@ const changelog = [
         items: [
           "Weighted overall score: Battery 30%, Thermals 25%, Storage 25%, Memory 10%, CPU 10%",
           "Cycle-adjusted battery degradation analysis using exponential decay curve fitted to population data",
-          "ACPI static thermal detection — identifies and excludes firmware-reported fixed temperatures",
+          "ACPI static thermal detection - identifies and excludes firmware-reported fixed temperatures",
           "NVMe S.M.A.R.T. health parsing with fallback scoring when vendor data is unavailable",
           "Reallocated sector detection as early SSD failure indicator",
           "Thermal throttle event counting (30-minute window)",
           "Cross-component correlation: thermal × battery degradation analysis",
-          "Data quality transparency — structured warnings explain excluded data and OEM comparison context",
+          "Data quality transparency - structured warnings explain excluded data and OEM comparison context",
           "Health forecast timelines with population-based and device-specific projection modes",
-          "OEM comparison context on every finding — shows what Dell SupportAssist, Lenovo Vantage, HP Support Assistant miss",
+          "OEM comparison context on every finding - shows what Dell SupportAssist, Lenovo Vantage, HP Support Assistant miss",
         ],
       },
     ],
@@ -100,7 +100,7 @@ const thresholds = [
     icon: HardDrive,
     color: "text-accent",
     rules: [
-      { condition: "reallocated sectors > 0", result: "Critical — back up immediately", urgency: "critical" as const },
+      { condition: "reallocated sectors > 0", result: "Critical - back up immediately", urgency: "critical" as const },
       { condition: "free space < 5%", result: "Critical free space", urgency: "critical" as const },
       { condition: "free space < 10%", result: "Low free space warning", urgency: "warning" as const },
       { condition: "wear level < 80%", result: "Elevated wear trajectory (Pro)", urgency: "warning" as const },
@@ -112,9 +112,9 @@ const thresholds = [
     icon: Database,
     color: "text-violet-400",
     rules: [
-      { condition: "used > 90%", result: "Score: 35 — Critical", urgency: "critical" as const },
-      { condition: "used > 80%", result: "Score: 55 — Attention", urgency: "warning" as const },
-      { condition: "used > 70%", result: "Score: 75 — Watch", urgency: "warning" as const },
+      { condition: "used > 90%", result: "Score: 35 - Critical", urgency: "critical" as const },
+      { condition: "used > 80%", result: "Score: 55 - Attention", urgency: "warning" as const },
+      { condition: "used > 70%", result: "Score: 75 - Watch", urgency: "warning" as const },
     ],
   },
   {
@@ -142,7 +142,7 @@ export default function Changelog() {
         {/* Header */}
         <AnimateIn>
           <div className="mb-16">
-            <span className="text-xs font-mono font-medium px-3 py-1 rounded-full border border-primary/30 text-primary bg-primary/10">
+            <span className="text-xs font-mono font-semibold tracking-wider uppercase px-3 py-1 rounded-md border border-primary/30 text-primary bg-primary/10">
               ALGORITHM CHANGELOG
             </span>
             <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mt-4 mb-6">
@@ -150,7 +150,7 @@ export default function Changelog() {
               <span className="gradient-text">& changelog.</span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
-              Every version of Sentinel's scoring algorithm is documented here. What it measures, what thresholds it uses, when it was written, and — critically — what it intentionally does <em>not</em> score yet.
+              Every version of Sentinel's scoring algorithm is documented here. What it measures, what thresholds it uses, when it was written, and - critically - what it intentionally does <em>not</em> score yet.
             </p>
             <p className="text-sm text-muted-foreground/60 mt-4 leading-relaxed">
               No OEM tool has ever published a single scoring formula. We publish all of ours.
@@ -180,7 +180,7 @@ export default function Changelog() {
                   <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                     <div className="flex items-center gap-3">
                       <span className="text-xl font-bold font-mono text-primary">v{entry.version}</span>
-                      <span className="text-xs font-mono text-muted-foreground/50 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-mono text-muted-foreground/70 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
                         {entry.label}
                       </span>
                     </div>
@@ -216,7 +216,7 @@ export default function Changelog() {
               Finding trigger thresholds
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed mb-6 max-w-2xl">
-              Every finding Sentinel produces is triggered by crossing a specific, documented threshold. There are no "AI-generated" or "heuristic" findings — every trigger condition is listed below.
+              Every finding Sentinel produces is triggered by crossing a specific, documented threshold. There are no "AI-generated" or "heuristic" findings - every trigger condition is listed below.
             </p>
             <StaggerContainer className="space-y-4" staggerDelay={0.05}>
               {thresholds.map((t) => (
@@ -282,7 +282,7 @@ export default function Changelog() {
                 },
                 {
                   title: "Conservative by default",
-                  detail: "When data is uncertain or missing, Sentinel excludes the component rather than guessing. This may produce a higher score than reality — but never a falsely alarming one.",
+                  detail: "When data is uncertain or missing, Sentinel excludes the component rather than guessing. This may produce a higher score than reality - but never a falsely alarming one.",
                 },
                 {
                   title: "Transparent exclusions",

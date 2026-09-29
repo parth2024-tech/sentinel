@@ -61,7 +61,7 @@ export default function AnimateIn({
 }
 
 /**
- * Stagger container — wraps children and staggers their animation.
+ * Stagger container - wraps children and staggers their animation.
  * Each direct child should be a `motion.div` or wrapped in `AnimateIn`.
  */
 export function StaggerContainer({
@@ -94,7 +94,7 @@ export function StaggerContainer({
 }
 
 /**
- * Stagger item — use as a direct child of `StaggerContainer`.
+ * Stagger item - use as a direct child of `StaggerContainer`.
  */
 export function StaggerItem({
   children,

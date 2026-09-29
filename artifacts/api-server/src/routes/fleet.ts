@@ -83,9 +83,9 @@ router.get("/dashboard", async (req, res) => {
 
     const deviceCount = recentReports.length;
     const avgOverall = Math.round(totalScore / deviceCount);
-    const avgComponents = Object.keys(componentSums).map((name) => ({
+    const avgComponents = Object.entries(componentSums).map(([name, data]) => ({
       name,
-      score: Math.round(componentSums[name].sum / componentSums[name].count)
+      score: Math.round(data.sum / (data.count || 1))
     }));
 
     // Deduplicate findings by title

@@ -36,7 +36,7 @@ const subsystems = [
   {
     icon: Thermometer,
     name: "Thermals",
-    description: "Monitors temperature trends across components — catching sustained overheating patterns before they shorten hardware life.",
+    description: "Monitors temperature trends across components - catching sustained overheating patterns before they shorten hardware life.",
     color: "text-accent",
   },
   {
@@ -60,7 +60,7 @@ const subsystems = [
   {
     icon: Server,
     name: "Memory pressure",
-    description: "Monitors paging frequency and memory compression rates — signals that your system is struggling more than it should.",
+    description: "Monitors paging frequency and memory compression rates - signals that your system is struggling more than it should.",
     color: "text-accent",
   },
   {
@@ -99,7 +99,7 @@ export default function WhatItMonitors() {
           </div>
         </AnimateIn>
 
-        {/* Grid — staggered */}
+        {/* Grid - staggered */}
         <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" staggerDelay={0.05}>
           {subsystems.map((s, i) => (
             <StaggerItem key={s.name}>

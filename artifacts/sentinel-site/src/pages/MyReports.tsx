@@ -18,8 +18,8 @@ interface ReportSummary {
 
 type PageState =
   | { mode: "loading" }
-  | { mode: "auth"; devToken?: string }
-  | { mode: "request-sent"; devToken?: string }
+  | { mode: "auth"; devToken?: string | undefined }
+  | { mode: "request-sent"; devToken?: string | undefined }
   | { mode: "reports"; email: string; reports: ReportSummary[] }
   | { mode: "error"; message: string };
 
@@ -35,7 +35,7 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-function RequestForm({ onSent }: { onSent: (devToken?: string) => void }) {
+function RequestForm({ onSent }: { onSent: (devToken?: string | undefined) => void }) {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -99,7 +99,7 @@ function RequestForm({ onSent }: { onSent: (devToken?: string) => void }) {
   );
 }
 
-function LinkSentPanel({ devToken }: { devToken?: string }) {
+function LinkSentPanel({ devToken }: { devToken?: string | undefined }) {
   const [, navigate] = useLocation();
 
   return (
@@ -117,7 +117,7 @@ function LinkSentPanel({ devToken }: { devToken?: string }) {
           {/* Dev mode shortcut */}
           {devToken && (
             <div className="rounded-lg bg-amber-400/5 border border-amber-400/20 p-4 text-left mb-4">
-              <div className="text-xs font-mono text-amber-400/80 mb-2">Dev mode — click to sign in instantly:</div>
+              <div className="text-xs font-mono text-amber-400/80 mb-2">Dev mode - click to sign in instantly:</div>
               <button
                 onClick={() => navigate(`/api/my-reports/verify?token=${devToken}`)}
                 className="text-xs font-mono text-foreground underline underline-offset-2 hover:text-primary transition-colors break-all"

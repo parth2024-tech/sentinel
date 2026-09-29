@@ -49,7 +49,7 @@ const KB: KBEntry[] = [
         },
         {
           type: "decision",
-          text: "Is the Full Charge Capacity less than 60% of Design Capacity? If yes, software fixes won't help — physical replacement is required. If no, ensure 'Battery Saver' is engaging at 20% to prevent deep discharges.",
+          text: "Is the Full Charge Capacity less than 60% of Design Capacity? If yes, software fixes won't help - physical replacement is required. If no, ensure 'Battery Saver' is engaging at 20% to prevent deep discharges.",
         },
       ],
     },
@@ -162,7 +162,7 @@ const KB: KBEntry[] = [
         },
         {
           type: "decision",
-          text: "Is your baseline memory usage above 85% even with only 2-3 browser tabs open? If yes, your workload exceeds your hardware capacity — an immediate RAM upgrade is the only permanent fix.",
+          text: "Is your baseline memory usage above 85% even with only 2-3 browser tabs open? If yes, your workload exceeds your hardware capacity - an immediate RAM upgrade is the only permanent fix.",
         },
       ],
     },
@@ -263,8 +263,8 @@ function FeedbackWidget({ messageId }: { messageId: number }) {
 interface Message {
   id: number;
   role: "user" | "assistant";
-  text?: string;
-  solutions?: Solution[];
+  text?: string | undefined;
+  solutions?: Solution[] | undefined;
 }
 
 const URGENCY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -354,7 +354,7 @@ export default function Troubleshoot() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
       setIsTyping(false);
-    }, 800 + Math.random() * 600);
+    }, 800);
   }
 
   return (
@@ -440,15 +440,15 @@ export default function Troubleshoot() {
                       )}
                       
                       {msg.solutions?.map((sol, i) => {
-                        const urg = URGENCY_COLORS[sol.urgency];
+                        const urg = URGENCY_COLORS[sol.urgency] ?? { bg: "bg-muted/30 border-muted", text: "text-muted-foreground", label: sol.urgency };
                         return (
-                          <div key={i} className="rounded-2xl border border-border/50 bg-card/60 overflow-hidden shadow-sm">
+                          <div key={i} className="rounded-xl border border-border/50 bg-card/60 overflow-hidden shadow-sm">
                             <div className="px-5 md:px-6 py-4 border-b border-border/40 flex items-center justify-between gap-4 flex-wrap bg-background/40">
                               <div className="flex items-center gap-3">
                                 <span className="text-xs font-mono font-bold text-muted-foreground/60 bg-muted/30 px-2 py-1 rounded tracking-wide">{sol.component}</span>
                                 <h3 className="text-base font-bold text-foreground">{sol.title}</h3>
                               </div>
-                              <span className={`text-xs font-mono px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${urg.bg} ${urg.text}`}>
+                              <span className={`text-xs font-mono px-2.5 py-1 rounded-md border flex items-center gap-1.5 ${urg.bg} ${urg.text}`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${urg.text.replace('text-', 'bg-')}`} />
                                 {urg.label}
                               </span>

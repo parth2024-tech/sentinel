@@ -1,167 +1,121 @@
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Battery, HardDrive, Cpu, Activity } from "lucide-react";
+import { Battery, HardDrive, Cpu, Shield, AlertTriangle, CheckCircle2, Activity } from "lucide-react";
 
 export default function HeroIllustration() {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      // Calculate normalized mouse position (-1 to 1) relative to center of screen
-      const x = (e.clientX / window.innerWidth - 0.5) * 2;
-      const y = (e.clientY / window.innerHeight - 0.5) * 2;
-      
-      animate(mouseX, x, { duration: 0.5, ease: "easeOut" });
-      animate(mouseY, y, { duration: 0.5, ease: "easeOut" });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY]);
-
-  // Parallax transforms based on mouse position
-  const rotateX = useTransform(mouseY, [-1, 1], [15, -15]);
-  const rotateY = useTransform(mouseX, [-1, 1], [-15, 15]);
-  
-  const layer1X = useTransform(mouseX, [-1, 1], [-20, 20]);
-  const layer1Y = useTransform(mouseY, [-1, 1], [-20, 20]);
-  
-  const layer2X = useTransform(mouseX, [-1, 1], [-40, 40]);
-  const layer2Y = useTransform(mouseY, [-1, 1], [-40, 40]);
-  
-  const layer3X = useTransform(mouseX, [-1, 1], [-60, 60]);
-  const layer3Y = useTransform(mouseY, [-1, 1], [-60, 60]);
-
   return (
-    <div 
-      style={{ perspective: 1000 }}
-      className="relative w-full max-w-3xl aspect-square mx-auto flex items-center justify-center pointer-events-none"
-    >
-      
-      {/* Central Core */}
-      <motion.div 
-        style={{ transformStyle: 'preserve-3d', rotateX, rotateY }}
-        className="relative w-64 h-64 flex items-center justify-center pointer-events-auto"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Core Glow */}
-        <motion.div 
-          animate={{ 
-            scale: isHovered ? 1.2 : 1,
-            opacity: isHovered ? 0.8 : 0.4
-          }}
-          transition={{ duration: 0.4 }}
-          className="absolute inset-0 bg-primary/30 rounded-full blur-[60px] animate-pulse-ring" 
-        />
-        
-        {/* Outer Ring 1 */}
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-[-40px] border border-primary/20 rounded-full border-dashed"
-        />
-
-        {/* Outer Ring 2 */}
-        <motion.div 
-          animate={{ rotate: -360 }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-[-20px] border border-accent/30 rounded-full border-t-accent/60"
-        />
-
-        {/* Inner Core Ball */}
-        <motion.div 
-          className="relative w-32 h-32 rounded-full bg-background border border-border/80 flex items-center justify-center overflow-hidden shadow-[0_0_50px_-10px_rgba(34,211,238,0.4)] backdrop-blur-md"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
-          <Activity className="w-12 h-12 text-primary animate-glow-pulse" />
-          
-          {/* Scanning line effect inside core */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/20 to-transparent animate-scan-line" />
-        </motion.div>
-      </motion.div>
-
-      {/* Floating Elements (Glassmorphic Cards) */}
-      {/* Battery Card */}
-      <motion.div 
-        style={{ x: layer1X, y: layer1Y }}
-        className="absolute top-[10%] right-[15%] w-48 p-4 rounded-xl border border-primary/40 bg-background/60 backdrop-blur-xl shadow-xl z-20 pointer-events-auto hover:border-primary transition-colors"
-      >
-        <div className="flex items-center justify-between mb-3">
+    <div className="relative w-full max-w-xl mx-auto flex flex-col gap-4 text-left select-none">
+      {/* Console Frame */}
+      <div className="rounded-2xl border border-border/80 bg-[#0b0f19]/90 shadow-2xl p-6 backdrop-blur-xl relative overflow-hidden">
+        {/* Top telemetry bar */}
+        <div className="flex items-center justify-between pb-4 mb-5 border-b border-border/40 text-xs font-mono">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-red-500/10 border border-red-500/20">
-              <Battery className="w-4 h-4 text-red-400" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-foreground font-semibold">SENTINEL ENGINE v3</span>
+            <span className="text-muted-foreground/60">|</span>
+            <span className="text-muted-foreground">PHYSICAL SCAN</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold tracking-wider">
+            <span>DETERMINISTIC</span>
+          </div>
+        </div>
+
+        {/* Central Metric Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-5">
+          {/* Battery Card */}
+          <div className="surface-card rounded-xl p-4 border border-border/60 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <Battery className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">Battery Curve</span>
+              </div>
+              <span className="text-xs font-mono text-amber-400 font-bold">78.2%</span>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Battery</span>
-          </div>
-          <span className="text-xs font-mono font-bold text-red-400">23%</span>
-        </div>
-        <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "23%" }}
-            transition={{ delay: 0.5, duration: 1.5, ease: "easeOut" }}
-            className="h-full bg-red-400 glow-red"
-          />
-        </div>
-      </motion.div>
-
-      {/* SSD Card */}
-      <motion.div 
-        style={{ x: layer2X, y: layer2Y }}
-        className="absolute bottom-[20%] left-[10%] w-52 p-4 rounded-xl border border-amber-400/40 bg-background/60 backdrop-blur-xl shadow-xl z-20 pointer-events-auto hover:border-amber-400/80 transition-colors"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-              <HardDrive className="w-4 h-4 text-amber-400" />
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+                <span>Cycle Count</span>
+                <span className="text-foreground">412 / 500</span>
+              </div>
+              <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                <div className="h-full bg-amber-400" style={{ width: "78.2%" }} />
+              </div>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">SSD Wear</span>
           </div>
-          <span className="text-xs font-mono font-bold text-amber-400">61%</span>
-        </div>
-        <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "61%" }}
-            transition={{ delay: 0.7, duration: 1.5, ease: "easeOut" }}
-            className="h-full bg-amber-400"
-          />
-        </div>
-      </motion.div>
 
-      {/* CPU Thermals Card */}
-      <motion.div 
-        style={{ x: layer3X, y: layer3Y }}
-        className="absolute top-[25%] left-[5%] w-40 p-4 rounded-xl border border-border/60 bg-background/60 backdrop-blur-xl shadow-xl z-20 pointer-events-auto hover:border-primary/60 transition-colors"
-      >
-         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-primary" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Thermal</span>
+          {/* NVMe IOCTL Storage Card */}
+          <div className="surface-card rounded-xl p-4 border border-border/60 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-primary/10 border border-primary/20 text-primary">
+                  <HardDrive className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">NVMe Log 0x02</span>
+              </div>
+              <span className="text-xs font-mono text-emerald-400 font-bold">PASS</span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+                <span>Media Errors</span>
+                <span className="text-emerald-400 font-bold">0</span>
+              </div>
+              <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: "91%" }} />
+              </div>
+            </div>
           </div>
-          <div className="flex items-end gap-1">
-            <span className="text-2xl font-mono font-bold text-foreground">84</span>
-            <span className="text-xs text-muted-foreground mb-1">°C</span>
+
+          {/* Thermal Throttle Monitor */}
+          <div className="surface-card rounded-xl p-4 border border-border/60 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-400">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">PROCHOT Thermal</span>
+              </div>
+              <span className="text-xs font-mono text-red-400 font-bold">94°C Peak</span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+                <span>Throttle Events</span>
+                <span className="text-red-400 font-bold">14 in 30m</span>
+              </div>
+              <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                <div className="h-full bg-red-400" style={{ width: "62%" }} />
+              </div>
+            </div>
           </div>
-          {/* Mini line chart aesthetic */}
-          <div className="flex items-end h-6 gap-1 mt-1 opacity-70">
-            {[40, 60, 55, 70, 84, 82, 84].map((h, i) => (
-              <motion.div 
-                key={i}
-                initial={{ height: 0 }}
-                animate={{ height: `${h}%` }}
-                transition={{ delay: 1 + i * 0.1, duration: 0.5 }}
-                className={`w-full rounded-t-sm ${h > 80 ? 'bg-red-400 glow-red' : 'bg-primary'}`}
-              />
-            ))}
+
+          {/* Overall Health Score Card */}
+          <div className="surface-card rounded-xl p-4 border border-primary/30 bg-primary/5 flex flex-col justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-primary/20 text-primary">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">Score Result</span>
+              </div>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-primary/20 text-primary font-bold">GRADE B</span>
+            </div>
+            <div className="flex items-end justify-between">
+              <div>
+                <span className="text-2xl font-bold font-mono text-foreground">79</span>
+                <span className="text-xs text-muted-foreground font-mono"> / 100</span>
+              </div>
+              <span className="text-[11px] font-mono text-amber-400">Action Recommended</span>
+            </div>
           </div>
         </div>
-      </motion.div>
 
+        {/* Live Status Ticker */}
+        <div className="rounded-lg bg-background/60 border border-border/40 p-3 flex items-center justify-between text-xs font-mono text-muted-foreground">
+          <div className="flex items-center gap-2 truncate">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="truncate">WMI COM isolation active - zero apartment hang</span>
+          </div>
+          <span className="text-primary shrink-0 pl-3">READY</span>
+        </div>
+      </div>
     </div>
   );
 }

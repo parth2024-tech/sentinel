@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { Hash, Calendar, Battery, Zap, BarChart3, Users, Radio, ShieldCheck, Play, Activity } from "lucide-react";
 import { useLiveFeed, type LiveStats, type LiveFeedEvent } from "@/hooks/useLiveFeed";
 
 
@@ -74,15 +75,15 @@ function StatCard({
   value: number | null;
   unit?: string;
   sublabel?: string;
-  color?: "cyan" | "emerald" | "amber" | "violet";
-  icon: string;
+  color?: "cyan" | "emerald" | "amber" | "blue";
+  icon: React.ReactNode;
   decimals?: number;
 }) {
   const colorMap = {
     cyan:    { glow: "shadow-cyan-500/20",    text: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/30" },
     emerald: { glow: "shadow-emerald-500/20", text: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
     amber:   { glow: "shadow-amber-500/20",   text: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/30" },
-    violet:  { glow: "shadow-violet-500/20",  text: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/30" },
+    blue:    { glow: "shadow-blue-500/20",    text: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/30" },
   };
   const c = colorMap[color];
 
@@ -95,7 +96,9 @@ function StatCard({
       <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10"
            style={{ background: `radial-gradient(circle, currentColor, transparent)` }} />
       <div className="flex items-start justify-between mb-3">
-        <span className="text-2xl">{icon}</span>
+        <div className="w-10 h-10 rounded-lg bg-background/50 border border-border/40 flex items-center justify-center">
+          {icon}
+        </div>
         {sublabel && (
           <span className="text-xs text-muted-foreground bg-background/40 px-2 py-0.5 rounded-full border border-border/40">
             {sublabel}
@@ -104,7 +107,7 @@ function StatCard({
       </div>
       <div className={`text-4xl font-bold tracking-tight mb-1 ${c.text}`}>
         {value === null ? (
-          <span className="text-muted-foreground text-2xl">—</span>
+          <span className="text-muted-foreground text-2xl">-</span>
         ) : (
           <><AnimatedNumber value={value} decimals={decimals} />{unit}</>
         )}
@@ -198,7 +201,7 @@ function OsBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
             </div>
             <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500"
+                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
@@ -298,7 +301,7 @@ export default function LiveDashboard() {
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/3 rounded-full blur-3xl" />
       </div>
 
@@ -327,27 +330,27 @@ export default function LiveDashboard() {
             href="/health-test"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-background font-semibold text-sm hover:bg-primary/90 transition-all glow-cyan shrink-0"
           >
-            <span>🔬</span> Run Your Scan
+            <Play className="w-4 h-4 fill-current" /> Run Your Scan
           </Link>
         </div>
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
-            icon="🔢"
+            icon={<Hash className="w-5 h-5 text-cyan-400" />}
             label="Total Reports"
             value={stats?.totalReports ?? null}
             color="cyan"
           />
           <StatCard
-            icon="📅"
+            icon={<Calendar className="w-5 h-5 text-blue-400" />}
             label="Reports Today"
             value={stats?.reportsLast24h ?? null}
             sublabel="24h"
-            color="violet"
+            color="blue"
           />
           <StatCard
-            icon="🔋"
+            icon={<Battery className="w-5 h-5 text-emerald-400" />}
             label="Avg Battery Health"
             value={stats?.avgBatteryHealth ?? null}
             unit="%"
@@ -356,7 +359,7 @@ export default function LiveDashboard() {
             decimals={1}
           />
           <StatCard
-            icon="⚡"
+            icon={<Zap className="w-5 h-5 text-amber-400" />}
             label="Avg Health Score"
             value={stats?.avgOverallScore ?? null}
             unit="/100"
@@ -405,13 +408,13 @@ export default function LiveDashboard() {
 
             <div className="space-y-4">
               {[
-                { label: "Reports this week", value: stats?.reportsLast7d ?? "—", icon: "📊" },
-                { label: "Active users", value: feed.length > 0 ? `${Math.min(feed.length, 50)}+` : "—", icon: "👤" },
-                { label: "Live connections", value: mode === "sse" ? "Connected" : "Polling", icon: "📡" },
+                { label: "Reports this week", value: stats?.reportsLast7d ?? "-", icon: BarChart3 },
+                { label: "Active users", value: feed.length > 0 ? `${Math.min(feed.length, 50)}+` : "-", icon: Users },
+                { label: "Live connections", value: mode === "sse" ? "Connected" : "Polling", icon: Radio },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{item.icon}</span> {item.label}
+                    <item.icon className="w-4 h-4 text-primary" /> {item.label}
                   </div>
                   <span className="text-sm font-semibold text-foreground">{item.value}</span>
                 </div>
@@ -438,10 +441,10 @@ export default function LiveDashboard() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Live Activity Feed</h2>
-              <p className="text-xs text-muted-foreground">Most recent health scans — anonymized</p>
+              <p className="text-xs text-muted-foreground">Most recent health scans (anonymized)</p>
             </div>
             {feed.length > 0 && (
-              <span className="text-xs text-muted-foreground bg-muted/20 px-2 py-1 rounded-full border border-border/40">
+              <span className="text-xs text-muted-foreground bg-muted/20 px-2 py-1 rounded-md border border-border/40 font-mono">
                 {feed.length} scans
               </span>
             )}
@@ -449,8 +452,8 @@ export default function LiveDashboard() {
 
           {feed.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <div className="text-4xl mb-3 animate-bounce">📡</div>
-              <p className="text-sm">Waiting for live data…</p>
+              <Radio className="w-8 h-8 text-primary/60 mb-3 animate-pulse" />
+              <p className="text-sm">Waiting for live data...</p>
               <p className="text-xs mt-1">New reports will appear here instantly</p>
             </div>
           ) : (
@@ -465,8 +468,9 @@ export default function LiveDashboard() {
         </motion.div>
 
         {/* Footer note */}
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          🔒 All statistics are derived from anonymized, aggregated data. Device models and OS versions only — no personal data is ever displayed.
+        <p className="text-center text-xs text-muted-foreground mt-8 flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          <span>All statistics are derived from anonymized, aggregated data. Device models and OS builds only; no personal data is ever displayed.</span>
         </p>
       </div>
     </div>

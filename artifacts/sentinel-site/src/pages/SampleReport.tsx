@@ -1,5 +1,5 @@
+import { ArrowRight, Calendar, Shield, TrendingDown, AlertTriangle, CheckCircle, Lightbulb, Activity, Battery, Thermometer, RefreshCw, Search, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
-import { ArrowRight, Calendar, Shield, TrendingDown, AlertTriangle, CheckCircle, Lightbulb, Activity } from "lucide-react";
 import AnimateIn, { StaggerContainer, StaggerItem } from "@/components/AnimateIn";
 
 const componentScores = [
@@ -18,7 +18,7 @@ const urgentFindings = [
   {
     severity: "critical",
     component: "STORAGE",
-    title: "Disk space critically low — 47 GB remaining (9%)",
+    title: "Disk space critically low - 47 GB remaining (9%)",
     detail: "Windows needs 10–15% free space to run updates, write restore points, and wear-level the SSD correctly. Below 10%, update installations begin failing silently. Below 5%, the system can lock up.",
     action: "Run Disk Cleanup (search in Start menu), then move large files (Downloads, Videos) to an external drive or cloud storage. Target: at least 80 GB free.",
     prediction: "If left under 10% for another 3 months, SSD write endurance will accumulate at roughly 2× the normal rate.",
@@ -31,8 +31,8 @@ const urgentFindings = [
   {
     severity: "warning",
     component: "THERMALS",
-    title: "CPU running 71°C at idle — 14 throttle events last week",
-    detail: "For a Core i7-12700H, 71°C at idle is elevated. During tasks it likely hit 95°C+ and triggered thermal throttling 14 times — each throttle event cuts performance by 30–50% for several seconds.",
+    title: "CPU running 71°C at idle - 14 throttle events last week",
+    detail: "For a Core i7-12700H, 71°C at idle is elevated. During tasks it likely hit 95°C+ and triggered thermal throttling 14 times - each throttle event cuts performance by 30–50% for several seconds.",
     action: "Check that vents (bottom and left side) aren't blocked. Use on hard surfaces only. If the issue persists after cleaning vents, the thermal paste on the CPU die may need replacing (common after 3+ years).",
     prediction: "Sustained high idle temps accelerate battery degradation by approximately 5–8% per year beyond normal.",
     color: "border-amber-500/40 bg-amber-500/5",
@@ -44,9 +44,9 @@ const urgentFindings = [
   {
     severity: "warning",
     component: "BATTERY",
-    title: "Battery at 78.2% capacity — degrading 3× faster than expected",
+    title: "Battery at 78.2% capacity - degrading 3× faster than expected",
     detail: "This battery's design capacity is 86,000 mWh. Full charge capacity has dropped to 67,240 mWh across 412 cycles. That's a faster-than-average decline, likely caused by sustained high temperatures and frequent 100% charges.",
-    action: "Stop charging to 100%. Use your laptop plugged in at 60–80% when at a desk. Most BIOS/OEM utilities can cap charging — check Dell Power Manager. Start planning for battery replacement in the next 12 months.",
+    action: "Stop charging to 100%. Use your laptop plugged in at 60–80% when at a desk. Most BIOS/OEM utilities can cap charging - check Dell Power Manager. Start planning for battery replacement in the next 12 months.",
     color: "border-amber-500/40 bg-amber-500/5",
     badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
     icon: TrendingDown,
@@ -62,30 +62,30 @@ const patterns = [
   },
   {
     title: "Low disk space is worsening thermals",
-    detail: "When disk space is critically low, Windows writes the pagefile inefficiently — causing the SSD to work harder, generating more heat, and contributing to elevated CPU temperatures even at idle. Freeing 80+ GB would reduce pagefile fragmentation and lower background disk activity.",
+    detail: "When disk space is critically low, Windows writes the pagefile inefficiently - causing the SSD to work harder, generating more heat, and contributing to elevated CPU temperatures even at idle. Freeing 80+ GB would reduce pagefile fragmentation and lower background disk activity.",
   },
 ];
 
 const habits = [
   {
-    icon: "🔋",
+    icon: Battery,
     title: "Charging habit",
     tip: "You've charged to 100% on 28 of the last 30 days. Charging to 80% and keeping the laptop unplugged below 20% is the single most impactful thing you can do for long-term battery health.",
   },
   {
-    icon: "🌡️",
+    icon: Thermometer,
     title: "Surface habit",
-    tip: "Usage patterns suggest the laptop is often on a soft surface. Bottom-mounted vents are your primary exhaust — even partial blockage raises idle temps by 8–12°C. A $12 laptop stand solves this.",
+    tip: "Usage patterns suggest the laptop is often on a soft surface. Bottom-mounted vents are your primary exhaust. Even partial blockage raises idle temps by 8-12°C. A laptop stand solves this.",
   },
   {
-    icon: "🔄",
+    icon: RefreshCw,
     title: "Restart habit",
     tip: "Last restart was 9 days ago. A weekly restart takes 90 seconds, clears accumulated memory leaks, applies security updates, and resets driver states that drift over time.",
   },
 ];
 
 const overallScore = 79;
-const overallGrade = "B — Good";
+const overallGrade = "B - Good";
 const overallColor = "text-cyan-400";
 
 function ScoreRing({ score }: { score: number }) {
@@ -124,7 +124,7 @@ export default function SampleReport() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Sample Data Disclaimer Banner */}
       <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 text-center text-xs font-mono text-amber-400 flex items-center justify-center gap-2">
-        <span>⚠️</span>
+        <AlertTriangle className="w-4 h-4 shrink-0" />
         <span><strong>Sample Report:</strong> This page displays simulated/static diagnostic data for demonstration purposes. It does not represent live telemetry from your current machine.</span>
       </div>
       {/* Header band */}
@@ -137,7 +137,7 @@ export default function SampleReport() {
               </div>
               <div>
                 <p className="text-xs font-mono text-muted-foreground">SENTINEL WEEKLY HEALTH REPORT</p>
-                <p className="text-sm font-semibold text-foreground">Dell XPS 15 9520 — Serial 7XK2P93</p>
+                <p className="text-sm font-semibold text-foreground">Dell XPS 15 9520 - Serial 7XK2P93</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
@@ -158,7 +158,7 @@ export default function SampleReport() {
               <p className="text-xs font-mono text-muted-foreground mb-1">OVERALL HEALTH</p>
               <h1 className={`text-4xl font-bold font-mono mb-1 ${overallColor}`}>{overallGrade}</h1>
               <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                Your laptop is in generally good shape. Two issues need attention this week — disk space and thermals — and your battery is degrading faster than expected for its age.
+                Your laptop is in generally good shape. Two issues need attention this week - disk space and thermals - and your battery is degrading faster than expected for its age.
               </p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                 <div className="flex items-center gap-1.5 text-sm">
@@ -256,7 +256,10 @@ export default function SampleReport() {
             {patterns.map((p, i) => (
               <StaggerItem key={i}>
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-                  <p className="text-xs font-mono text-primary mb-2">🔍 {p.title.toUpperCase()}</p>
+                  <p className="text-xs font-mono text-primary mb-2 flex items-center gap-1.5">
+                    <Search className="w-3.5 h-3.5" />
+                    <span>{p.title.toUpperCase()}</span>
+                  </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">{p.detail}</p>
                 </div>
               </StaggerItem>
@@ -275,8 +278,10 @@ export default function SampleReport() {
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-4" staggerDelay={0.1}>
             {habits.map((h, i) => (
               <StaggerItem key={i}>
-                <div className="surface-card rounded-xl p-5 h-full">
-                  <div className="text-2xl mb-3">{h.icon}</div>
+                <div className="surface-card rounded-xl p-5 h-full flex flex-col">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-3">
+                    <h.icon className="w-4 h-4" />
+                  </div>
                   <p className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-wide">{h.title}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">{h.tip}</p>
                 </div>
@@ -294,17 +299,17 @@ export default function SampleReport() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {[
-                "GPU — no driver crashes or TDR events",
-                "RAM — no hardware errors detected via HCI memtest",
-                "Network — zero Wi-Fi drop events, DNS responding normally",
-                "SMART — NVMe SSD passed all S.M.A.R.T. attribute checks",
-                "Boot — 11.2 s average, no startup delay events",
-                "System integrity — SFC scan: 0 corrupt files",
-                "BSOD history — 0 unexpected shutdowns in last 30 days",
-                "Drivers — all critical drivers have no error codes in Device Manager",
+                "GPU: no driver crashes or TDR events",
+                "RAM: no hardware errors detected via HCI memtest",
+                "Network: zero Wi-Fi drop events, DNS responding normally",
+                "SMART: NVMe SSD passed all S.M.A.R.T. attribute checks",
+                "Boot: 11.2 s average, no startup delay events",
+                "System integrity: SFC scan: 0 corrupt files",
+                "BSOD history: 0 unexpected shutdowns in last 30 days",
+                "Drivers: all critical drivers have no error codes in Device Manager",
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className="text-green-400 shrink-0 mt-0.5">✓</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </div>
               ))}
@@ -323,7 +328,7 @@ export default function SampleReport() {
             <div className="surface-card rounded-xl p-6 max-w-md mx-auto">
               <p className="text-sm font-semibold text-foreground mb-2">This is what Sentinel sends you every week.</p>
               <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                No numbers without context. No alerts without action steps. No doom — just what matters and what to do about it.
+                No numbers without context. No alerts without action steps. No doom - just what matters and what to do about it.
               </p>
               <Link
                 href="/waitlist"

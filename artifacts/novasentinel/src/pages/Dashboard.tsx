@@ -177,26 +177,25 @@ export default function Dashboard() {
           }));
           setHistory(latestPts);
           
-          // Generate a fake stream of events based on findings to keep UI rich
-          if (mappedFindings.length > 0 && Math.random() > 0.5) {
-            const f = mappedFindings[Math.floor(Math.random() * mappedFindings.length)];
-            const entry: AlertEntry = {
+          // Synchronize alerts with genuine server findings and scan receipts
+          if (mappedFindings.length > 0) {
+            const genuineAlerts: AlertEntry[] = mappedFindings.map((f: any) => ({
               id: alertIdRef.current++,
               ts: nowStr(),
               level: f.severity as AlertLevel,
               component: f.component.toUpperCase(),
               message: f.title,
-            };
-            setAlerts(prev => [entry, ...prev].slice(0, 20));
-          } else if (Math.random() > 0.7) {
+            }));
+            setAlerts(genuineAlerts.slice(0, 20));
+          } else {
             const entry: AlertEntry = {
               id: alertIdRef.current++,
               ts: nowStr(),
               level: "ok",
-              component: "SYSTEM",
-              message: "Telemetry sync successful",
+              component: "FLEET",
+              message: "Telemetry synchronized: all monitored systems healthy",
             };
-            setAlerts(prev => [entry, ...prev].slice(0, 20));
+            setAlerts([entry]);
           }
         }
         
@@ -213,7 +212,7 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, []);
 
-  const live = history.length > 0 ? history[history.length - 1] : { cpu: 0, ram: 0, cpuTemp: 0, chassisTemp: 0, net: 0 };
+  const live = history[history.length - 1] ?? { cpu: 0, ram: 0, cpuTemp: 0, chassisTemp: 0, net: 0 };
 
   const uptimeH = Math.floor(uptime / 3600);
   const uptimeM = Math.floor((uptime % 3600) / 60);

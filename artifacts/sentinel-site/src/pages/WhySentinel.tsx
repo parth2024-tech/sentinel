@@ -9,11 +9,11 @@ const failures = [
     what: "Shows you what's happening right now",
     problems: [
       "No history. Close it and the data is gone.",
-      "Snapshot view hides trends — a battery losing 2% capacity per month won't register.",
-      "No correlation between metrics — you see high CPU and high temperature separately, not together.",
+      "Snapshot view hides trends - a battery losing 2% capacity per month won't register.",
+      "No correlation between metrics - you see high CPU and high temperature separately, not together.",
       "No warnings. You interpret the numbers yourself or ignore them.",
     ],
-    scenario: "Your SSD loses 40% of its write endurance over 18 months. Task Manager shows nothing unusual on any given day — until the drive fails entirely.",
+    scenario: "Your SSD loses 40% of its write endurance over 18 months. Task Manager shows nothing unusual on any given day - until the drive fails entirely.",
   },
   {
     tool: "Manufacturer tools",
@@ -21,7 +21,7 @@ const failures = [
     what: "Dell SupportAssist, HP Support Assistant, Lenovo Vantage",
     problems: [
       "Designed to tell you when something is already broken, not when it's trending toward failure.",
-      "Run on-demand or weekly scans — not continuous monitoring.",
+      "Run on-demand or weekly scans - not continuous monitoring.",
       "Battery 'health' is a binary: OK or Replace. No degradation rate, no timeline.",
       "Often recommend expensive service calls for things you can fix yourself.",
     ],
@@ -32,12 +32,12 @@ const failures = [
     icon: Eye,
     what: "CrystalDiskInfo, HWiNFO, Speccy",
     problems: [
-      "S.M.A.R.T. reports failure state — not failure trajectory.",
+      "S.M.A.R.T. reports failure state - not failure trajectory.",
       "A drive can pass all S.M.A.R.T. checks and fail within the week. This is documented and common.",
       "No baseline: '4,000 reallocated sectors' means nothing without knowing if that doubled last month.",
       "No plain-English output. You need to understand what each attribute means.",
     ],
-    scenario: "CrystalDiskInfo shows 'Good' in blue. Three months later your NVMe fails suddenly because reallocated sector counts were climbing — but the tool only flags 'Caution' at a threshold set for enterprise drives, not consumer SSDs.",
+    scenario: "CrystalDiskInfo shows 'Good' in blue. Three months later your NVMe fails suddenly because reallocated sector counts were climbing - but the tool only flags 'Caution' at a threshold set for enterprise drives, not consumer SSDs.",
   },
   {
     tool: "Resource Monitor / Perfmon",
@@ -46,22 +46,22 @@ const failures = [
     problems: [
       "Designed for IT administrators, not users.",
       "Requires you to know which counters matter and what values are concerning.",
-      "No persistence across sessions — data resets on reboot.",
+      "No persistence across sessions - data resets on reboot.",
       "No alerts, no recommendations, no pattern detection.",
     ],
-    scenario: "Your RAM has been causing intermittent page faults for 3 months, showing up as random slowdowns. Perfmon could have caught it — but only if you were watching the right counter, at the right time, and knew what the number meant.",
+    scenario: "Your RAM has been causing intermittent page faults for 3 months, showing up as random slowdowns. Perfmon could have caught it - but only if you were watching the right counter, at the right time, and knew what the number meant.",
   },
 ];
 
 const sentinelAdvantages = [
   {
     title: "Continuous, not on-demand",
-    detail: "Sentinel runs silently in the background, collecting readings every few minutes — not just when you open it. A battery that loses 1% capacity per month will show up in Sentinel's trend line. It's invisible to a weekly scanner.",
+    detail: "Sentinel runs silently in the background, collecting readings every few minutes - not just when you open it. A battery that loses 1% capacity per month will show up in Sentinel's trend line. It's invisible to a weekly scanner.",
     icon: Clock,
   },
   {
     title: "Personal baseline, not generic specs",
-    detail: "Your laptop's 'normal' is not a spec sheet value. After 7–14 days, Sentinel knows what your CPU temperature looks like during light work, heavy compile tasks, video calls, and idle. Anomaly detection is against your baseline — not a factory average.",
+    detail: "Your laptop's 'normal' is not a spec sheet value. After 7–14 days, Sentinel knows what your CPU temperature looks like during light work, heavy compile tasks, video calls, and idle. Anomaly detection is against your baseline - not a factory average.",
     icon: BarChart3,
   },
   {
@@ -78,19 +78,19 @@ const sentinelAdvantages = [
 
 const realScenarios = [
   {
-    situation: "Battery swelling — 6 weeks of warning",
+    situation: "Battery swelling - 6 weeks of warning",
     what_happened: "Sentinel detected that battery capacity was dropping at 3× the normal rate while simultaneously running 5°C hotter than baseline during identical workloads. It flagged the combination 43 days before the battery showed visible swelling.",
     traditional: "All manufacturer tools showed 'Battery OK' until the swelling was physically visible. SupportAssist ran a scan 10 days before failure and passed everything.",
   },
   {
-    situation: "SSD failure — caught during warranty",
+    situation: "SSD failure - caught during warranty",
     what_happened: "Sentinel spotted that reallocated sector counts were increasing at an accelerating rate over 3 months, cross-referenced against power-on hours, and issued a warning at week 8. The drive was replaced under warranty with all data intact.",
     traditional: "CrystalDiskInfo showed 'Good' status throughout. The S.M.A.R.T. threshold for the specific attribute that was failing wasn't reached until week 11.",
   },
   {
-    situation: "Thermal paste failure — performance recovered",
+    situation: "Thermal paste failure - performance recovered",
     what_happened: "After 36 months, CPU boost clock duration dropped from 28 seconds to 4 seconds under identical test loads. Sentinel correlated this with rising idle temperatures and flagged thermal compound degradation. Repasting restored full performance.",
-    traditional: "The laptop 'felt slower' but benchmarks weren't run. Task Manager showed normal CPU usage percentages — the throttling was invisible at the usage level.",
+    traditional: "The laptop 'felt slower' but benchmarks weren't run. Task Manager showed normal CPU usage percentages - the throttling was invisible at the usage level.",
   },
 ];
 
@@ -110,7 +110,7 @@ export default function WhySentinel() {
               <span className="gradient-text">isn't enough.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Task Manager, SupportAssist, S.M.A.R.T. tools — they all exist, they're all free, and laptops still fail without warning every day. Here's why.
+              Task Manager, SupportAssist, S.M.A.R.T. tools - they all exist, they're all free, and laptops still fail without warning every day. Here's why.
             </p>
           </div>
         </AnimateIn>
@@ -143,7 +143,7 @@ export default function WhySentinel() {
           <AnimateIn>
             <div className="text-center mb-14">
               <h2 className="text-2xl font-bold tracking-tight mb-3">What each tool misses</h2>
-              <p className="text-muted-foreground text-sm">This isn't criticism — these tools do exactly what they were built to do. They just weren't built to predict failure.</p>
+              <p className="text-muted-foreground text-sm">This isn't criticism - these tools do exactly what they were built to do. They just weren't built to predict failure.</p>
             </div>
           </AnimateIn>
 
@@ -191,7 +191,7 @@ export default function WhySentinel() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground mb-1">Want documented proof?</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  We recorded five cases where OEM diagnostic tools gave users misleading or incomplete readings on real hardware — with the data to back it up.
+                  We recorded five cases where OEM diagnostic tools gave users misleading or incomplete readings on real hardware - with the data to back it up.
                 </p>
               </div>
               <Link
@@ -245,7 +245,7 @@ export default function WhySentinel() {
           <AnimateIn>
             <div className="text-center mb-14">
               <h2 className="text-2xl font-bold tracking-tight mb-3">What early warning actually looks like</h2>
-              <p className="text-muted-foreground text-sm">Three cases where existing tools failed — and where Sentinel's approach would have caught the issue weeks earlier.</p>
+              <p className="text-muted-foreground text-sm">Three cases where existing tools failed - and where Sentinel's approach would have caught the issue weeks earlier.</p>
             </div>
           </AnimateIn>
           <StaggerContainer className="space-y-6" staggerDelay={0.1}>
@@ -278,7 +278,7 @@ export default function WhySentinel() {
               The tools you have are fine. They're just not built for this.
             </h2>
             <p className="text-muted-foreground mb-8 leading-relaxed">
-              Sentinel isn't a replacement for manufacturer software or S.M.A.R.T. monitoring. It's the layer on top that watches the trend, connects the dots, and tells you in plain English what needs your attention — before it becomes a crisis.
+              Sentinel isn't a replacement for manufacturer software or S.M.A.R.T. monitoring. It's the layer on top that watches the trend, connects the dots, and tells you in plain English what needs your attention - before it becomes a crisis.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link

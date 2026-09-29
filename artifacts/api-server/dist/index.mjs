@@ -4146,7 +4146,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path2 = __require("path");
-        const outputDir = "/home/thor/Desktop/Senitel/Marketing-Website-Plan/artifacts/api-server/dist";
+        const outputDir = "/home/thor/Desktop/-Sentinel-main/artifacts/api-server/dist";
         return path2.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e2) {
         const f2 = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -110989,7 +110989,7 @@ var ReportsService = class {
     let agentDeviceOrgId = null;
     if (deviceToken && deviceToken.length >= 10) {
       const deviceRows = await db.select().from(devicesTable).where(eq(devicesTable.deviceToken, deviceToken)).limit(1);
-      if (deviceRows.length === 0) {
+      if (deviceRows.length === 0 || !deviceRows[0]) {
         throw new Error("Invalid device token");
       }
       agentDeviceOrgId = deviceRows[0].orgId ?? null;
@@ -110997,7 +110997,7 @@ var ReportsService = class {
     const reportParsed = SentinelReportSchema.safeParse(rawJson);
     if (!reportParsed.success) {
       const first = reportParsed.error.issues[0];
-      throw new Error(`Invalid report data: ${first.path.join(".")}: ${first.message}`);
+      throw new Error(`Invalid report data: ${first ? `${first.path.join(".")}: ${first.message}` : "Validation failed"}`);
     }
     const plausibility = validatePlausibility(reportParsed.data);
     if (!plausibility.valid) {
@@ -111030,9 +111030,9 @@ var ReportsService = class {
     const serverSecret = process.env.SERVER_SECRET || "sentinel-default-server-secret-key-32-chars-long";
     const computedIdempotencyKey = crypto2.createHmac("sha256", serverSecret).update(`${deviceId}||${scanTimestamp}||${payloadHash}`).digest("hex");
     const existing = await db.select().from(idempotencyKeysTable).where(eq(idempotencyKeysTable.key, computedIdempotencyKey)).limit(1);
-    if (existing.length > 0) {
+    if (existing.length > 0 && existing[0]) {
       const report = await db.select().from(reportsTable).where(eq(reportsTable.id, existing[0].reportId)).limit(1);
-      if (report.length > 0) {
+      if (report.length > 0 && report[0]) {
         const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, report[0].id)).limit(1);
         return {
           id: report[0].id,
@@ -111089,14 +111089,14 @@ var ReportsService = class {
    */
   static async claimReport(id, claimToken, email3, logger2 = defaultLogger) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
     if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
     if (row.claimed && !email3) return { id, claimed: true, email: row.userId ? "***" : null };
     let finalUserId = row.userId;
     if (email3 && !finalUserId) {
       const userRows = await db.select().from(usersTable).where(eq(usersTable.email, email3)).limit(1);
-      if (userRows.length > 0) {
+      if (userRows.length > 0 && userRows[0]) {
         finalUserId = userRows[0].id;
       } else {
         finalUserId = crypto2.randomBytes(16).toString("hex");
@@ -111104,7 +111104,7 @@ var ReportsService = class {
           await db.insert(usersTable).values({ id: finalUserId, email: email3 });
         } catch (err) {
           const concurrentUserRows = await db.select().from(usersTable).where(eq(usersTable.email, email3)).limit(1);
-          if (concurrentUserRows.length > 0) {
+          if (concurrentUserRows.length > 0 && concurrentUserRows[0]) {
             finalUserId = concurrentUserRows[0].id;
           } else {
             throw err;
@@ -111124,8 +111124,8 @@ var ReportsService = class {
   }
   static async submitHabitAnswers(id, claimToken, habitAnswers, logger2 = defaultLogger) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
     if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, id)).limit(1);
     const rj = payloadRow[0]?.resultJson ?? {};
@@ -111151,8 +111151,8 @@ var ReportsService = class {
   }
   static async getReport(id) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, id)).limit(1);
     const habitRows = await db.select().from(reportHabitAnswersTable).where(eq(reportHabitAnswersTable.reportId, id)).limit(1);
     const habit = habitRows[0];
@@ -111169,8 +111169,8 @@ var ReportsService = class {
   }
   static async generateShareToken(id, claimToken, logger2 = defaultLogger) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
     if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
     if (row.shareToken) {
       logger2.info({ reportId: id }, "share_token_reused");
@@ -111183,8 +111183,8 @@ var ReportsService = class {
   }
   static async getSharedReport(shareToken) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.shareToken, shareToken), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, row.id)).limit(1);
     const result = payloadRow[0]?.resultJson ?? {};
     const habitRows = await db.select().from(reportHabitAnswersTable).where(eq(reportHabitAnswersTable.reportId, row.id)).limit(1);
@@ -111498,11 +111498,12 @@ router4.get("/verify", async (req, res) => {
       gt(magicLinkTokensTable.expiresAt, now)
     )
   ).limit(1);
-  if (rows.length === 0) {
+  const row = rows[0];
+  if (!row) {
     res.status(401).json({ error: "Invalid or expired magic link." });
     return;
   }
-  const { email: email3 } = rows[0];
+  const { email: email3 } = row;
   await db.update(magicLinkTokensTable).set({ usedAt: now }).where(eq(magicLinkTokensTable.token, token2));
   const sessionToken = newToken();
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3);
@@ -111706,11 +111707,11 @@ router6.get("/session/:code", async (req, res) => {
   }
   const now = /* @__PURE__ */ new Date();
   const rows = await db.select().from(pairSessionsTable).where(eq(pairSessionsTable.code, code.toUpperCase())).limit(1);
-  if (rows.length === 0) {
+  const session = rows[0];
+  if (!session) {
     res.json({ status: "expired" });
     return;
   }
-  const session = rows[0];
   if (session.expiresAt < now) {
     res.json({ status: "expired" });
     return;
@@ -111754,11 +111755,11 @@ router6.post("/push", async (req, res) => {
   }
   const now = /* @__PURE__ */ new Date();
   const sessionRows = await db.select().from(pairSessionsTable).where(eq(pairSessionsTable.code, normalizedCode)).limit(1);
-  if (sessionRows.length === 0) {
+  const session = sessionRows[0];
+  if (!session) {
     res.status(404).json({ error: "Pair code not found or expired." });
     return;
   }
-  const session = sessionRows[0];
   if (session.expiresAt < now) {
     res.status(410).json({ error: "Pair code has expired." });
     return;
@@ -111772,7 +111773,7 @@ router6.post("/push", async (req, res) => {
     const first = reportParsed.error.issues[0];
     res.status(422).json({
       error: "Invalid report data",
-      details: `${first.path.join(".")}: ${first.message}`
+      details: first ? `${first.path.join(".")}: ${first.message}` : "Validation failed"
     });
     return;
   }
@@ -112062,13 +112063,14 @@ router9.get("/:orgId/billing", async (req, res) => {
   const { orgId } = req.params;
   try {
     const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, orgId)).limit(1);
-    if (org.length === 0) {
+    const orgRow = org[0];
+    if (!orgRow) {
       res.status(404).json({ error: "Organization not found", details: "" });
       return;
     }
     res.status(200).json({
-      status: org[0].status,
-      currentPeriodEnd: org[0].currentPeriodEnd?.toISOString() || null,
+      status: orgRow.status,
+      currentPeriodEnd: orgRow.currentPeriodEnd?.toISOString() || null,
       portalUrl: "https://billing.stripe.com/p/session/test_mock"
     });
   } catch (err) {
@@ -129378,9 +129380,9 @@ router11.get("/dashboard", async (req, res) => {
     }
     const deviceCount = recentReports.length;
     const avgOverall = Math.round(totalScore / deviceCount);
-    const avgComponents = Object.keys(componentSums).map((name2) => ({
+    const avgComponents = Object.entries(componentSums).map(([name2, data]) => ({
       name: name2,
-      score: Math.round(componentSums[name2].sum / componentSums[name2].count)
+      score: Math.round(data.sum / (data.count || 1))
     }));
     const uniqueFindingsMap = /* @__PURE__ */ new Map();
     for (const f2 of findingsList) {
@@ -129407,7 +129409,7 @@ var fleet_default = router11;
 
 // src/routes/live.ts
 var import_express13 = __toESM(require_express2(), 1);
-initLiveFeed(db, reportsTable);
+initLiveFeed(db);
 var router12 = (0, import_express13.Router)();
 router12.get("/stats", async (_req, res) => {
   try {

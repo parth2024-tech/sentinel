@@ -18,7 +18,7 @@ export class ReportsService {
    * generates the report using the engine, and persists it to the database using CUID2.
    */
   static async createReport(
-    payload: { rawJson: any; habitAnswers?: Record<string, number>; legacy?: boolean },
+    payload: { rawJson: any; habitAnswers?: Record<string, number> | undefined; legacy?: boolean | undefined },
     ip: string,
     idempotencyKey?: string,
     deviceToken?: string,
@@ -41,7 +41,7 @@ export class ReportsService {
         .from(devicesTable)
         .where(eq(devicesTable.deviceToken, deviceToken))
         .limit(1);
-      if (deviceRows.length === 0) {
+      if (deviceRows.length === 0 || !deviceRows[0]) {
         throw new Error("Invalid device token");
       }
       agentDeviceOrgId = deviceRows[0].orgId ?? null;
@@ -51,7 +51,7 @@ export class ReportsService {
     const reportParsed = SentinelReportSchema.safeParse(rawJson);
     if (!reportParsed.success) {
       const first = reportParsed.error.issues[0];
-      throw new Error(`Invalid report data: ${first.path.join(".")}: ${first.message}`);
+      throw new Error(`Invalid report data: ${first ? `${first.path.join(".")}: ${first.message}` : "Validation failed"}`);
     }
 
     // Stage 2: PlausibilityGuard bounds checking & quarantine
@@ -99,13 +99,13 @@ export class ReportsService {
       .from(idempotencyKeysTable)
       .where(eq(idempotencyKeysTable.key, computedIdempotencyKey))
       .limit(1);
-    if (existing.length > 0) {
+    if (existing.length > 0 && existing[0]) {
       const report = await db
         .select()
         .from(reportsTable)
         .where(eq(reportsTable.id, existing[0].reportId))
         .limit(1);
-      if (report.length > 0) {
+      if (report.length > 0 && report[0]) {
         const payloadRow = await db
           .select()
           .from(reportPayloadsTable)
@@ -181,8 +181,8 @@ export class ReportsService {
    */
   static async claimReport(id: string, claimToken: string, email?: string, logger: pino.Logger = defaultLogger) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
 
     if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
 
@@ -192,7 +192,7 @@ export class ReportsService {
 
     if (email && !finalUserId) {
       const userRows = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-      if (userRows.length > 0) {
+      if (userRows.length > 0 && userRows[0]) {
         finalUserId = userRows[0].id;
       } else {
         finalUserId = crypto.randomBytes(16).toString("hex");
@@ -200,7 +200,7 @@ export class ReportsService {
           await db.insert(usersTable).values({ id: finalUserId, email });
         } catch (err) {
           const concurrentUserRows = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-          if (concurrentUserRows.length > 0) {
+          if (concurrentUserRows.length > 0 && concurrentUserRows[0]) {
             finalUserId = concurrentUserRows[0].id;
           } else {
             throw err;
@@ -225,8 +225,8 @@ export class ReportsService {
 
   static async submitHabitAnswers(id: string, claimToken: string, habitAnswers: Record<string, number>, logger: pino.Logger = defaultLogger) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
 
     if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
 
@@ -259,8 +259,8 @@ export class ReportsService {
 
   static async getReport(id: string) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
 
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, id)).limit(1);
     
@@ -281,8 +281,8 @@ export class ReportsService {
 
   static async generateShareToken(id: string, claimToken: string, logger: pino.Logger = defaultLogger) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
 
     if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
 
@@ -300,8 +300,8 @@ export class ReportsService {
 
   static async getSharedReport(shareToken: string) {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.shareToken, shareToken), isNull(reportsTable.deletedAt))).limit(1);
-    if (rows.length === 0) throw new Error("Report not found");
     const row = rows[0];
+    if (!row) throw new Error("Report not found");
 
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, row.id)).limit(1);
     const result = (payloadRow[0]?.resultJson ?? {}) as any;

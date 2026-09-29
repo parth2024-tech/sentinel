@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { db, reportsTable } from "@workspace/db";
+import { db } from "@workspace/db";
 import { addClient, getStats, getRecentEvents, initLiveFeed } from "../lib/liveFeed";
 
 // Initialise live feed with DB (once on first import)
-initLiveFeed(db, reportsTable);
+initLiveFeed(db);
 
 const router = Router();
 

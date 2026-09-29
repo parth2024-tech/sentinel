@@ -11,7 +11,7 @@ const differentiators = [
   {
     icon: TrendingUp,
     title: "Diagnostic, not reactive",
-    description: "Sentinel runs 40+ deterministic checks and surfaces degradation trends weeks before hardware fails — with the reasoning shown.",
+    description: "Sentinel runs 40+ deterministic checks and surfaces degradation trends weeks before hardware fails - with the reasoning shown.",
     color: "text-primary",
   },
   {
@@ -49,7 +49,7 @@ export default function Home() {
           {/* Left Content Area */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
             <AnimateIn delay={0} direction="up">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-mono font-medium border border-primary/30 text-primary bg-primary/10 mb-8 shadow-sm backdrop-blur-md">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-mono uppercase tracking-wider font-semibold border border-primary/30 text-primary bg-primary/10 mb-8 shadow-sm backdrop-blur-md">
                 <Activity className="w-3.5 h-3.5" /> REVEAL THE INVISIBLE
               </div>
             </AnimateIn>
@@ -65,7 +65,7 @@ export default function Home() {
             <AnimateIn delay={0.2} direction="up">
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mt-8">
                 Stop relying on binary Pass/Fail checks that hide hardware degradation. 
-                Our deterministic telemetry exposes exactly what is failing—down to the individual cycle—before your system dies.
+                Our deterministic telemetry exposes exactly what is failing, down to individual cycle degradation, before hardware failure.
               </p>
             </AnimateIn>
             
@@ -205,7 +205,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <AnimateIn>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-primary/30 text-primary bg-primary/10 mb-6 font-semibold shadow-sm">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono uppercase tracking-wider border border-primary/30 text-primary bg-primary/10 mb-6 font-semibold shadow-sm">
                   <FileCode className="w-3.5 h-3.5" /> FULLY OPEN ALGORITHM
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-5">No black-box AI.<br/>Reproducible by hand.</h2>
@@ -363,9 +363,8 @@ export default function Home() {
 
       {/* Waitlist section */}
       <section 
-        className="px-6 py-28" 
+        className="px-6 py-28 border-t border-border/60 bg-card/10" 
         id="waitlist"
-        style={{ background: 'linear-gradient(270deg, hsl(185 85% 55% / 0.03), hsl(265 70% 65% / 0.03), hsl(185 85% 55% / 0.03))', backgroundSize: '400% 400%', animation: 'gradient-shift 10s linear infinite' }}
       >
         <AnimateIn>
           <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-8">

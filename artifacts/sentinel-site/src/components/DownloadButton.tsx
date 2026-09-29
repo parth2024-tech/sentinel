@@ -92,7 +92,7 @@ export default function DownloadButton({ slug, label, recommended, preload = tru
         if (!info) {
           setState({
             phase: "unavailable",
-            message: "Not yet published — binaries are built on first deploy. Use the script flow below as an alternative.",
+            message: "Not yet published - binaries are built on first deploy. Use the script flow below as an alternative.",
           });
         } else {
           setState({ phase: "ready", info });
@@ -184,7 +184,7 @@ export default function DownloadButton({ slug, label, recommended, preload = tru
             <a href="/health-test" className="underline underline-offset-2 hover:text-amber-300 transition-colors">
               script paste-back flow
             </a>{" "}
-            in the meantime — it produces the identical report.
+            in the meantime - it produces the identical report.
           </p>
         </div>
       )}

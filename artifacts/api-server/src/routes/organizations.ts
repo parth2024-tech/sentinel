@@ -86,14 +86,15 @@ router.get("/:orgId/billing", async (req, res) => {
 
   try {
     const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, orgId)).limit(1);
-    if (org.length === 0) {
+    const orgRow = org[0];
+    if (!orgRow) {
       res.status(404).json({ error: "Organization not found", details: "" });
       return;
     }
 
     res.status(200).json({
-      status: org[0].status,
-      currentPeriodEnd: org[0].currentPeriodEnd?.toISOString() || null,
+      status: orgRow.status,
+      currentPeriodEnd: orgRow.currentPeriodEnd?.toISOString() || null,
       portalUrl: "https://billing.stripe.com/p/session/test_mock"
     });
   } catch (err) {

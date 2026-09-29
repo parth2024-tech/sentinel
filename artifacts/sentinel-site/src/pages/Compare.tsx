@@ -126,7 +126,7 @@ export default function Compare() {
               Sentinel vs. everything else.
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              A side-by-side look at what each tool actually covers — and where the gaps are that Sentinel fills.
+              A side-by-side look at what each tool actually covers - and where the gaps are that Sentinel fills.
             </p>
           </div>
         </AnimateIn>
@@ -257,15 +257,15 @@ export default function Compare() {
             {[
               {
                 title: "Personal baseline",
-                detail: "Every other tool compares your hardware against a fixed threshold — usually a manufacturer spec or a generic warning value. Sentinel compares against your own history. Your laptop's normal is the reference, not a factory average.",
+                detail: "Every other tool compares your hardware against a fixed threshold - usually a manufacturer spec or a generic warning value. Sentinel compares against your own history. Your laptop's normal is the reference, not a factory average.",
               },
               {
                 title: "Cross-component correlation",
-                detail: "High CPU temperature means something different when it's also paired with accelerating battery capacity loss and elevated discharge rates. No individual tool connects these signals. Sentinel does — automatically.",
+                detail: "High CPU temperature means something different when it's also paired with accelerating battery capacity loss and elevated discharge rates. No individual tool connects these signals. Sentinel does - automatically.",
               },
               {
                 title: "Trend forecasting",
-                detail: "Every tool on this list tells you what's true right now. Sentinel models the trajectory — how fast something is changing, whether the rate is accelerating, and what that implies for the next 30–90 days.",
+                detail: "Every tool on this list tells you what's true right now. Sentinel models the trajectory - how fast something is changing, whether the rate is accelerating, and what that implies for the next 30–90 days.",
               },
             ].map((item) => (
               <StaggerItem key={item.title}>
@@ -290,7 +290,7 @@ export default function Compare() {
               The gap is real. Sentinel fills it.
             </h2>
             <p className="text-muted-foreground mb-8 leading-relaxed">
-              Keep using the tools you already have — they're good at what they do. Sentinel adds the one thing they all share: no memory of the past, no model of where things are going.
+              Keep using the tools you already have - they're good at what they do. Sentinel adds the one thing they all share: no memory of the past, no model of where things are going.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link

@@ -68,12 +68,11 @@ router.get("/session/:code", async (req, res) => {
     .where(eq(pairSessionsTable.code, code.toUpperCase()))
     .limit(1);
 
-  if (rows.length === 0) {
+  const session = rows[0];
+  if (!session) {
     res.json({ status: "expired" });
     return;
   }
-
-  const session = rows[0];
 
   if (session.expiresAt < now) {
     res.json({ status: "expired" });
@@ -146,12 +145,11 @@ router.post("/push", async (req, res) => {
     .where(eq(pairSessionsTable.code, normalizedCode))
     .limit(1);
 
-  if (sessionRows.length === 0) {
+  const session = sessionRows[0];
+  if (!session) {
     res.status(404).json({ error: "Pair code not found or expired." });
     return;
   }
-
-  const session = sessionRows[0];
 
   if (session.expiresAt < now) {
     res.status(410).json({ error: "Pair code has expired." });
@@ -170,7 +168,7 @@ router.post("/push", async (req, res) => {
     const first = reportParsed.error.issues[0];
     res.status(422).json({
       error: "Invalid report data",
-      details: `${first.path.join(".")}: ${first.message}`,
+      details: first ? `${first.path.join(".")}: ${first.message}` : "Validation failed",
     });
     return;
   }

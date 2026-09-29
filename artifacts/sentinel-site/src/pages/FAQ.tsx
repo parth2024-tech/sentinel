@@ -6,11 +6,11 @@ import AnimateIn, { StaggerContainer, StaggerItem } from "@/components/AnimateIn
 const faqs = [
   {
     question: "Is my data private?",
-    answer: "Completely. Sentinel runs entirely on your machine. No data is sent to any external server — not diagnostic readings, not usage patterns, not your hardware specs. Everything stays local. We have no servers receiving your data because we built it that way intentionally.",
+    answer: "Completely. Sentinel runs entirely on your machine. No data is sent to any external server - not diagnostic readings, not usage patterns, not your hardware specs. Everything stays local. We have no servers receiving your data because we built it that way intentionally.",
   },
   {
     question: "How much CPU does it use?",
-    answer: "Less than 1% on average. Sentinel is designed to be invisible — it uses idle CPU cycles for analysis and pauses during intensive workloads. You won't notice it running unless you go looking for it in Task Manager.",
+    answer: "Less than 1% on average. Sentinel is designed to be invisible - it uses idle CPU cycles for analysis and pauses during intensive workloads. You won't notice it running unless you go looking for it in Task Manager.",
   },
   {
     question: "What Windows versions are supported?",
@@ -18,11 +18,11 @@ const faqs = [
   },
   {
     question: "Why predictive instead of reactive?",
-    answer: "Reactive tools tell you something broke. That's already too late — you've lost data, missed a deadline, or paid for an emergency repair. Predictive monitoring gives you weeks of lead time to back up, schedule service, or order a replacement before anything actually fails.",
+    answer: "Reactive tools tell you something broke. That's already too late - you've lost data, missed a deadline, or paid for an emergency repair. Predictive monitoring gives you weeks of lead time to back up, schedule service, or order a replacement before anything actually fails.",
   },
   {
     question: "How does Sentinel learn my machine?",
-    answer: "In the first 3–5 days after installation, Sentinel collects baseline readings across all monitored subsystems under your normal usage conditions. It builds a statistical model of your laptop's healthy behavior — unique to your machine, your workloads, and your environment. After that, deviations from that baseline trigger analysis.",
+    answer: "In the first 3–5 days after installation, Sentinel collects baseline readings across all monitored subsystems under your normal usage conditions. It builds a statistical model of your laptop's healthy behavior - unique to your machine, your workloads, and your environment. After that, deviations from that baseline trigger analysis.",
   },
   {
     question: "Is there a free tier?",
@@ -87,7 +87,7 @@ export default function FAQ() {
           </div>
         </AnimateIn>
 
-        {/* FAQ items — staggered */}
+        {/* FAQ items - staggered */}
         <StaggerContainer className="flex flex-col gap-3" staggerDelay={0.06}>
           {faqs.map((faq, i) => (
             <StaggerItem key={i}>

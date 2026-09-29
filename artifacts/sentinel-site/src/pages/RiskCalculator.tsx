@@ -79,7 +79,7 @@ const FIELDS: Field<any>[] = [
       { value: "smart",     label: "Smart: keep it 20–80%",     riskDelta: -5 },
       { value: "overnight", label: "Overnight charging to 100%", riskDelta: 8  },
       { value: "always",    label: "Always plugged in at 100%",  riskDelta: 12 },
-      { value: "variable",  label: "Variable — no consistent habit", riskDelta: 3 },
+      { value: "variable",  label: "Variable - no consistent habit", riskDelta: 3 },
     ],
   },
   {
@@ -96,7 +96,7 @@ const FIELDS: Field<any>[] = [
     id: "issues",
     label: "Prior hardware issues?",
     options: [
-      { value: "none",     label: "None — been trouble-free",        riskDelta: -5 },
+      { value: "none",     label: "None - been trouble-free",        riskDelta: -5 },
       { value: "minor",    label: "Minor (slower, occasional freeze)", riskDelta: 3  },
       { value: "moderate", label: "Moderate (crashes, battery issues)", riskDelta: 12 },
       { value: "major",    label: "Major (repair, replaced part)",    riskDelta: 20 },
@@ -131,7 +131,7 @@ function getTopRisks(inputs: Inputs): { component: string; reason: string; sever
   if (inputs.charging === "always" || inputs.charging === "overnight") {
     risks.push({ component: "Battery", reason: inputs.charging === "always" ? "Always-on charging at 100% causes lithium electrolyte oxidation continuously." : "Overnight charging keeps the battery at max charge stress for 7–9 hours nightly.", severity: "high" });
   }
-  if (inputs.cooling === "lapbed") risks.push({ component: "Thermals", reason: "Soft surface usage blocks vents and raises operating temp 8–15°C above baseline — the single biggest driver of accelerated CPU throttling.", severity: "high" });
+  if (inputs.cooling === "lapbed") risks.push({ component: "Thermals", reason: "Soft surface usage blocks vents and raises operating temp 8–15°C above baseline - the single biggest driver of accelerated CPU throttling.", severity: "high" });
   if (inputs.age === "3to4" || inputs.age === "gt4") risks.push({ component: "SSD / Battery", reason: `At ${inputs.age === "gt4" ? "4+" : "3–4"} years, lithium battery chemistry has typically completed 300–500 cycles. Both battery and SSD wear accelerate non-linearly in this range.`, severity: inputs.age === "gt4" ? "high" : "medium" });
   if (inputs.usage === "gaming") risks.push({ component: "Thermals + Fan", reason: "Sustained gaming-level loads push thermal systems to 85–95°C continuously, degrading thermal paste and fan bearings faster than any other workload.", severity: "high" });
   if (inputs.issues === "moderate" || inputs.issues === "major") risks.push({ component: "Multiple components", reason: `Prior ${inputs.issues === "major" ? "major" : "moderate"} issues are the strongest predictor of future failure. Hardware stress is cumulative.`, severity: "high" });
@@ -150,8 +150,8 @@ function getLifespan(risk: number, age: Age | ""): string {
     gt4:  { low: "2–3 more years", moderate: "1–2 more years", elevated: "12–18 months", high: "Under 12 months", critical: "Replacement recommended" },
   };
   const bucket = risk <= 20 ? "low" : risk <= 35 ? "moderate" : risk <= 55 ? "elevated" : risk <= 75 ? "high" : "critical";
-  if (!age) return "—";
-  return remaining[age][bucket];
+  if (!age) return "-";
+  return remaining[age]?.[bucket] ?? "-";
 }
 
 export default function RiskCalculator() {

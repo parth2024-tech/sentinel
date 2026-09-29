@@ -39,7 +39,7 @@ export default function Waitlist() {
 
           {/* Header */}
           <div className="text-center mb-10">
-            <span className="text-xs font-mono font-medium px-3 py-1 rounded-full border border-primary/30 text-primary bg-primary/10 mb-5 inline-block">
+            <span className="text-xs font-mono font-semibold tracking-wider uppercase px-3 py-1 rounded-md border border-primary/30 text-primary bg-primary/10 mb-5 inline-block">
               EARLY ACCESS
             </span>
             <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-5" data-testid="heading-waitlist">

@@ -8,7 +8,7 @@ const FREE_FEATURES = [
   { label: "Battery cycle count & capacity",        supported: true  },
   { label: "SSD / NVMe S.M.A.R.T. monitoring",     supported: true  },
   { label: "Thermal zone temperature tracking",     supported: true  },
-  { label: "Personal baseline learning",            supported: false, note: "Pro only — 7-day trial included" },
+  { label: "Personal baseline learning",            supported: false, note: "Pro only - 7-day trial included" },
   { label: "Anomaly detection vs your normal",      supported: false, note: "Pro only"  },
   { label: "Cross-component correlation",           supported: false, note: "Pro only"  },
   { label: "Trend forecasting (30–90 day)",         supported: false, note: "Pro only"  },
@@ -38,7 +38,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What happens when my 7-day Pro trial ends?",
-    a: "Sentinel rolls back to the Free tier automatically — no charge. Your baseline data is preserved, so if you upgrade later, learning picks up where it left off. No credit card is required to start the trial.",
+    a: "Sentinel rolls back to the Free tier automatically - no charge. Your baseline data is preserved, so if you upgrade later, learning picks up where it left off. No credit card is required to start the trial.",
   },
   {
     q: "Is there a discount for students or educators?",
@@ -50,7 +50,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What Windows versions are supported?",
-    a: "Sentinel runs on Windows 10 (build 1903+) and Windows 11. It requires no administrator elevation for normal operation — only the initial install needs admin rights.",
+    a: "Sentinel runs on Windows 10 (build 1903+) and Windows 11. It requires no administrator elevation for normal operation - only the initial install needs admin rights.",
   },
   {
     q: "What if Sentinel doesn't detect anything useful?",
@@ -75,7 +75,7 @@ export default function Pricing() {
               <span className="gradient-text">No surprises.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Start free. Upgrade when the predictions prove their worth. Cancel anytime — your baseline data stays on your machine regardless.
+              Start free. Upgrade when the predictions prove their worth. Cancel anytime - your baseline data stays on your machine regardless.
             </p>
           </div>
         </AnimateIn>
@@ -160,7 +160,7 @@ export default function Pricing() {
                 <span className="ml-2 text-sm text-muted-foreground/50 pb-1.5 line-through">$9</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Includes a <span className="text-foreground font-medium">7-day full Pro trial</span> — no credit card required to start.
+                Includes a <span className="text-foreground font-medium">7-day full Pro trial</span> - no credit card required to start.
               </p>
             </div>
 
@@ -194,7 +194,7 @@ export default function Pricing() {
 
         {/* Billing note */}
         <p className="text-center text-xs text-muted-foreground/50 mt-6 max-w-lg mx-auto leading-relaxed">
-          Early access pricing is locked in for the life of your subscription. When Sentinel exits early access, the standard price increases — your rate stays the same.
+          Early access pricing is locked in for the life of your subscription. When Sentinel exits early access, the standard price increases - your rate stays the same.
         </p>
       </section>
 
@@ -205,7 +205,7 @@ export default function Pricing() {
             <div className="text-center mb-12">
               <h2 className="text-2xl font-bold tracking-tight mb-3">What Pro actually gives you</h2>
               <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-                Free gives you raw data. Pro gives you meaning — the difference between knowing your battery is at 78% capacity and knowing it's degrading 3× faster than expected.
+                Free gives you raw data. Pro gives you meaning - the difference between knowing your battery is at 78% capacity and knowing it's degrading 3× faster than expected.
               </p>
             </div>
           </AnimateIn>
@@ -218,7 +218,7 @@ export default function Pricing() {
               },
               {
                 before: "Battery capacity: 78.2%",
-                after: "Capacity declining at 0.4%/week — 3× your first-year rate. At this rate, below 50% within 4 months. Consider a replacement before travel season.",
+                after: "Capacity declining at 0.4%/week - 3× your first-year rate. At this rate, below 50% within 4 months. Consider a replacement before travel season.",
                 label: "From number to timeline",
               },
               {

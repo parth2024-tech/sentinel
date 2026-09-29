@@ -29,7 +29,7 @@ const EVENT_POOL: Omit<FeedEvent, "id" | "ts">[] = [
   { component: "THERMALS", message: "Vent airflow pattern",          value: "nominal",      level: "ok"    },
   { component: "ANALYSIS", message: "Anomaly score",                 value: "LOW",          level: "ok"    },
   { component: "BATTERY",  message: "Degradation rate",              value: "3× expected",  level: "alert" },
-  { component: "SSD",      message: "Free space",                    value: "9.2% — low",   level: "warn"  },
+  { component: "SSD",      message: "Free space",                    value: "9.2% - low",   level: "warn"  },
   { component: "NETWORK",  message: "Packet loss",                   value: "0.0%",         level: "ok"    },
   { component: "CPU",      message: "Frequency scaling",             value: "healthy",      level: "ok"    },
   { component: "ANALYSIS", message: "Cross-component correlation",   value: "heat + batt",  level: "warn"  },
@@ -50,24 +50,14 @@ function formatTs(d: Date) {
   return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 }
 
-function pickNext(last: number): number {
-  let next = Math.floor(Math.random() * EVENT_POOL.length);
-  while (next === last) next = Math.floor(Math.random() * EVENT_POOL.length);
-  return next;
-}
-
 let globalId = 1;
 
 function seedFeed(): FeedEvent[] {
   const now = new Date();
   const seeds: FeedEvent[] = [];
-  const used = new Set<number>();
   for (let i = 0; i < 8; i++) {
-    let idx = Math.floor(Math.random() * EVENT_POOL.length);
-    while (used.has(idx)) idx = (idx + 1) % EVENT_POOL.length;
-    used.add(idx);
     const d = new Date(now.getTime() - (8 - i) * 4500);
-    const item = EVENT_POOL[idx] ?? EVENT_POOL[0]!;
+    const item = EVENT_POOL[i % EVENT_POOL.length]!;
     seeds.push({ id: globalId++, ts: formatTs(d), ...item });
   }
   return seeds;
@@ -76,21 +66,21 @@ function seedFeed(): FeedEvent[] {
 export default function HealthFeed() {
   const [events, setEvents] = useState<FeedEvent[]>(() => seedFeed());
   const [tick, setTick] = useState(0);
-  const lastIdxRef = useRef(-1);
+  const nextIdxRef = useRef(8);
 
-  // Add a new event every ~3.5 s
+  // Advance sequential telemetry stream every 4s
   useEffect(() => {
     const interval = setInterval(() => {
-      const idx = pickNext(lastIdxRef.current);
-      lastIdxRef.current = idx;
-      const item = EVENT_POOL[idx] ?? EVENT_POOL[0]!;
+      const idx = nextIdxRef.current % EVENT_POOL.length;
+      nextIdxRef.current = (nextIdxRef.current + 1) % EVENT_POOL.length;
+      const item = EVENT_POOL[idx]!;
       const e: FeedEvent = {
         id: globalId++,
         ts: formatTs(new Date()),
         ...item,
       };
       setEvents((prev) => [e, ...prev].slice(0, 12));
-    }, 3500);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -111,18 +101,18 @@ export default function HealthFeed() {
 
           {/* Left copy */}
           <div className="flex flex-col gap-6 lg:sticky lg:top-24">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-mono w-fit">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-primary text-xs font-mono font-semibold tracking-wider uppercase w-fit">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-glow-pulse" />
-              LIVE MONITORING
+              REFERENCE TELEMETRY
             </div>
             <h2 className="text-3xl font-bold tracking-tight">
-              Sentinel never stops watching.
+              Sentinel continuously inspects every subsystem.
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              Every few minutes — silently, locally — Sentinel reads from over 60 hardware telemetry points. It compares each reading to your personal baseline, scores any drift, and cross-references related metrics for early pattern detection.
+              Every few minutes, Sentinel reads from over 60 hardware telemetry points locally. It compares each reading to your personal baseline, evaluates drift against deterministic thresholds, and correlates related components for early fault detection.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              You don't see any of this. You only hear from Sentinel when something actually needs your attention.
+              Background analysis runs at under 1% CPU utilization. You only hear from Sentinel when a component exceeds monitored safety thresholds.
             </p>
 
             {/* Stats */}
@@ -130,7 +120,7 @@ export default function HealthFeed() {
               {[
                 { label: "Checks per day",    value: "860+" },
                 { label: "Avg CPU overhead",  value: "< 1%" },
-                { label: "Network calls",     value: "Zero" },
+                { label: "Cloud requirement", value: "None" },
               ].map((s) => (
                 <div key={s.label} className="surface-card rounded-lg px-4 py-3 text-center">
                   <div className="text-lg font-bold font-mono text-primary">{s.value}</div>
@@ -157,7 +147,7 @@ export default function HealthFeed() {
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
                 </div>
-                <span className="text-xs text-muted-foreground font-mono">sentinel — telemetry feed (simulation)</span>
+                <span className="text-xs text-muted-foreground font-mono">sentinel - telemetry stream (Dell XPS 15 reference baseline)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
