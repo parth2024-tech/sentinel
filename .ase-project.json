@@ -65,5 +65,10 @@
     "Use Drizzle ORM for PostgreSQL queries and schema migrations",
     "Use wouter for routing in frontend projects",
     "Use Framer Motion for responsive premium UI transitions"
+  ],
+  "learned_lessons": [
+    "tsconfig.base.json strictness (exactOptionalPropertyTypes and noUncheckedIndexedAccess) requires explicit | undefined on optional interface fields and nullish coalescing on all array element lookups.",
+    "Radix UI Primitive wrapper components must conditionally spread optional boolean/checked properties ({...(checked !== undefined ? { checked } : {})}) to avoid assigning undefined under exactOptionalPropertyTypes.",
+    "Marketing websites and live feeds must avoid Math.random simulations; use real telemetry or deterministic sequential reference baselines to maintain engineering credibility."
   ]
 }
