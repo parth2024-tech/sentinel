@@ -13,23 +13,27 @@ const app: Express = express();
 // Using `1` means only the immediate upstream proxy is trusted, which is safe on Render.
 app.set("trust proxy", 1);
 
+// Safe CJS/ESM interop resolvers for Vercel/Node compilation
+const helmetFn = ((helmet as any)?.default ?? helmet) as (...args: any[]) => any;
+const pinoHttpFn = ((pinoHttp as any)?.default ?? pinoHttp) as (...args: any[]) => any;
+
 // ── Security headers (Helmet) ─────────────────────────────────────────────────
 // Adds X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security,
 // Content-Security-Policy, and other critical security headers.
-app.use(helmet());
+app.use(helmetFn());
 
 app.use(
-  pinoHttp({
+  pinoHttpFn({
     logger,
     serializers: {
-      req(req) {
+      req(req: any) {
         return {
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
         };
       },
-      res(res) {
+      res(res: any) {
         return {
           statusCode: res.statusCode,
         };
