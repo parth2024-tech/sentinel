@@ -2,10 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
+    "noEmitOnError": false,
+    "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src"],
+  "include": ["src/**/*"],
   "references": [
     {
       "path": "../../lib/db"
@@ -16,5 +18,11 @@
     {
       "path": "../../lib/report-engine"
     }
-  ]
+  ],
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "rootDir": "."
+    }
+  }
 }
