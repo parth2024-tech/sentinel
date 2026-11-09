@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { PgBoss } from "pg-boss";
-import { logger } from "../logger";
-import { isResendConfigured } from "../email/config";
-import { buildReportClaimedEmail } from "../email/templates/reportClaimed";
-import { sendTransactionalEmail } from "../email/resendMailer";
-import { emitNewReport } from "../liveFeed";
+import { logger } from "../logger.js";
+import { isResendConfigured } from "../email/config.js";
+import { buildReportClaimedEmail } from "../email/templates/reportClaimed.js";
+import { sendTransactionalEmail } from "../email/resendMailer.js";
+import { emitNewReport } from "../liveFeed.js";
 
 // Initialize pg-boss using the existing database pool or connection string.
 // Since we have a connection string in process.env.DATABASE_URL, we'll use that.

@@ -1,4 +1,4 @@
-import { getPublicSiteOrigin } from "../../githubReleaseRepo";
+import { getPublicSiteOrigin } from "../../githubReleaseRepo.js";
 
 export function buildMagicLinkVerifyUrl(token: string): string {
   const origin = getPublicSiteOrigin();

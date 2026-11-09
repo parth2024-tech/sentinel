@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { logger } from "./lib/logger";
+import { logger } from "./lib/logger.js";
 
 // ── Env validation on startup (#8) ────────────────────────────────────────────
 // Fails fast with a clear error instead of crashing at runtime.
@@ -16,10 +16,10 @@ const EnvSchema = z.object({
 const env = EnvSchema.parse(process.env); // throws on startup if invalid
 
 // Import app after env validation so DB init uses validated env
-import app from "./app";
-import { startMagicLinkReminderScheduler } from "./lib/magicLinkReminderScheduler";
-import { startCleanupScheduler } from "./lib/cleanupScheduler";
-import { initQueue, stopQueue } from "./lib/queue";
+import app from "./app.js";
+import { startMagicLinkReminderScheduler } from "./lib/magicLinkReminderScheduler.js";
+import { startCleanupScheduler } from "./lib/cleanupScheduler.js";
+import { initQueue, stopQueue } from "./lib/queue/index.js";
 
 const port = env.PORT;
 

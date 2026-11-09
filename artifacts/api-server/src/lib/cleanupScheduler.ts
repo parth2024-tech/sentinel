@@ -1,6 +1,6 @@
 import { db, magicLinkTokensTable, idempotencyKeysTable } from "@workspace/db";
 import { lt, or, and, isNotNull } from "drizzle-orm";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 /**
  * Background cleanup jobs for expired/used data (#9, #17).

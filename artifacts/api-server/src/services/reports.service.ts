@@ -4,9 +4,9 @@ import { SentinelReportSchema, generateReport, computeHabitScore, combinedScore,
 import { eq, and, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import crypto from "node:crypto";
-import { newClaimToken, newShareToken, sha256hex } from "../lib/ids";
-import { consumeRateLimit } from "../lib/rateLimit";
-import { enqueueClaimEmail, enqueueLiveFeed } from "../lib/queue";
+import { newClaimToken, newShareToken, sha256hex } from "../lib/ids.js";
+import { consumeRateLimit } from "../lib/rateLimit.js";
+import { enqueueClaimEmail, enqueueLiveFeed } from "../lib/queue/index.js";
 import pino from "pino";
 
 // A dummy logger for service use if req.log isn't passed (though passing it is better)

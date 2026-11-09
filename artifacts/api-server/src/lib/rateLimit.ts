@@ -1,6 +1,6 @@
 import { db, rateLimitsTable } from "@workspace/db";
 import { sql, lt } from "drizzle-orm";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 /**
  * Atomically increments the counter for `(key, windowStart)` and returns whether

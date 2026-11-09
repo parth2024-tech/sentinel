@@ -1,4 +1,4 @@
-import { buildReportPublicUrl } from "../urls";
+import { buildReportPublicUrl } from "../urls.js";
 
 export function buildReportClaimedEmail(
   email: string,

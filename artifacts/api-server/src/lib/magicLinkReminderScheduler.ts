@@ -4,10 +4,10 @@ import { and, eq, gt, isNull, lte } from "drizzle-orm";
 import {
   MAGIC_LINK_REMINDER_LEAD_MIN,
   MAGIC_LINK_REMINDER_POLL_MS,
-} from "./magicLinkConstants";
-import { buildMagicLinkLoginEmail } from "./email/templates/magicLinkLogin";
-import { sendTransactionalEmail } from "./email/resendMailer";
-import { isResendConfigured } from "./email/config";
+} from "./magicLinkConstants.js";
+import { buildMagicLinkLoginEmail } from "./email/templates/magicLinkLogin.js";
+import { sendTransactionalEmail } from "./email/resendMailer.js";
+import { isResendConfigured } from "./email/config.js";
 
 /**
  * Polls for unused magic-link tokens that expire within the next

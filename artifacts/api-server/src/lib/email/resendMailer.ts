@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { getResendApiKey, getResendFromAddress } from "./config";
+import { getResendApiKey, getResendFromAddress } from "./config.js";
 
 let client: Resend | null = null;
 

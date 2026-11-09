@@ -3,9 +3,9 @@ import { z } from "zod";
 import { db, pairSessionsTable } from "@workspace/db";
 import { SentinelReportSchema } from "@workspace/report-engine";
 import { eq } from "drizzle-orm";
-import { newPairCode, sha256hex } from "../lib/ids";
-import { ReportsService } from "../services/reports.service";
-import { consumeRateLimit } from "../lib/rateLimit";
+import { newPairCode, sha256hex } from "../lib/ids.js";
+import { ReportsService } from "../services/reports.service.js";
+import { consumeRateLimit } from "../lib/rateLimit.js";
 
 const router = Router();
 

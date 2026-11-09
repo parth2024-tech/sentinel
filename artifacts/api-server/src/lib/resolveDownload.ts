@@ -74,11 +74,11 @@ async function findAssetOnGithub(
   const listUrl = `https://api.github.com/repos/${repo}/releases?per_page=30`;
   const listRes = await fetch(listUrl, { headers });
 
-  if (!listRes.ok) {
+  if (!(listRes as any).ok) {
     return null;
   }
 
-  const releases = (await listRes.json()) as GhRelease[];
+  const releases = (await (listRes as any).json()) as GhRelease[];
 
   for (const release of releases) {
     if (release.draft) continue;

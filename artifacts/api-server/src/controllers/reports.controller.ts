@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { ReportsService } from "../services/reports.service";
+import { ReportsService } from "../services/reports.service.js";
 
 const PostReportBody = z.object({
   rawJson: z.record(z.unknown()),

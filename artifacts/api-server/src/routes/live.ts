@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { addClient, getStats, getRecentEvents, initLiveFeed } from "../lib/liveFeed";
+import { addClient, getStats, getRecentEvents, initLiveFeed } from "../lib/liveFeed.js";
 
 // Initialise live feed with DB (once on first import)
 initLiveFeed(db);

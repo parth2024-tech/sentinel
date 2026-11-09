@@ -11,10 +11,10 @@ import { eq, and, gt, isNull, isNotNull } from "drizzle-orm";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { Router, type Request } from "express";
-import { MAGIC_LINK_TTL_MIN } from "../lib/magicLinkConstants";
-import { isResendConfigured } from "../lib/email/config";
-import { buildMagicLinkLoginEmail } from "../lib/email/templates/magicLinkLogin";
-import { sendTransactionalEmail } from "../lib/email/resendMailer";
+import { MAGIC_LINK_TTL_MIN } from "../lib/magicLinkConstants.js";
+import { isResendConfigured } from "../lib/email/config.js";
+import { buildMagicLinkLoginEmail } from "../lib/email/templates/magicLinkLogin.js";
+import { sendTransactionalEmail } from "../lib/email/resendMailer.js";
 
 const router = Router();
 

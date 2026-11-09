@@ -1,8 +1,8 @@
-import { buildMagicLinkVerifyUrl } from "../urls";
+import { buildMagicLinkVerifyUrl } from "../urls.js";
 import {
   MAGIC_LINK_REMINDER_LEAD_MIN,
   MAGIC_LINK_TTL_MIN,
-} from "../../magicLinkConstants";
+} from "../../magicLinkConstants.js";
 
 export type MagicLinkEmailKind = "login" | "reminder";
 

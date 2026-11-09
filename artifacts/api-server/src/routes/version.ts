@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, type Request, type Response as ExpressResponse } from "express";
 import { getGithubReleaseRepo, getPublicSiteOrigin } from "../githubReleaseRepo.js";
 
 const router = Router();
@@ -7,7 +7,7 @@ const router = Router();
 let versionCache: { data: unknown; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-router.get("/", async (_req: Request, res: Response) => {
+router.get("/", async (_req: Request, res: ExpressResponse) => {
   const now = Date.now();
 
   // Return cached response if fresh
@@ -29,8 +29,8 @@ router.get("/", async (_req: Request, res: Response) => {
       }
     );
 
-    if (ghResponse.ok) {
-      const release = (await ghResponse.json()) as {
+    if ((ghResponse as any).ok) {
+      const release = (await (ghResponse as any).json()) as {
         tag_name: string;
       };
 

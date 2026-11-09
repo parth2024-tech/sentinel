@@ -3,8 +3,8 @@ import { z } from "zod";
 import { db, devicesTable } from "@workspace/db";
 import { eq, and, gt } from "drizzle-orm";
 import { randomBytes } from "crypto";
-import { consumeRateLimit } from "../lib/rateLimit";
-import { sha256hex } from "../lib/ids";
+import { consumeRateLimit } from "../lib/rateLimit.js";
+import { sha256hex } from "../lib/ids.js";
 
 const router = Router();
 
