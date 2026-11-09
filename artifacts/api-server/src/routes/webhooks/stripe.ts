@@ -21,7 +21,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
     return;
   }
 
-  let event: Stripe.Event;
+  let event: any;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
@@ -40,7 +40,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as any;
         // In a real flow, client_reference_id would contain the orgId
         const orgId = session.client_reference_id;
         
@@ -57,7 +57,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
       }
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         await db.update(organizationsTable)
           .set({ 
             status: subscription.status,
