@@ -4146,7 +4146,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path2 = __require("path");
-        const outputDir = "/home/thor/Desktop/-Sentinel-main/artifacts/api-server/dist";
+        const outputDir = "/home/thor/.gemini/antigravity/scratch/sentinel/artifacts/api-server/dist";
         return path2.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e2) {
         const f2 = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -129468,9 +129468,11 @@ var routes_default = router13;
 // src/app.ts
 var app = (0, import_express15.default)();
 app.set("trust proxy", 1);
-app.use(helmet());
+var helmetFn = helmet?.default ?? helmet;
+var pinoHttpFn = import_pino_http.default?.default ?? import_pino_http.default;
+app.use(helmetFn());
 app.use(
-  (0, import_pino_http.default)({
+  pinoHttpFn({
     logger,
     serializers: {
       req(req) {

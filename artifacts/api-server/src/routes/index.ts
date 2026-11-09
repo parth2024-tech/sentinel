@@ -1,16 +1,16 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import waitlistRouter from "./waitlist";
-import reportsRouter from "./reports";
-import myReportsRouter from "./myReports";
-import devicesRouter from "./devices";
-import pairRouter from "./pair";
-import versionRouter from "./version";
-import downloadsRouter from "./downloads";
-import organizationsRouter from "./organizations";
-import stripeWebhookRouter from "./webhooks/stripe";
-import fleetRouter from "./fleet";
-import liveRouter from "./live";
+import healthRouter from "./health.js";
+import waitlistRouter from "./waitlist.js";
+import reportsRouter from "./reports.js";
+import myReportsRouter from "./myReports.js";
+import devicesRouter from "./devices.js";
+import pairRouter from "./pair.js";
+import versionRouter from "./version.js";
+import downloadsRouter from "./downloads.js";
+import organizationsRouter from "./organizations.js";
+import stripeWebhookRouter from "./webhooks/stripe.js";
+import fleetRouter from "./fleet.js";
+import liveRouter from "./live.js";
 
 const router: IRouter = Router();
 
