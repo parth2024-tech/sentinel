@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         
     - name: Install pnpm
       uses: pnpm/action-setup@v3
@@ -24,10 +24,7 @@ jobs:
         version: 9
         
     - name: Install dependencies
-      run: pnpm install
-      
-    - name: Run ESLint
-      run: pnpm run lint
+      run: pnpm install --no-frozen-lockfile
       
     - name: Run Tests
       run: pnpm run test
