@@ -44,6 +44,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -374,6 +376,14 @@ jobs:
           sha256sum SentinelOneShot.exe SentinelAgent.exe SentinelSetup.msi > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            release-assets/SentinelOneShot.exe
+            release-assets/SentinelAgent.exe
+            release-assets/SentinelSetup.msi
+
       - name: Publish prerelease for website download API
         uses: softprops/action-gh-release@v2
         with:
@@ -431,6 +441,14 @@ jobs:
           cd release-assets
           sha256sum SentinelOneShot.exe SentinelAgent.exe SentinelSetup.msi > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            release-assets/SentinelOneShot.exe
+            release-assets/SentinelAgent.exe
+            release-assets/SentinelSetup.msi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

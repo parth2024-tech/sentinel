@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import crypto from "node:crypto";
 import { ReportsService } from "../services/reports.service.js";
+import { timingSafeEqualStr } from "../lib/crypto.js";
 
 const BoundedHabitAnswers = z
   .record(z.string().max(64), z.number().finite().min(0).max(100))
@@ -46,14 +48,39 @@ export class ReportsController {
     const signatureStr = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
 
     if (signatureStr) {
+      const nowSec = Math.floor(Date.now() / 1000);
       if (!timestampStr) {
-        res.status(401).json({ error: "Missing attestation timestamp header." });
+        res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+        res.status(401).json({ error: "Missing attestation timestamp header.", serverTime: nowSec });
         return;
       }
       const ts = parseInt(timestampStr, 10);
-      const nowSec = Math.floor(Date.now() / 1000);
       if (isNaN(ts) || Math.abs(nowSec - ts) > 300) {
-        res.status(401).json({ error: "Attestation timestamp expired or outside acceptable clock skew." });
+        res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+        res.status(401).json({
+          error: "Attestation timestamp expired or outside acceptable clock skew.",
+          serverTime: nowSec,
+        });
+        return;
+      }
+
+      // Capture exact wire bytes to prevent serialization drift
+      const rawBodyBuf = (req as Request & { rawBody?: Buffer }).rawBody;
+      const wireBytes = rawBodyBuf ? rawBodyBuf.toString("utf8") : JSON.stringify(req.body);
+      const signaturePayload = `${timestampStr}.${wireBytes}`;
+
+      let expectedSig: string;
+      if (deviceToken && deviceToken.length >= 10) {
+        // Paired agent: Keyed HMAC-SHA256 bound to provisioned deviceToken
+        expectedSig = crypto.createHmac("sha256", deviceToken).update(signaturePayload).digest("hex");
+      } else {
+        // OneShot client: Digest attestation over timestamp + payload wire bytes
+        expectedSig = crypto.createHash("sha256").update(signaturePayload).digest("hex");
+      }
+
+      if (!timingSafeEqualStr(signatureStr, expectedSig)) {
+        res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+        res.status(401).json({ error: "Invalid attestation signature.", serverTime: nowSec });
         return;
       }
     }

@@ -67,9 +67,16 @@ app.use(cors({
 
 app.use(cookieParser());
 
-// ── Body parser with explicit size cap ────────────────────────────────────────
-// Enforced by the parser regardless of client-supplied content-length header.
-app.use(express.json({ limit: "256kb" }));
+// ── Body parser with explicit size cap & raw buffer capture ──────────────────
+// Preserves exact wire bytes in req.rawBody for cryptographic attestation verification
+app.use(
+  express.json({
+    limit: "256kb",
+    verify: (req: Request, _res: Response, buf: Buffer) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: "256kb" }));
 
 // ── Health check ─────────────────────────────────────────────────────────────

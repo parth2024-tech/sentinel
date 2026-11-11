@@ -23238,14 +23238,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto8 = __require("crypto");
+    var crypto9 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto8.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto9.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -26720,17 +26720,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto8 = __require("crypto");
+    var crypto9 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto8.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto9.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto8.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto9.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -28360,11 +28360,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
-    var crypto8 = __require("crypto");
+    var crypto9 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto8.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto9.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -28373,7 +28373,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto8.createHash("sha1").update(str).digest("hex");
+      return crypto9.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -30033,7 +30033,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "../../node_modules/.pnpm/pg@8.21.0/node_modules/pg/lib/crypto/sasl.js"(exports, module) {
     "use strict";
-    var crypto8 = require_utils5();
+    var crypto9 = require_utils5();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -30051,7 +30051,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto8.randomBytes(18).toString("base64");
+      const clientNonce = crypto9.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
       return {
         mechanism,
@@ -30093,20 +30093,20 @@ var require_sasl = __commonJS({
         const peerCert = stream.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto8.hashByName(hashName, peerCert);
+        const certHash = await crypto9.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto8.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto8.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto8.sha256(clientKey);
-      const clientSignature = await crypto8.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto9.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto9.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto9.sha256(clientKey);
+      const clientSignature = await crypto9.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto8.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto8.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto9.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto9.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -32279,7 +32279,7 @@ var require_client = __commonJS({
     var Query2 = require_query();
     var defaults3 = require_defaults();
     var Connection2 = require_connection();
-    var crypto8 = require_utils5();
+    var crypto9 = require_utils5();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -32526,7 +32526,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto8.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto9.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e2) {
             this.emit("error", e2);
@@ -60410,7 +60410,7 @@ var require_react_dom_server_node_production = __commonJS({
   "../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom/cjs/react-dom-server.node.production.js"(exports) {
     "use strict";
     var util2 = __require("util");
-    var crypto8 = __require("crypto");
+    var crypto9 = __require("crypto");
     var async_hooks = __require("async_hooks");
     var React = require_react();
     var ReactDOM = require_react_dom();
@@ -63074,7 +63074,7 @@ var require_react_dom_server_node_production = __commonJS({
     function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
       if (void 0 !== permalink) return "p" + permalink;
       permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-      componentKeyPath = crypto8.createHash("md5");
+      componentKeyPath = crypto9.createHash("md5");
       componentKeyPath.update(permalink);
       return "k" + componentKeyPath.digest("hex");
     }
@@ -74753,7 +74753,7 @@ var require_react_dom_server_node_development = __commonJS({
       function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
         if (void 0 !== permalink) return "p" + permalink;
         permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-        componentKeyPath = crypto8.createHash("md5");
+        componentKeyPath = crypto9.createHash("md5");
         componentKeyPath.update(permalink);
         return "k" + componentKeyPath.digest("hex");
       }
@@ -77461,7 +77461,7 @@ var require_react_dom_server_node_development = __commonJS({
           }
         };
       }
-      var util2 = __require("util"), crypto8 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
+      var util2 = __require("util"), crypto9 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
         "^[:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$"
       ), illegalAttributeNameCache = {}, validatedAttributeNameCache = {}, unitlessNumbers = new Set(
         "animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth boxFlex boxFlexGroup boxOrdinalGroup columnCount columns flex flexGrow flexPositive flexShrink flexNegative flexOrder gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight lineClamp lineHeight opacity order orphans scale tabSize widows zIndex zoom fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth MozAnimationIterationCount MozBoxFlex MozBoxFlexGroup MozLineClamp msAnimationIterationCount msFlex msZoom msFlexGrow msFlexNegative msFlexOrder msFlexPositive msFlexShrink msGridColumn msGridColumnSpan msGridRow msGridRowSpan WebkitAnimationIterationCount WebkitBoxFlex WebKitBoxFlexGroup WebkitBoxOrdinalGroup WebkitColumnCount WebkitColumns WebkitFlex WebkitFlexGrow WebkitFlexPositive WebkitFlexShrink WebkitLineClamp".split(
@@ -101999,6 +101999,10 @@ var reportsTable = pgTable(
     consentAt: timestamp("consent_at", { withTimezone: true }),
     ipHash: text("ip_hash"),
     legacy: boolean("legacy").notNull().default(false),
+    overallScore: integer("overall_score"),
+    grade: text("grade"),
+    os: text("os"),
+    batteryHealth: real("battery_health"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true })
@@ -102418,6 +102422,9 @@ var waitlist_default = router2;
 
 // src/routes/reports.ts
 var import_express3 = __toESM(require_express2(), 1);
+
+// src/controllers/reports.controller.ts
+import crypto4 from "node:crypto";
 
 // ../../lib/report-engine/src/schema.ts
 var StorageDeviceSchema = external_exports.object({
@@ -110828,20 +110835,20 @@ async function fetchFreshStats() {
         COUNT(*)::int                                                                    AS total,
         COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
         COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
-        ROUND(AVG((rp.result_json->>'overall')::numeric)::numeric, 1)                    AS avg_score
+        ROUND(AVG(COALESCE(r.overall_score, (rp.result_json->>'overall')::numeric))::numeric, 1) AS avg_score
       FROM reports r
-      LEFT JOIN report_payloads rp ON rp.report_id = r.id
+      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND r.overall_score IS NULL
       WHERE r.deleted_at IS NULL
     `);
     const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
     const totalRow = totalRows[0];
     const rowsResult = await _db.execute(sql`
       SELECT
-        rp.result_json->>'grade'                          AS grade,
-        rp.raw_json->'system'->>'os'                      AS os,
-        (rp.raw_json->'battery'->>'health')::text         AS battery_health
+        COALESCE(r.grade, rp.result_json->>'grade')                          AS grade,
+        COALESCE(r.os, rp.raw_json->'system'->>'os')                         AS os,
+        COALESCE(r.battery_health::text, (rp.raw_json->'battery'->>'health')::text) AS battery_health
       FROM reports r
-      INNER JOIN report_payloads rp ON rp.report_id = r.id
+      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND (r.grade IS NULL OR r.os IS NULL)
       WHERE r.deleted_at IS NULL
         AND r.created_at >= ${ago7d.toISOString()}::timestamptz
       ORDER BY r.created_at DESC
@@ -111138,12 +111145,20 @@ var ReportsService = class {
     const combined = habitScore !== null ? combinedScore(resultJson.overall, habitScore) : null;
     const id = createId();
     const claimToken = newClaimToken();
+    const overallScore = typeof resultJson.overall === "number" ? Math.round(resultJson.overall) : null;
+    const grade = typeof resultJson.grade === "string" ? resultJson.grade : null;
+    const os2 = typeof rawJson.system?.os === "string" ? rawJson.system.os : null;
+    const batteryHealth = typeof rawJson.battery?.health === "number" ? rawJson.battery.health : null;
     await db.transaction(async (tx) => {
       await tx.insert(reportsTable).values({
         id,
         claimToken,
         ipHash,
         legacy: legacy ?? false,
+        overallScore,
+        grade,
+        os: os2,
+        batteryHealth,
         ...agentDeviceOrgId ? { claimed: true, orgId: agentDeviceOrgId } : {}
       });
       await tx.insert(reportPayloadsTable).values({
@@ -111352,14 +111367,33 @@ var ReportsController = class {
     const timestampStr = Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader;
     const signatureStr = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
     if (signatureStr) {
+      const nowSec = Math.floor(Date.now() / 1e3);
       if (!timestampStr) {
-        res.status(401).json({ error: "Missing attestation timestamp header." });
+        res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+        res.status(401).json({ error: "Missing attestation timestamp header.", serverTime: nowSec });
         return;
       }
       const ts2 = parseInt(timestampStr, 10);
-      const nowSec = Math.floor(Date.now() / 1e3);
       if (isNaN(ts2) || Math.abs(nowSec - ts2) > 300) {
-        res.status(401).json({ error: "Attestation timestamp expired or outside acceptable clock skew." });
+        res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+        res.status(401).json({
+          error: "Attestation timestamp expired or outside acceptable clock skew.",
+          serverTime: nowSec
+        });
+        return;
+      }
+      const rawBodyBuf = req.rawBody;
+      const wireBytes = rawBodyBuf ? rawBodyBuf.toString("utf8") : JSON.stringify(req.body);
+      const signaturePayload = `${timestampStr}.${wireBytes}`;
+      let expectedSig;
+      if (deviceToken && deviceToken.length >= 10) {
+        expectedSig = crypto4.createHmac("sha256", deviceToken).update(signaturePayload).digest("hex");
+      } else {
+        expectedSig = crypto4.createHash("sha256").update(signaturePayload).digest("hex");
+      }
+      if (!timingSafeEqualStr(signatureStr, expectedSig)) {
+        res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+        res.status(401).json({ error: "Invalid attestation signature.", serverTime: nowSec });
         return;
       }
     }
@@ -111504,7 +111538,7 @@ router3.get("/shared/:shareToken", ReportsController.getSharedReport);
 var reports_default = router3;
 
 // src/routes/myReports.ts
-import crypto4 from "node:crypto";
+import crypto5 from "node:crypto";
 var import_express4 = __toESM(require_express2(), 1);
 
 // src/lib/magicLinkConstants.ts
@@ -111551,10 +111585,10 @@ var router4 = (0, import_express4.Router)();
 var SESSION_COOKIE = "sentinel_session";
 var SESSION_TTL_DAYS = 30;
 function newToken(bytes = 32) {
-  return crypto4.randomBytes(bytes).toString("hex");
+  return crypto5.randomBytes(bytes).toString("hex");
 }
 function hashToken(token2) {
-  return crypto4.createHash("sha256").update(token2).digest("hex");
+  return crypto5.createHash("sha256").update(token2).digest("hex");
 }
 function getSession(req) {
   return req.cookies?.[SESSION_COOKIE] ?? null;
@@ -111581,8 +111615,8 @@ router4.post("/request", async (req, res) => {
   }
   const { email: email3 } = parsed.data;
   const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
-  const ipHash = crypto4.createHash("sha256").update(ip).digest("hex");
-  const emailHash = crypto4.createHash("sha256").update(email3).digest("hex");
+  const ipHash = crypto5.createHash("sha256").update(ip).digest("hex");
+  const emailHash = crypto5.createHash("sha256").update(email3).digest("hex");
   const [allowIp, allowEmail] = await Promise.all([
     consumeRateLimit(`magic-req:ip:${ipHash}`, 15, 5),
     consumeRateLimit(`magic-req:email:${emailHash}`, 15, 3)
@@ -112006,7 +112040,7 @@ var import_express8 = __toESM(require_express2(), 1);
 // src/lib/resolveDownload.ts
 import fs2 from "fs";
 import path from "path";
-import crypto5 from "node:crypto";
+import crypto6 from "node:crypto";
 import { fileURLToPath } from "url";
 var DOWNLOAD_SLUGS = ["oneshot", "setup", "agent"];
 var ASSET_FILENAMES = {
@@ -112130,7 +112164,7 @@ async function getAssetSha256(slug) {
   if (fs2.existsSync(localPath) && fs2.statSync(localPath).isFile()) {
     try {
       const buf = fs2.readFileSync(localPath);
-      return crypto5.createHash("sha256").update(buf).digest("hex");
+      return crypto6.createHash("sha256").update(buf).digest("hex");
     } catch {
       return null;
     }
@@ -114402,11 +114436,11 @@ var StripeContext = class _StripeContext {
 };
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/platform/NodePlatformFunctions.js
-import * as crypto7 from "crypto";
+import * as crypto8 from "crypto";
 import { EventEmitter as EventEmitter7 } from "events";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/NodeCryptoProvider.js
-import * as crypto6 from "crypto";
+import * as crypto7 from "crypto";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/CryptoProvider.js
 var CryptoProvider = class {
@@ -114449,7 +114483,7 @@ var CryptoProviderOnlySupportsAsyncError = class extends Error {
 var NodeCryptoProvider = class extends CryptoProvider {
   /** @override */
   computeHMACSignature(payload, secret) {
-    return crypto6.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
+    return crypto7.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
   }
   /** @override */
   async computeHMACSignatureAsync(payload, secret) {
@@ -114458,7 +114492,7 @@ var NodeCryptoProvider = class extends CryptoProvider {
   }
   /** @override */
   async computeSHA256Async(data) {
-    return new Uint8Array(await crypto6.createHash("sha256").update(data).digest());
+    return new Uint8Array(await crypto7.createHash("sha256").update(data).digest());
   }
 };
 
@@ -114797,8 +114831,8 @@ var StreamProcessingError = class extends StripeError {
 var NodePlatformFunctions = class extends PlatformFunctions {
   /** @override */
   uuid4() {
-    if (crypto7.randomUUID) {
-      return crypto7.randomUUID();
+    if (crypto8.randomUUID) {
+      return crypto8.randomUUID();
     }
     return super.uuid4();
   }
@@ -114817,11 +114851,11 @@ var NodePlatformFunctions = class extends PlatformFunctions {
     if (a.length !== b3.length) {
       return false;
     }
-    if (crypto7.timingSafeEqual) {
+    if (crypto8.timingSafeEqual) {
       const textEncoder = new TextEncoder();
       const aEncoded = textEncoder.encode(a);
       const bEncoded = textEncoder.encode(b3);
-      return crypto7.timingSafeEqual(aEncoded, bEncoded);
+      return crypto8.timingSafeEqual(aEncoded, bEncoded);
     }
     return super.secureCompare(a, b3);
   }
@@ -129744,7 +129778,14 @@ app.use((0, import_cors.default)({
   methods: ["GET", "POST", "OPTIONS"]
 }));
 app.use((0, import_cookie_parser.default)());
-app.use(import_express15.default.json({ limit: "256kb" }));
+app.use(
+  import_express15.default.json({
+    limit: "256kb",
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    }
+  })
+);
 app.use(import_express15.default.urlencoded({ extended: true, limit: "256kb" }));
 app.get("/health", (_req, res) => {
   res.status(200).json({

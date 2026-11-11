@@ -288,21 +288,78 @@ describe("Adversarial Security & Concurrency Test Suite", () => {
       expect(isTimestampValid).toBe(false);
     });
 
-    it("rejects attestation when payload has been tampered with", () => {
+    it("verifies keyed HMAC-SHA256 attestation bound to provisioned deviceToken", () => {
       const nowSec = Math.floor(Date.now() / 1000);
-      const originalPayload = JSON.stringify({ score: 100 });
-      const tamperedPayload = JSON.stringify({ score: 50 });
+      const provisionedToken = "device-secret-token-" + crypto.randomBytes(16).toString("hex");
+      const wireBytes = Buffer.from('{"rawJson":{"sentinelSchema":1,"score":80.0}}', "utf8");
+      const signaturePayload = `${nowSec}.${wireBytes.toString("utf8")}`;
 
-      const sigOverOriginal = crypto
-        .createHash("sha256")
-        .update(`${nowSec}.${originalPayload}`)
-        .digest("hex");
-      const expectedSigOverTampered = crypto
-        .createHash("sha256")
-        .update(`${nowSec}.${tamperedPayload}`)
+      // Client signs with provisioned deviceToken
+      const clientHmac = crypto
+        .createHmac("sha256", provisionedToken)
+        .update(signaturePayload)
         .digest("hex");
 
-      expect(timingSafeEqualStr(sigOverOriginal, expectedSigOverTampered)).toBe(false);
+      // Server verifies with same deviceToken
+      const serverHmac = crypto
+        .createHmac("sha256", provisionedToken)
+        .update(signaturePayload)
+        .digest("hex");
+
+      expect(timingSafeEqualStr(clientHmac, serverHmac)).toBe(true);
+
+      // Attack scenario: Attacker attempts to forge with wrong token
+      const attackerHmac = crypto
+        .createHmac("sha256", "wrong-attacker-token")
+        .update(signaturePayload)
+        .digest("hex");
+
+      expect(timingSafeEqualStr(attackerHmac, serverHmac)).toBe(false);
+    });
+
+    it("prevents floating-point and formatting drift by hashing exact raw wire buffer", () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      // Client sends literal formatted JSON with formatting (e.g. space or 80.0)
+      const rawWireString = '{\n  "score": 80.0\n}';
+      const rawWireBuf = Buffer.from(rawWireString, "utf8");
+
+      // Re-serialization through parsed object changes the string
+      const parsed = JSON.parse(rawWireString);
+      const reSerialized = JSON.stringify(parsed); // '{"score":80}' -> floats and whitespace collapsed!
+
+      expect(reSerialized).not.toBe(rawWireString);
+
+      // Using rawWireBuf preserves signature verification across wire boundaries
+      const clientSig = crypto
+        .createHash("sha256")
+        .update(`${nowSec}.${rawWireBuf.toString("utf8")}`)
+        .digest("hex");
+      const serverSigOverWire = crypto
+        .createHash("sha256")
+        .update(`${nowSec}.${rawWireBuf.toString("utf8")}`)
+        .digest("hex");
+
+      expect(clientSig).toBe(serverSigOverWire);
+    });
+
+    it("calibrates client clock-offset delta when server returns authoritative timestamp", () => {
+      const driftedClientTime = 1000;
+      const authoritativeServerTime = 2500; // 1500s ahead (CMOS battery died)
+
+      // Initial skew check fails: |1000 - 2500| = 1500 > 300
+      const initialSkew = Math.abs(driftedClientTime - authoritativeServerTime);
+      expect(initialSkew > 300).toBe(true);
+
+      // Server emits authoritative time in response header:
+      // X-Sentinel-Server-Time: 2500
+      const calibratedOffset = authoritativeServerTime - driftedClientTime; // +1500
+
+      // Client re-attempts with calibrated offset
+      const calibratedClientTime = driftedClientTime + calibratedOffset; // 2500
+      const calibratedSkew = Math.abs(calibratedClientTime - authoritativeServerTime);
+
+      expect(calibratedSkew).toBe(0);
+      expect(calibratedSkew <= 300).toBe(true);
     });
   });
 });

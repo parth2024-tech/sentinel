@@ -1,5 +1,7 @@
 using Microsoft.Win32;
 using System;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SentinelAgent;
 
@@ -9,8 +11,42 @@ public static class RegistryState
 
     public static string? DeviceToken
     {
-        get => GetValue("DeviceToken");
-        set => SetValue("DeviceToken", value);
+        get
+        {
+            var enc = GetValue("DeviceTokenEncrypted");
+            if (!string.IsNullOrEmpty(enc))
+            {
+                try
+                {
+                    var bytes = Convert.FromBase64String(enc);
+                    var unprotected = ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
+                    return Encoding.UTF8.GetString(unprotected);
+                }
+                catch { }
+            }
+            // Fallback for legacy migration
+            return GetValue("DeviceToken");
+        }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                DeleteValue("DeviceTokenEncrypted");
+                DeleteValue("DeviceToken");
+                return;
+            }
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(value);
+                var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+                SetValue("DeviceTokenEncrypted", Convert.ToBase64String(protectedBytes));
+                DeleteValue("DeviceToken"); // Purge legacy plaintext
+            }
+            catch
+            {
+                SetValue("DeviceToken", value);
+            }
+        }
     }
 
     public static string? OrgToken

@@ -4,6 +4,7 @@ import {
   boolean,
   timestamp,
   integer,
+  real,
   index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -23,6 +24,10 @@ export const reportsTable = pgTable(
     consentAt: timestamp("consent_at", { withTimezone: true }),
     ipHash: text("ip_hash"),
     legacy: boolean("legacy").notNull().default(false),
+    overallScore: integer("overall_score"),
+    grade: text("grade"),
+    os: text("os"),
+    batteryHealth: real("battery_health"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

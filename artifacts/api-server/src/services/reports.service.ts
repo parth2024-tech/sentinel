@@ -128,12 +128,21 @@ export class ReportsService {
     const id = createId();
     const claimToken = newClaimToken();
 
+    const overallScore = typeof (resultJson as any).overall === "number" ? Math.round((resultJson as any).overall) : null;
+    const grade = typeof (resultJson as any).grade === "string" ? (resultJson as any).grade : null;
+    const os = typeof rawJson.system?.os === "string" ? rawJson.system.os : null;
+    const batteryHealth = typeof rawJson.battery?.health === "number" ? rawJson.battery.health : null;
+
     await db.transaction(async (tx) => {
       await tx.insert(reportsTable).values({
         id,
         claimToken,
         ipHash,
         legacy: legacy ?? false,
+        overallScore,
+        grade,
+        os,
+        batteryHealth,
         ...(agentDeviceOrgId ? { claimed: true, orgId: agentDeviceOrgId } : {}),
       });
 

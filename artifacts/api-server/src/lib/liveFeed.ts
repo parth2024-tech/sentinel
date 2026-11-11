@@ -77,7 +77,7 @@ async function fetchFreshStats(): Promise<LiveStats> {
     const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const ago7d  = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Single query for totals + avg score with proper join to report_payloads
+    // Single query for totals + avg score using materialized columns on reportsTable
     const totalResult = await _db.execute<{
       total: string;
       last24h: string;
@@ -88,26 +88,26 @@ async function fetchFreshStats(): Promise<LiveStats> {
         COUNT(*)::int                                                                    AS total,
         COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
         COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
-        ROUND(AVG((rp.result_json->>'overall')::numeric)::numeric, 1)                    AS avg_score
+        ROUND(AVG(COALESCE(r.overall_score, (rp.result_json->>'overall')::numeric))::numeric, 1) AS avg_score
       FROM reports r
-      LEFT JOIN report_payloads rp ON rp.report_id = r.id
+      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND r.overall_score IS NULL
       WHERE r.deleted_at IS NULL
     `);
     const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
     const totalRow = totalRows[0];
 
-    // Sample recent rows for distribution data (last 7d, max 500)
+    // Sample recent rows for distribution data (last 7d, max 500) using materialized columns
     const rowsResult = await _db.execute<{
       grade: string | null;
       os: string | null;
       battery_health: string | null;
     }>(sql`
       SELECT
-        rp.result_json->>'grade'                          AS grade,
-        rp.raw_json->'system'->>'os'                      AS os,
-        (rp.raw_json->'battery'->>'health')::text         AS battery_health
+        COALESCE(r.grade, rp.result_json->>'grade')                          AS grade,
+        COALESCE(r.os, rp.raw_json->'system'->>'os')                         AS os,
+        COALESCE(r.battery_health::text, (rp.raw_json->'battery'->>'health')::text) AS battery_health
       FROM reports r
-      INNER JOIN report_payloads rp ON rp.report_id = r.id
+      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND (r.grade IS NULL OR r.os IS NULL)
       WHERE r.deleted_at IS NULL
         AND r.created_at >= ${ago7d.toISOString()}::timestamptz
       ORDER BY r.created_at DESC
