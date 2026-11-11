@@ -25,6 +25,11 @@ router.get("/stats", async (_req, res) => {
 // ── GET /api/live/stream ──────────────────────────────────────────────────────
 
 router.get("/stream", async (req, res) => {
+  if (!addClient(res)) {
+    res.status(503).json({ error: "Live stream capacity reached. Try again later." });
+    return;
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Connection", "keep-alive");
@@ -40,8 +45,6 @@ router.get("/stream", async (req, res) => {
   } catch {
     // non-fatal — client will receive next broadcast
   }
-
-  addClient(res);
 
   req.on("close", () => {
     res.end();

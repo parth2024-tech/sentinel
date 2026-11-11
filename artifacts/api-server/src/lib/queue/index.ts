@@ -29,18 +29,27 @@ export async function initQueue() {
 
   // Define workers
   await boss.work("send-claim-email", async (job: any) => {
-    const { email, reportId } = job.data as { email: string; reportId: string };
-    if (!isResendConfigured()) {
-      logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
-      return;
+    try {
+      const { email, reportId } = job.data as { email: string; reportId: string };
+      if (!isResendConfigured()) {
+        logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
+        return;
+      }
+      const { subject, html, text } = buildReportClaimedEmail(email, reportId);
+      await sendTransactionalEmail({ to: email, subject, html, text });
+    } catch (err) {
+      logger.error({ err, jobId: job.id }, "send-claim-email worker failed");
+      throw err;
     }
-    const { subject, html, text } = buildReportClaimedEmail(email, reportId);
-    await sendTransactionalEmail({ to: email, subject, html, text });
   });
 
   await boss.work("emit-live-feed", async (job: any) => {
-    const data = job.data as any;
-    emitNewReport(data);
+    try {
+      const data = job.data as any;
+      emitNewReport(data);
+    } catch (err) {
+      logger.error({ err, jobId: job.id }, "emit-live-feed worker failed");
+    }
   });
 }
 

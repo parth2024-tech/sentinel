@@ -64,22 +64,64 @@ type GhRelease = {
   assets: GhAsset[];
 };
 
+let cachedReleases: GhRelease[] | null = null;
+let releasesLastFetched = 0;
+const RELEASES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let inflightReleasesPromise: Promise<GhRelease[] | null> | null = null;
+
+async function fetchGithubReleases(): Promise<GhRelease[] | null> {
+  const repo = getGithubReleaseRepo();
+  const headers = githubAuthHeaders();
+  const listUrl = `https://api.github.com/repos/${repo}/releases?per_page=30`;
+
+  try {
+    const listRes = await fetch(listUrl, {
+      headers,
+      signal: AbortSignal.timeout(5_000),
+    });
+
+    if (!listRes.ok) {
+      return null;
+    }
+
+    return (await listRes.json()) as GhRelease[];
+  } catch {
+    return null;
+  }
+}
+
+async function getCachedGithubReleases(): Promise<GhRelease[] | null> {
+  const now = Date.now();
+  if (cachedReleases && now - releasesLastFetched < RELEASES_CACHE_TTL_MS) {
+    return cachedReleases;
+  }
+
+  if (inflightReleasesPromise) {
+    return inflightReleasesPromise;
+  }
+
+  inflightReleasesPromise = fetchGithubReleases()
+    .then((releases) => {
+      if (releases) {
+        cachedReleases = releases;
+        releasesLastFetched = Date.now();
+      }
+      return releases ?? cachedReleases;
+    })
+    .finally(() => {
+      inflightReleasesPromise = null;
+    });
+
+  return inflightReleasesPromise;
+}
+
 async function findAssetOnGithub(
   assetName: string
 ): Promise<{ url: string; tag: string } | null> {
-  const repo = getGithubReleaseRepo();
-  const headers = githubAuthHeaders();
-
-  // /releases/latest only returns non-prerelease; many projects ship prereleases first.
-  const listUrl = `https://api.github.com/repos/${repo}/releases?per_page=30`;
-  const listRes = await fetch(listUrl, { headers });
-
-  if (!(listRes as any).ok) {
+  const releases = await getCachedGithubReleases();
+  if (!releases) {
     return null;
   }
-
-  const releases = (await (listRes as any).json()) as GhRelease[];
-
   for (const release of releases) {
     if (release.draft) continue;
     const asset = release.assets.find(
@@ -126,11 +168,10 @@ export function isDownloadSlug(value: string): value is DownloadSlug {
 
 export function unavailableMessage(slug: DownloadSlug): string {
   const filename = ASSET_FILENAMES[slug];
-  const dir = getDownloadsDirectory();
   const repo = getGithubReleaseRepo();
   return (
     `${filename} is not available yet. ` +
-    `Place a signed build at ${dir}/${filename}, set SENTINEL_DOWNLOAD_URL_${slug.toUpperCase()}, ` +
-    `or publish a GitHub Release on ${repo} with that asset attached.`
+    `Publish a release on GitHub (${repo}) with ${filename} attached, ` +
+    `or configure SENTINEL_DOWNLOAD_URL_${slug.toUpperCase()}.`
   );
 }

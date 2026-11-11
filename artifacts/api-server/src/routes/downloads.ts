@@ -3,7 +3,6 @@ import { getGithubReleaseRepo } from "../githubReleaseRepo.js";
 import {
   ASSET_FILENAMES,
   DOWNLOAD_SLUGS,
-  getDownloadsDirectory,
   isDownloadSlug,
   resolveDownload,
   unavailableMessage,
@@ -77,7 +76,6 @@ router.get("/latest/:binary", async (req: Request, res: Response) => {
  */
 router.get("/latest", async (_req: Request, res: Response) => {
   const GITHUB_REPO = getGithubReleaseRepo();
-  const downloadsDir = getDownloadsDirectory();
 
   const assets: Array<{
     slug: DownloadSlug;
@@ -103,7 +101,6 @@ router.get("/latest", async (_req: Request, res: Response) => {
     name: "Sentinel native downloads",
     publishedAt: null,
     releaseUrl: `https://github.com/${GITHUB_REPO}/releases`,
-    downloadsDirectory: downloadsDir,
     assets,
   });
 });

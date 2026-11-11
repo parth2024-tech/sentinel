@@ -2,9 +2,13 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { ReportsService } from "../services/reports.service.js";
 
+const BoundedHabitAnswers = z
+  .record(z.string().max(64), z.number().finite().min(0).max(100))
+  .refine((obj) => Object.keys(obj).length <= 32, "Maximum 32 habit keys allowed");
+
 const PostReportBody = z.object({
-  rawJson: z.record(z.unknown()),
-  habitAnswers: z.record(z.number()).optional(),
+  rawJson: z.record(z.string().max(128), z.unknown()),
+  habitAnswers: BoundedHabitAnswers.optional(),
   legacy: z.boolean().optional().default(false),
 });
 
@@ -15,7 +19,7 @@ const ClaimBody = z.object({
 
 const HabitAnswersBody = z.object({
   claimToken: z.string().min(8).max(64),
-  habitAnswers: z.record(z.number()),
+  habitAnswers: BoundedHabitAnswers,
 });
 
 const ShareBody = z.object({
@@ -86,13 +90,16 @@ const authHeader = req.headers["authorization"];
       return;
     }
 
+    const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+
     try {
-      const result = await ReportsService.claimReport(id, parsed.data.claimToken, parsed.data.email, req.log);
+      const result = await ReportsService.claimReport(id, parsed.data.claimToken, parsed.data.email, ip, req.log);
       res.json(result);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       if (error.message === "Report not found") res.status(404).json({ error: error.message });
       else if (error.message === "Invalid claim token") res.status(403).json({ error: error.message });
+      else if (error.message === "Rate limit exceeded") res.status(429).json({ error: error.message });
       else res.status(500).json({ error: "Failed to claim report" });
     }
   }

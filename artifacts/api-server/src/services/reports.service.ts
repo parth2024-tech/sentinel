@@ -7,6 +7,7 @@ import crypto from "node:crypto";
 import { newClaimToken, newShareToken, sha256hex } from "../lib/ids.js";
 import { consumeRateLimit } from "../lib/rateLimit.js";
 import { enqueueClaimEmail, enqueueLiveFeed } from "../lib/queue/index.js";
+import { timingSafeEqualStr, canonicalJsonHash, getRequiredServerSecret } from "../lib/crypto.js";
 import pino from "pino";
 
 // A dummy logger for service use if req.log isn't passed (though passing it is better)
@@ -25,15 +26,25 @@ export class ReportsService {
     logger: pino.Logger = defaultLogger
   ) {
     const { rawJson, habitAnswers, legacy } = payload;
+    const ipHash = await sha256hex(ip);
 
-    // Schema Version Negotiation
+    // 1. RATE LIMIT FIRST (Before DB lookups, plausibility writes, or CPU work)
+    const [perMinute, perDay] = await Promise.all([
+      consumeRateLimit(`report:min:${ipHash}`, 1, 10),
+      consumeRateLimit(`report:day:${ipHash}`, 1440, 100),
+    ]);
+    if (!perMinute || !perDay) {
+      throw new Error("Rate limit exceeded");
+    }
+
+    // 2. Schema Version Negotiation
     const version = Number(rawJson.sentinelSchema || rawJson.schemaVersion);
     const MIN_SUPPORTED_VERSION = 1;
-    if (!version || version < MIN_SUPPORTED_VERSION) {
+    if (!Number.isInteger(version) || version < MIN_SUPPORTED_VERSION) {
       throw new Error(`UPGRADE_REQUIRED: Agent schema version ${version || "unknown"} is no longer supported. Minimum required: ${MIN_SUPPORTED_VERSION}`);
     }
 
-    // 1. Device Token Auth
+    // 3. Constant-Time Device Token Auth
     let agentDeviceOrgId: string | null = null;
     if (deviceToken && deviceToken.length >= 10) {
       const deviceRows = await db
@@ -41,57 +52,42 @@ export class ReportsService {
         .from(devicesTable)
         .where(eq(devicesTable.deviceToken, deviceToken))
         .limit(1);
-      if (deviceRows.length === 0 || !deviceRows[0]) {
+      const dev = deviceRows[0];
+      if (!dev || !timingSafeEqualStr(dev.deviceToken, deviceToken)) {
         throw new Error("Invalid device token");
       }
-      agentDeviceOrgId = deviceRows[0].orgId ?? null;
+      agentDeviceOrgId = dev.orgId ?? null;
     }
 
-    // 2. Validate rawJson
+    // 4. Validate Schema & Rate-Limited Plausibility Quarantine
     const reportParsed = SentinelReportSchema.safeParse(rawJson);
     if (!reportParsed.success) {
       const first = reportParsed.error.issues[0];
       throw new Error(`Invalid report data: ${first ? `${first.path.join(".")}: ${first.message}` : "Validation failed"}`);
     }
 
-    // Stage 2: PlausibilityGuard bounds checking & quarantine
     const plausibility = validatePlausibility(reportParsed.data);
     if (!plausibility.valid) {
       const failureReason = plausibility.errors.join("; ");
-      const suspectId = createId();
-      const ipHash = await sha256hex(ip);
-      try {
+      const allowQuarantineWrite = await consumeRateLimit(`quarantine:${ipHash}`, 60, 5);
+      if (allowQuarantineWrite) {
         await db.insert(suspectPayloadsTable).values({
-          id: suspectId,
+          id: createId(),
           rawJson: rawJson as any,
           failureReason,
           ipHash,
-        });
-      } catch (dbErr) {
-        logger.error({ err: dbErr }, "Failed to write to suspect_payloads table");
+        }).catch((dbErr) => logger.error({ err: dbErr }, "Failed to write suspect_payloads"));
       }
       throw new Error(`Invalid report data (quarantined): ${failureReason}`);
     }
 
-    // 3. Rate Limiting
-    const ipHash = await sha256hex(ip);
-    const [perMinute, perDay] = await Promise.all([
-      consumeRateLimit(ipHash, 1, 10),
-      consumeRateLimit(ipHash, 1440, 100),
-    ]);
-    if (!perMinute || !perDay) {
-      throw new Error("Rate limit exceeded");
-    }
-
-    // 4. Idempotency Check (Computed as HMAC-SHA256 of device, timestamp, and payload hash)
-    const deviceId = rawJson.system?.hostname || rawJson.system?.model || "unknown-device";
-    const scanTimestamp = rawJson.generatedAt || "unknown-timestamp";
-    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(rawJson)).digest("hex");
-    const serverSecret = process.env.SERVER_SECRET || "sentinel-default-server-secret-key-32-chars-long";
-    
+    // 5. Tenant-Scoped Canonical Idempotency Check
+    const serverSecret = getRequiredServerSecret();
+    const payloadHash = canonicalJsonHash(rawJson);
+    const callerScope = deviceToken ? await sha256hex(deviceToken) : ipHash;
     const computedIdempotencyKey = crypto
       .createHmac("sha256", serverSecret)
-      .update(`${deviceId}||${scanTimestamp}||${payloadHash}`)
+      .update(`${callerScope}||${idempotencyKey ?? ""}||${payloadHash}`)
       .digest("hex");
 
     const existing = await db
@@ -105,27 +101,30 @@ export class ReportsService {
         .from(reportsTable)
         .where(eq(reportsTable.id, existing[0].reportId))
         .limit(1);
-      if (report.length > 0 && report[0]) {
+      const rep = report[0];
+      if (rep) {
         const payloadRow = await db
           .select()
           .from(reportPayloadsTable)
-          .where(eq(reportPayloadsTable.reportId, report[0].id))
+          .where(eq(reportPayloadsTable.reportId, rep.id))
           .limit(1);
+        const callerAuthorized = (rep.ipHash && timingSafeEqualStr(rep.ipHash, ipHash)) ||
+          (agentDeviceOrgId && rep.orgId && timingSafeEqualStr(rep.orgId, agentDeviceOrgId));
         return {
-          id: report[0].id,
-          claimToken: report[0].claimToken,
+          id: rep.id,
+          claimToken: callerAuthorized ? rep.claimToken : null,
           result: payloadRow[0]?.resultJson,
           deduplicated: true,
         };
       }
     }
 
-    // 5. Generate Report
+    // 6. Generate Report
     const resultJson = generateReport(reportParsed.data);
     const habitScore = habitAnswers ? computeHabitScore(habitAnswers) : null;
     const combined = habitScore !== null ? combinedScore(resultJson.overall, habitScore) : null;
 
-    // 6. Persist to DB using CUID2 (No retries needed for collisions)
+    // 7. Persist to DB using CUID2 (No retries needed for collisions)
     const id = createId();
     const claimToken = newClaimToken();
 
@@ -160,7 +159,7 @@ export class ReportsService {
 
     logger.info({ reportId: id, hasHabit: !!habitAnswers }, "report_created");
 
-    // 7. Enqueue Live Feed Emission (Background Job)
+    // 8. Enqueue Live Feed Emission (Background Job)
     const raw = reportParsed.data as any;
     enqueueLiveFeed({
       id,
@@ -179,14 +178,34 @@ export class ReportsService {
    * Claims a report by token and optionally links to a user email.
    * Enqueues a confirmation email if email is provided.
    */
-  static async claimReport(id: string, claimToken: string, email?: string, logger: pino.Logger = defaultLogger) {
+  static async claimReport(
+    id: string,
+    claimToken: string,
+    email?: string,
+    ip: string = "unknown",
+    logger: pino.Logger = defaultLogger
+  ) {
+    const ipHash = await sha256hex(ip);
+    const allowAttempt = await consumeRateLimit(`claim-attempt:${ipHash}:${id}`, 15, 10);
+    if (!allowAttempt) {
+      throw new Error("Rate limit exceeded");
+    }
+
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
     const row = rows[0];
     if (!row) throw new Error("Report not found");
 
-    if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
+    if (!row.claimToken || !timingSafeEqualStr(row.claimToken, claimToken)) throw new Error("Invalid claim token");
 
-    if (row.claimed && !email) return { id, claimed: true, email: row.userId ? "***" : null };
+    if (row.claimed) {
+      if (row.userId && email) {
+        // Locked: already bound to an account, cannot re-bind or hijack
+        return { id, claimed: true, email: "***" };
+      }
+      if (!email) {
+        return { id, claimed: true, email: row.userId ? "***" : null };
+      }
+    }
 
     let finalUserId = row.userId;
 
@@ -212,12 +231,16 @@ export class ReportsService {
     await db.update(reportsTable).set({
       claimed: true,
       ...(finalUserId ? { userId: finalUserId } : {}),
+      updatedAt: new Date(),
     }).where(eq(reportsTable.id, id));
 
     logger.info({ reportId: id, hasEmail: !!email }, "report_claimed");
 
     if (email) {
-      enqueueClaimEmail(email, id).catch((e) => logger.error({ err: e }, "Failed to enqueue claim email"));
+      const allowEmail = await consumeRateLimit(`claim-email:${id}`, 3600, 3);
+      if (allowEmail) {
+        enqueueClaimEmail(email, id).catch((e) => logger.error({ err: e }, "Failed to enqueue claim email"));
+      }
     }
 
     return { id, claimed: true, email: email ? "***" : null };
@@ -228,7 +251,7 @@ export class ReportsService {
     const row = rows[0];
     if (!row) throw new Error("Report not found");
 
-    if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
+    if (!row.claimToken || !timingSafeEqualStr(row.claimToken, claimToken)) throw new Error("Invalid claim token");
 
     // Fetch resultJson from payloads
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, id)).limit(1);
@@ -274,7 +297,6 @@ export class ReportsService {
       combinedScore: habit?.combinedScore ?? null,
       claimed: row.claimed,
       email: row.userId ? "***" : null,
-      shareToken: row.shareToken ?? null,
       createdAt: row.createdAt,
     };
   }
@@ -284,7 +306,7 @@ export class ReportsService {
     const row = rows[0];
     if (!row) throw new Error("Report not found");
 
-    if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
+    if (!row.claimToken || !timingSafeEqualStr(row.claimToken, claimToken)) throw new Error("Invalid claim token");
 
     if (row.shareToken) {
       logger.info({ reportId: id }, "share_token_reused");

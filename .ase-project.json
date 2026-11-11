@@ -19,7 +19,8 @@
     "Core scoring formulas must remain 100% deterministic (in @workspace/report-engine)",
     "API routes must use Express router mounted in artifacts/api-server/src/routes/",
     "Diagnostic reports generate on the server-side only for security",
-    "All sensor metrics from native tools must match unified sentinelSchema:1"
+    "All sensor metrics from native tools must match unified sentinelSchema:1",
+    "Always start every task response with an explicit estimated completion time (e.g., ⏱️ **Estimated Time**: ~X minutes)."
   ],
   "architecture_patterns": [
     "Monorepo with decoupled frontend applications, shared libs, and native C# apps",
@@ -58,13 +59,24 @@
     "Never use Math.random or other non-deterministic logic for scoring calculations",
     "Never store plain text passwords or secrets in the codebase",
     "Never bypass Zod validation schema for ingested client reports",
-    "Never trust client-side score evaluations; always compute on the API server"
+    "Never trust client-side score evaluations; always compute on the API server",
+    "Never commit or push code without passing gitleaks protect --staged secret audit",
+    "Never rely on fragile regex linters when ast-grep (sg) AST rules can be enforced",
+    "Never output verbose unsolicited recaps, exhaustive changelogs, or repetitive summaries that waste tokens — mention ONLY the most critical points unless explicitly asked"
   ],
   "preferred_patterns": [
     "Use Zod for input validation across the monorepo boundary",
     "Use Drizzle ORM for PostgreSQL queries and schema migrations",
     "Use wouter for routing in frontend projects",
-    "Use Framer Motion for responsive premium UI transitions"
+    "Use Framer Motion for responsive premium UI transitions",
+    "Use gitleaks (gitleaks protect --staged) for zero secret leakage verification before committing or pushing",
+    "Use ast-grep (sg scan) for structural AST-level syntax rules rather than regex linters",
+    "Use just (justfile) for deterministic project verification and task runs",
+    "Use adr-tools (adr new) and D2 (d2) for all architectural decision records and C4 system diagrams",
+    "Use TypeSpec (tsp compile) for contract-first API development and OpenAPI 3.1 generation",
+    "Use vl-convert (vl-convert vl2svg) and Typst CeTZ for declarative standalone vector charts",
+    "Use Typst (typst compile) exclusively for any research paper or scientific document",
+    "Practice extreme token economy: keep responses concise, high-signal, and directly answer user requests without unprompted changelogs or filler"
   ],
   "learned_lessons": [
     "tsconfig.base.json strictness (exactOptionalPropertyTypes and noUncheckedIndexedAccess) requires explicit | undefined on optional interface fields and nullish coalescing on all array element lookups.",

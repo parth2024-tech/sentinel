@@ -28,10 +28,13 @@ export interface LiveFeedEvent {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const clients = new Set<Response>();
+const MAX_GLOBAL_SSE_CLIENTS = 1000;
 
 let cachedStats: LiveStats | null = null;
 let statsLastFetched = 0;
 const STATS_TTL_MS = 30_000;
+let inflightStatsPromise: Promise<LiveStats> | null = null;
+let statsBroadcastTimer: NodeJS.Timeout | null = null;
 
 const recentEvents: LiveFeedEvent[] = [];
 const MAX_FEED_SIZE = 50;
@@ -61,6 +64,11 @@ function normalizeOs(raw: string): string {
   return "Other";
 }
 
+function sanitizeText(str: unknown, maxLen = 64): string {
+  if (typeof str !== "string") return "";
+  return str.replace(/[<>&"']/g, "").slice(0, maxLen).trim();
+}
+
 async function fetchFreshStats(): Promise<LiveStats> {
   if (!_db) return emptyStats();
 
@@ -69,7 +77,7 @@ async function fetchFreshStats(): Promise<LiveStats> {
     const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const ago7d  = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Single query for totals + avg score
+    // Single query for totals + avg score with proper join to report_payloads
     const totalResult = await _db.execute<{
       total: string;
       last24h: string;
@@ -77,12 +85,13 @@ async function fetchFreshStats(): Promise<LiveStats> {
       avg_score: string | null;
     }>(sql`
       SELECT
-        COUNT(*)::int                                                          AS total,
-        COUNT(*) FILTER (WHERE created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
-        COUNT(*) FILTER (WHERE created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
-        ROUND(AVG((result_json->>'overall')::numeric)::numeric, 1)            AS avg_score
-      FROM reports
-      WHERE deleted_at IS NULL
+        COUNT(*)::int                                                                    AS total,
+        COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
+        COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
+        ROUND(AVG((rp.result_json->>'overall')::numeric)::numeric, 1)                    AS avg_score
+      FROM reports r
+      LEFT JOIN report_payloads rp ON rp.report_id = r.id
+      WHERE r.deleted_at IS NULL
     `);
     const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
     const totalRow = totalRows[0];
@@ -94,13 +103,14 @@ async function fetchFreshStats(): Promise<LiveStats> {
       battery_health: string | null;
     }>(sql`
       SELECT
-        result_json->>'grade'                          AS grade,
-        raw_json->'system'->>'os'                      AS os,
-        (raw_json->'battery'->>'health')::text         AS battery_health
-      FROM reports
-      WHERE deleted_at IS NULL
-        AND created_at >= ${ago7d.toISOString()}::timestamptz
-      ORDER BY created_at DESC
+        rp.result_json->>'grade'                          AS grade,
+        rp.raw_json->'system'->>'os'                      AS os,
+        (rp.raw_json->'battery'->>'health')::text         AS battery_health
+      FROM reports r
+      INNER JOIN report_payloads rp ON rp.report_id = r.id
+      WHERE r.deleted_at IS NULL
+        AND r.created_at >= ${ago7d.toISOString()}::timestamptz
+      ORDER BY r.created_at DESC
       LIMIT 500
     `);
     const rows = Array.isArray(rowsResult) ? rowsResult : rowsResult.rows;
@@ -127,10 +137,10 @@ async function fetchFreshStats(): Promise<LiveStats> {
     }
 
     return {
-      totalReports:     Number(totalRow.total    ?? 0),
-      reportsLast24h:   Number(totalRow.last24h  ?? 0),
-      reportsLast7d:    Number(totalRow.last7d   ?? 0),
-      avgOverallScore:  totalRow.avg_score != null ? Number(totalRow.avg_score) : null,
+      totalReports:     Number(totalRow?.total    ?? 0),
+      reportsLast24h:   Number(totalRow?.last24h  ?? 0),
+      reportsLast7d:    Number(totalRow?.last7d   ?? 0),
+      avgOverallScore:  totalRow?.avg_score != null ? Number(totalRow.avg_score) : null,
       avgBatteryHealth: batteryCount > 0
         ? Math.round((totalBattery / batteryCount) * 10) / 10
         : null,
@@ -162,19 +172,42 @@ export async function getStats(forceRefresh = false): Promise<LiveStats> {
   if (!forceRefresh && cachedStats && now - statsLastFetched < STATS_TTL_MS) {
     return cachedStats;
   }
-  cachedStats = await fetchFreshStats();
-  statsLastFetched = now;
-  return cachedStats;
+  if (inflightStatsPromise) {
+    return inflightStatsPromise;
+  }
+  inflightStatsPromise = fetchFreshStats()
+    .then((stats) => {
+      cachedStats = stats;
+      statsLastFetched = Date.now();
+      return stats;
+    })
+    .finally(() => {
+      inflightStatsPromise = null;
+    });
+  return inflightStatsPromise;
 }
 
 // ── Client management ─────────────────────────────────────────────────────────
 
-export function addClient(res: Response) {
+export function addClient(res: Response): boolean {
+  if (clients.size >= MAX_GLOBAL_SSE_CLIENTS) {
+    return false;
+  }
   clients.add(res);
   res.on("close", () => clients.delete(res));
+  return true;
 }
 
 function sendToClient(res: Response, event: string, data: unknown) {
+  if (res.writableEnded || res.destroyed) {
+    clients.delete(res);
+    return;
+  }
+  if (res.socket && res.socket.writableLength > 64 * 1024) {
+    clients.delete(res);
+    res.end();
+    return;
+  }
   try {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   } catch {
@@ -191,20 +224,34 @@ function broadcast(event: string, data: unknown) {
 // ── Emit new report ───────────────────────────────────────────────────────────
 
 export function emitNewReport(event: LiveFeedEvent) {
-  recentEvents.unshift(event);
+  const sanitized: LiveFeedEvent = {
+    id: sanitizeText(event.id, 64),
+    model: sanitizeText(event.model, 64) || "Unknown Device",
+    grade: sanitizeText(event.grade, 16) || "?",
+    overallScore: typeof event.overallScore === "number" && Number.isFinite(event.overallScore) ? Math.max(0, Math.min(100, Math.round(event.overallScore))) : 0,
+    os: sanitizeText(event.os, 64) || "Unknown OS",
+    batteryHealth: typeof event.batteryHealth === "number" && Number.isFinite(event.batteryHealth) ? Math.max(0, Math.min(100, Math.round(event.batteryHealth))) : null,
+    timestamp: typeof event.timestamp === "string" ? event.timestamp : new Date().toISOString(),
+  };
+
+  recentEvents.unshift(sanitized);
   if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
 
   // Invalidate cache
   cachedStats = null;
 
   // Broadcast the new event immediately
-  broadcast("new_report", event);
+  broadcast("new_report", sanitized);
 
-  // Broadcast refreshed stats shortly after (let DB write settle)
-  setTimeout(async () => {
+  // Debounce refreshed stats broadcast (1000ms delay to let DB write settle)
+  if (statsBroadcastTimer) {
+    clearTimeout(statsBroadcastTimer);
+  }
+  statsBroadcastTimer = setTimeout(async () => {
+    statsBroadcastTimer = null;
     const stats = await getStats(true);
     broadcast("stats", stats);
-  }, 600);
+  }, 1000);
 }
 
 export function getRecentEvents(): LiveFeedEvent[] {

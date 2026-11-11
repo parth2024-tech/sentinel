@@ -4146,7 +4146,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path2 = __require("path");
-        const outputDir = "/home/thor/.gemini/antigravity/scratch/sentinel/artifacts/api-server/dist";
+        const outputDir = "/home/thor/Desktop/-Sentinel-main/artifacts/api-server/dist";
         return path2.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e2) {
         const f2 = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -23238,14 +23238,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto6 = __require("crypto");
+    var crypto8 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto6.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto8.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -26720,17 +26720,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto6 = __require("crypto");
+    var crypto8 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto8.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto6.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto8.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -28360,11 +28360,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
-    var crypto6 = __require("crypto");
+    var crypto8 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto6.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto8.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -28373,7 +28373,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto6.createHash("sha1").update(str).digest("hex");
+      return crypto8.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -30033,7 +30033,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "../../node_modules/.pnpm/pg@8.21.0/node_modules/pg/lib/crypto/sasl.js"(exports, module) {
     "use strict";
-    var crypto6 = require_utils5();
+    var crypto8 = require_utils5();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -30051,7 +30051,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto6.randomBytes(18).toString("base64");
+      const clientNonce = crypto8.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
       return {
         mechanism,
@@ -30093,20 +30093,20 @@ var require_sasl = __commonJS({
         const peerCert = stream.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto6.hashByName(hashName, peerCert);
+        const certHash = await crypto8.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto6.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto6.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto6.sha256(clientKey);
-      const clientSignature = await crypto6.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto8.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto8.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto8.sha256(clientKey);
+      const clientSignature = await crypto8.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto6.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto6.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto8.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto8.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -32279,7 +32279,7 @@ var require_client = __commonJS({
     var Query2 = require_query();
     var defaults3 = require_defaults();
     var Connection2 = require_connection();
-    var crypto6 = require_utils5();
+    var crypto8 = require_utils5();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -32526,7 +32526,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto6.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto8.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e2) {
             this.emit("error", e2);
@@ -60410,7 +60410,7 @@ var require_react_dom_server_node_production = __commonJS({
   "../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom/cjs/react-dom-server.node.production.js"(exports) {
     "use strict";
     var util2 = __require("util");
-    var crypto6 = __require("crypto");
+    var crypto8 = __require("crypto");
     var async_hooks = __require("async_hooks");
     var React = require_react();
     var ReactDOM = require_react_dom();
@@ -63074,7 +63074,7 @@ var require_react_dom_server_node_production = __commonJS({
     function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
       if (void 0 !== permalink) return "p" + permalink;
       permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-      componentKeyPath = crypto6.createHash("md5");
+      componentKeyPath = crypto8.createHash("md5");
       componentKeyPath.update(permalink);
       return "k" + componentKeyPath.digest("hex");
     }
@@ -74753,7 +74753,7 @@ var require_react_dom_server_node_development = __commonJS({
       function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
         if (void 0 !== permalink) return "p" + permalink;
         permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-        componentKeyPath = crypto6.createHash("md5");
+        componentKeyPath = crypto8.createHash("md5");
         componentKeyPath.update(permalink);
         return "k" + componentKeyPath.digest("hex");
       }
@@ -77461,7 +77461,7 @@ var require_react_dom_server_node_development = __commonJS({
           }
         };
       }
-      var util2 = __require("util"), crypto6 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
+      var util2 = __require("util"), crypto8 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
         "^[:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$"
       ), illegalAttributeNameCache = {}, validatedAttributeNameCache = {}, unitlessNumbers = new Set(
         "animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth boxFlex boxFlexGroup boxOrdinalGroup columnCount columns flex flexGrow flexPositive flexShrink flexNegative flexOrder gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight lineClamp lineHeight opacity order orphans scale tabSize widows zIndex zoom fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth MozAnimationIterationCount MozBoxFlex MozBoxFlexGroup MozLineClamp msAnimationIterationCount msFlex msZoom msFlexGrow msFlexNegative msFlexOrder msFlexPositive msFlexShrink msGridColumn msGridColumnSpan msGridRow msGridRowSpan WebkitAnimationIterationCount WebkitBoxFlex WebKitBoxFlexGroup WebkitBoxOrdinalGroup WebkitColumnCount WebkitColumns WebkitFlex WebkitFlexGrow WebkitFlexPositive WebkitFlexShrink WebkitLineClamp".split(
@@ -105416,7 +105416,7 @@ function lazy2(fn2) {
 }
 
 // src/services/reports.service.ts
-import crypto2 from "node:crypto";
+import crypto3 from "node:crypto";
 
 // src/lib/ids.ts
 import { randomBytes } from "crypto";
@@ -110096,18 +110096,26 @@ function isResendConfigured() {
 }
 
 // src/githubReleaseRepo.ts
+var DEFAULT_REPO = "parth2024-tech/Marketing-Website-Plan";
+var REPO_REGEX = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 function getGithubReleaseRepo() {
   const explicit = process.env.SENTINEL_GITHUB_REPO?.trim();
-  if (explicit) return explicit;
+  if (explicit && REPO_REGEX.test(explicit)) return explicit;
   const fromCi = process.env.GITHUB_REPOSITORY?.trim();
-  if (fromCi) return fromCi;
-  return "parth2024-tech/Marketing-Website-Plan";
+  if (fromCi && REPO_REGEX.test(fromCi)) return fromCi;
+  return DEFAULT_REPO;
 }
 function getPublicSiteOrigin() {
-  return (process.env.SENTINEL_PUBLIC_BASE_URL ?? "https://sentinelapp.io").replace(
+  const origin = (process.env.SENTINEL_PUBLIC_BASE_URL ?? "https://sentinelapp.io").replace(
     /\/$/,
     ""
   );
+  try {
+    const parsed = new URL(origin);
+    return parsed.origin;
+  } catch {
+    return "https://sentinelapp.io";
+  }
 }
 
 // src/lib/email/urls.ts
@@ -110780,9 +110788,12 @@ async function sendTransactionalEmail(input) {
 
 // src/lib/liveFeed.ts
 var clients = /* @__PURE__ */ new Set();
+var MAX_GLOBAL_SSE_CLIENTS = 1e3;
 var cachedStats = null;
 var statsLastFetched = 0;
 var STATS_TTL_MS = 3e4;
+var inflightStatsPromise = null;
+var statsBroadcastTimer = null;
 var recentEvents = [];
 var MAX_FEED_SIZE = 50;
 var _db = null;
@@ -110801,6 +110812,10 @@ function normalizeOs(raw) {
   if (r2.includes("linux")) return "Linux";
   return "Other";
 }
+function sanitizeText(str, maxLen = 64) {
+  if (typeof str !== "string") return "";
+  return str.replace(/[<>&"']/g, "").slice(0, maxLen).trim();
+}
 async function fetchFreshStats() {
   if (!_db) return emptyStats();
   try {
@@ -110809,24 +110824,26 @@ async function fetchFreshStats() {
     const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
     const totalResult = await _db.execute(sql`
       SELECT
-        COUNT(*)::int                                                          AS total,
-        COUNT(*) FILTER (WHERE created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
-        COUNT(*) FILTER (WHERE created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
-        ROUND(AVG((result_json->>'overall')::numeric)::numeric, 1)            AS avg_score
-      FROM reports
-      WHERE deleted_at IS NULL
+        COUNT(*)::int                                                                    AS total,
+        COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
+        COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
+        ROUND(AVG((rp.result_json->>'overall')::numeric)::numeric, 1)                    AS avg_score
+      FROM reports r
+      LEFT JOIN report_payloads rp ON rp.report_id = r.id
+      WHERE r.deleted_at IS NULL
     `);
     const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
     const totalRow = totalRows[0];
     const rowsResult = await _db.execute(sql`
       SELECT
-        result_json->>'grade'                          AS grade,
-        raw_json->'system'->>'os'                      AS os,
-        (raw_json->'battery'->>'health')::text         AS battery_health
-      FROM reports
-      WHERE deleted_at IS NULL
-        AND created_at >= ${ago7d.toISOString()}::timestamptz
-      ORDER BY created_at DESC
+        rp.result_json->>'grade'                          AS grade,
+        rp.raw_json->'system'->>'os'                      AS os,
+        (rp.raw_json->'battery'->>'health')::text         AS battery_health
+      FROM reports r
+      INNER JOIN report_payloads rp ON rp.report_id = r.id
+      WHERE r.deleted_at IS NULL
+        AND r.created_at >= ${ago7d.toISOString()}::timestamptz
+      ORDER BY r.created_at DESC
       LIMIT 500
     `);
     const rows = Array.isArray(rowsResult) ? rowsResult : rowsResult.rows;
@@ -110848,10 +110865,10 @@ async function fetchFreshStats() {
       }
     }
     return {
-      totalReports: Number(totalRow.total ?? 0),
-      reportsLast24h: Number(totalRow.last24h ?? 0),
-      reportsLast7d: Number(totalRow.last7d ?? 0),
-      avgOverallScore: totalRow.avg_score != null ? Number(totalRow.avg_score) : null,
+      totalReports: Number(totalRow?.total ?? 0),
+      reportsLast24h: Number(totalRow?.last24h ?? 0),
+      reportsLast7d: Number(totalRow?.last7d ?? 0),
+      avgOverallScore: totalRow?.avg_score != null ? Number(totalRow.avg_score) : null,
       avgBatteryHealth: batteryCount > 0 ? Math.round(totalBattery / batteryCount * 10) / 10 : null,
       gradeDistribution,
       osBreakdown,
@@ -110879,15 +110896,36 @@ async function getStats(forceRefresh = false) {
   if (!forceRefresh && cachedStats && now - statsLastFetched < STATS_TTL_MS) {
     return cachedStats;
   }
-  cachedStats = await fetchFreshStats();
-  statsLastFetched = now;
-  return cachedStats;
+  if (inflightStatsPromise) {
+    return inflightStatsPromise;
+  }
+  inflightStatsPromise = fetchFreshStats().then((stats) => {
+    cachedStats = stats;
+    statsLastFetched = Date.now();
+    return stats;
+  }).finally(() => {
+    inflightStatsPromise = null;
+  });
+  return inflightStatsPromise;
 }
 function addClient(res) {
+  if (clients.size >= MAX_GLOBAL_SSE_CLIENTS) {
+    return false;
+  }
   clients.add(res);
   res.on("close", () => clients.delete(res));
+  return true;
 }
 function sendToClient(res, event, data) {
+  if (res.writableEnded || res.destroyed) {
+    clients.delete(res);
+    return;
+  }
+  if (res.socket && res.socket.writableLength > 64 * 1024) {
+    clients.delete(res);
+    res.end();
+    return;
+  }
   try {
     res.write(`event: ${event}
 data: ${JSON.stringify(data)}
@@ -110903,14 +110941,27 @@ function broadcast(event, data) {
   }
 }
 function emitNewReport(event) {
-  recentEvents.unshift(event);
+  const sanitized = {
+    id: sanitizeText(event.id, 64),
+    model: sanitizeText(event.model, 64) || "Unknown Device",
+    grade: sanitizeText(event.grade, 16) || "?",
+    overallScore: typeof event.overallScore === "number" && Number.isFinite(event.overallScore) ? Math.max(0, Math.min(100, Math.round(event.overallScore))) : 0,
+    os: sanitizeText(event.os, 64) || "Unknown OS",
+    batteryHealth: typeof event.batteryHealth === "number" && Number.isFinite(event.batteryHealth) ? Math.max(0, Math.min(100, Math.round(event.batteryHealth))) : null,
+    timestamp: typeof event.timestamp === "string" ? event.timestamp : (/* @__PURE__ */ new Date()).toISOString()
+  };
+  recentEvents.unshift(sanitized);
   if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
   cachedStats = null;
-  broadcast("new_report", event);
-  setTimeout(async () => {
+  broadcast("new_report", sanitized);
+  if (statsBroadcastTimer) {
+    clearTimeout(statsBroadcastTimer);
+  }
+  statsBroadcastTimer = setTimeout(async () => {
+    statsBroadcastTimer = null;
     const stats = await getStats(true);
     broadcast("stats", stats);
-  }, 600);
+  }, 1e3);
 }
 function getRecentEvents() {
   return [...recentEvents];
@@ -110942,17 +110993,26 @@ async function initQueue() {
   await boss.createQueue("send-claim-email");
   await boss.createQueue("emit-live-feed");
   await boss.work("send-claim-email", async (job) => {
-    const { email: email3, reportId } = job.data;
-    if (!isResendConfigured()) {
-      logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
-      return;
+    try {
+      const { email: email3, reportId } = job.data;
+      if (!isResendConfigured()) {
+        logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
+        return;
+      }
+      const { subject, html, text: text2 } = buildReportClaimedEmail(email3, reportId);
+      await sendTransactionalEmail({ to: email3, subject, html, text: text2 });
+    } catch (err) {
+      logger.error({ err, jobId: job.id }, "send-claim-email worker failed");
+      throw err;
     }
-    const { subject, html, text: text2 } = buildReportClaimedEmail(email3, reportId);
-    await sendTransactionalEmail({ to: email3, subject, html, text: text2 });
   });
   await boss.work("emit-live-feed", async (job) => {
-    const data = job.data;
-    emitNewReport(data);
+    try {
+      const data = job.data;
+      emitNewReport(data);
+    } catch (err) {
+      logger.error({ err, jobId: job.id }, "emit-live-feed worker failed");
+    }
   });
 }
 async function stopQueue() {
@@ -110971,6 +111031,37 @@ async function enqueueLiveFeed(data) {
   }
 }
 
+// src/lib/crypto.ts
+import crypto2 from "node:crypto";
+function timingSafeEqualStr(a, b3) {
+  if (typeof a !== "string" || typeof b3 !== "string") {
+    return false;
+  }
+  const hashA = crypto2.createHash("sha256").update(a).digest();
+  const hashB = crypto2.createHash("sha256").update(b3).digest();
+  return crypto2.timingSafeEqual(hashA, hashB);
+}
+function canonicalJsonHash(obj) {
+  const canonical = JSON.stringify(
+    obj,
+    (_2, val) => val && typeof val === "object" && !Array.isArray(val) ? Object.keys(val).sort().reduce((acc, k3) => {
+      acc[k3] = val[k3];
+      return acc;
+    }, {}) : val
+  );
+  return crypto2.createHash("sha256").update(canonical).digest("hex");
+}
+function getRequiredServerSecret() {
+  const secret = process.env.SERVER_SECRET?.trim();
+  if (!secret || secret.length < 32 || secret === "sentinel-default-server-secret-key-32-chars-long") {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FATAL: SERVER_SECRET environment variable must be explicitly configured and >= 32 characters in production.");
+    }
+    return secret && secret.length >= 32 ? secret : "sentinel-default-server-secret-key-32-chars-long";
+  }
+  return secret;
+}
+
 // src/services/reports.service.ts
 var import_pino2 = __toESM(require_pino(), 1);
 var defaultLogger = (0, import_pino2.default)();
@@ -110981,18 +111072,27 @@ var ReportsService = class {
    */
   static async createReport(payload, ip, idempotencyKey, deviceToken, logger2 = defaultLogger) {
     const { rawJson, habitAnswers, legacy } = payload;
+    const ipHash = await sha256hex(ip);
+    const [perMinute, perDay] = await Promise.all([
+      consumeRateLimit(`report:min:${ipHash}`, 1, 10),
+      consumeRateLimit(`report:day:${ipHash}`, 1440, 100)
+    ]);
+    if (!perMinute || !perDay) {
+      throw new Error("Rate limit exceeded");
+    }
     const version4 = Number(rawJson.sentinelSchema || rawJson.schemaVersion);
     const MIN_SUPPORTED_VERSION = 1;
-    if (!version4 || version4 < MIN_SUPPORTED_VERSION) {
+    if (!Number.isInteger(version4) || version4 < MIN_SUPPORTED_VERSION) {
       throw new Error(`UPGRADE_REQUIRED: Agent schema version ${version4 || "unknown"} is no longer supported. Minimum required: ${MIN_SUPPORTED_VERSION}`);
     }
     let agentDeviceOrgId = null;
     if (deviceToken && deviceToken.length >= 10) {
       const deviceRows = await db.select().from(devicesTable).where(eq(devicesTable.deviceToken, deviceToken)).limit(1);
-      if (deviceRows.length === 0 || !deviceRows[0]) {
+      const dev = deviceRows[0];
+      if (!dev || !timingSafeEqualStr(dev.deviceToken, deviceToken)) {
         throw new Error("Invalid device token");
       }
-      agentDeviceOrgId = deviceRows[0].orgId ?? null;
+      agentDeviceOrgId = dev.orgId ?? null;
     }
     const reportParsed = SentinelReportSchema.safeParse(rawJson);
     if (!reportParsed.success) {
@@ -111002,41 +111102,31 @@ var ReportsService = class {
     const plausibility = validatePlausibility(reportParsed.data);
     if (!plausibility.valid) {
       const failureReason = plausibility.errors.join("; ");
-      const suspectId = createId();
-      const ipHash2 = await sha256hex(ip);
-      try {
+      const allowQuarantineWrite = await consumeRateLimit(`quarantine:${ipHash}`, 60, 5);
+      if (allowQuarantineWrite) {
         await db.insert(suspectPayloadsTable).values({
-          id: suspectId,
+          id: createId(),
           rawJson,
           failureReason,
-          ipHash: ipHash2
-        });
-      } catch (dbErr) {
-        logger2.error({ err: dbErr }, "Failed to write to suspect_payloads table");
+          ipHash
+        }).catch((dbErr) => logger2.error({ err: dbErr }, "Failed to write suspect_payloads"));
       }
       throw new Error(`Invalid report data (quarantined): ${failureReason}`);
     }
-    const ipHash = await sha256hex(ip);
-    const [perMinute, perDay] = await Promise.all([
-      consumeRateLimit(ipHash, 1, 10),
-      consumeRateLimit(ipHash, 1440, 100)
-    ]);
-    if (!perMinute || !perDay) {
-      throw new Error("Rate limit exceeded");
-    }
-    const deviceId = rawJson.system?.hostname || rawJson.system?.model || "unknown-device";
-    const scanTimestamp = rawJson.generatedAt || "unknown-timestamp";
-    const payloadHash = crypto2.createHash("sha256").update(JSON.stringify(rawJson)).digest("hex");
-    const serverSecret = process.env.SERVER_SECRET || "sentinel-default-server-secret-key-32-chars-long";
-    const computedIdempotencyKey = crypto2.createHmac("sha256", serverSecret).update(`${deviceId}||${scanTimestamp}||${payloadHash}`).digest("hex");
+    const serverSecret = getRequiredServerSecret();
+    const payloadHash = canonicalJsonHash(rawJson);
+    const callerScope = deviceToken ? await sha256hex(deviceToken) : ipHash;
+    const computedIdempotencyKey = crypto3.createHmac("sha256", serverSecret).update(`${callerScope}||${idempotencyKey ?? ""}||${payloadHash}`).digest("hex");
     const existing = await db.select().from(idempotencyKeysTable).where(eq(idempotencyKeysTable.key, computedIdempotencyKey)).limit(1);
     if (existing.length > 0 && existing[0]) {
       const report = await db.select().from(reportsTable).where(eq(reportsTable.id, existing[0].reportId)).limit(1);
-      if (report.length > 0 && report[0]) {
-        const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, report[0].id)).limit(1);
+      const rep = report[0];
+      if (rep) {
+        const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, rep.id)).limit(1);
+        const callerAuthorized = rep.ipHash && timingSafeEqualStr(rep.ipHash, ipHash) || agentDeviceOrgId && rep.orgId && timingSafeEqualStr(rep.orgId, agentDeviceOrgId);
         return {
-          id: report[0].id,
-          claimToken: report[0].claimToken,
+          id: rep.id,
+          claimToken: callerAuthorized ? rep.claimToken : null,
           result: payloadRow[0]?.resultJson,
           deduplicated: true
         };
@@ -111087,19 +111177,31 @@ var ReportsService = class {
    * Claims a report by token and optionally links to a user email.
    * Enqueues a confirmation email if email is provided.
    */
-  static async claimReport(id, claimToken, email3, logger2 = defaultLogger) {
+  static async claimReport(id, claimToken, email3, ip = "unknown", logger2 = defaultLogger) {
+    const ipHash = await sha256hex(ip);
+    const allowAttempt = await consumeRateLimit(`claim-attempt:${ipHash}:${id}`, 15, 10);
+    if (!allowAttempt) {
+      throw new Error("Rate limit exceeded");
+    }
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
     const row = rows[0];
     if (!row) throw new Error("Report not found");
-    if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
-    if (row.claimed && !email3) return { id, claimed: true, email: row.userId ? "***" : null };
+    if (!row.claimToken || !timingSafeEqualStr(row.claimToken, claimToken)) throw new Error("Invalid claim token");
+    if (row.claimed) {
+      if (row.userId && email3) {
+        return { id, claimed: true, email: "***" };
+      }
+      if (!email3) {
+        return { id, claimed: true, email: row.userId ? "***" : null };
+      }
+    }
     let finalUserId = row.userId;
     if (email3 && !finalUserId) {
       const userRows = await db.select().from(usersTable).where(eq(usersTable.email, email3)).limit(1);
       if (userRows.length > 0 && userRows[0]) {
         finalUserId = userRows[0].id;
       } else {
-        finalUserId = crypto2.randomBytes(16).toString("hex");
+        finalUserId = crypto3.randomBytes(16).toString("hex");
         try {
           await db.insert(usersTable).values({ id: finalUserId, email: email3 });
         } catch (err) {
@@ -111114,11 +111216,15 @@ var ReportsService = class {
     }
     await db.update(reportsTable).set({
       claimed: true,
-      ...finalUserId ? { userId: finalUserId } : {}
+      ...finalUserId ? { userId: finalUserId } : {},
+      updatedAt: /* @__PURE__ */ new Date()
     }).where(eq(reportsTable.id, id));
     logger2.info({ reportId: id, hasEmail: !!email3 }, "report_claimed");
     if (email3) {
-      enqueueClaimEmail(email3, id).catch((e2) => logger2.error({ err: e2 }, "Failed to enqueue claim email"));
+      const allowEmail = await consumeRateLimit(`claim-email:${id}`, 3600, 3);
+      if (allowEmail) {
+        enqueueClaimEmail(email3, id).catch((e2) => logger2.error({ err: e2 }, "Failed to enqueue claim email"));
+      }
     }
     return { id, claimed: true, email: email3 ? "***" : null };
   }
@@ -111126,7 +111232,7 @@ var ReportsService = class {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
     const row = rows[0];
     if (!row) throw new Error("Report not found");
-    if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
+    if (!row.claimToken || !timingSafeEqualStr(row.claimToken, claimToken)) throw new Error("Invalid claim token");
     const payloadRow = await db.select().from(reportPayloadsTable).where(eq(reportPayloadsTable.reportId, id)).limit(1);
     const rj = payloadRow[0]?.resultJson ?? {};
     const habitScore = computeHabitScore(habitAnswers);
@@ -111163,7 +111269,6 @@ var ReportsService = class {
       combinedScore: habit?.combinedScore ?? null,
       claimed: row.claimed,
       email: row.userId ? "***" : null,
-      shareToken: row.shareToken ?? null,
       createdAt: row.createdAt
     };
   }
@@ -111171,7 +111276,7 @@ var ReportsService = class {
     const rows = await db.select().from(reportsTable).where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt))).limit(1);
     const row = rows[0];
     if (!row) throw new Error("Report not found");
-    if (row.claimToken !== claimToken) throw new Error("Invalid claim token");
+    if (!row.claimToken || !timingSafeEqualStr(row.claimToken, claimToken)) throw new Error("Invalid claim token");
     if (row.shareToken) {
       logger2.info({ reportId: id }, "share_token_reused");
       return row.shareToken;
@@ -111212,9 +111317,10 @@ var ReportsService = class {
 };
 
 // src/controllers/reports.controller.ts
+var BoundedHabitAnswers = external_exports.record(external_exports.string().max(64), external_exports.number().finite().min(0).max(100)).refine((obj) => Object.keys(obj).length <= 32, "Maximum 32 habit keys allowed");
 var PostReportBody = external_exports.object({
-  rawJson: external_exports.record(external_exports.unknown()),
-  habitAnswers: external_exports.record(external_exports.number()).optional(),
+  rawJson: external_exports.record(external_exports.string().max(128), external_exports.unknown()),
+  habitAnswers: BoundedHabitAnswers.optional(),
   legacy: external_exports.boolean().optional().default(false)
 });
 var ClaimBody = external_exports.object({
@@ -111223,7 +111329,7 @@ var ClaimBody = external_exports.object({
 });
 var HabitAnswersBody = external_exports.object({
   claimToken: external_exports.string().min(8).max(64),
-  habitAnswers: external_exports.record(external_exports.number())
+  habitAnswers: BoundedHabitAnswers
 });
 var ShareBody = external_exports.object({
   claimToken: external_exports.string().min(8).max(64)
@@ -111284,13 +111390,15 @@ var ReportsController = class {
       res.status(422).json({ error: "Invalid claim request", details: parsed.error.message });
       return;
     }
+    const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
     try {
-      const result = await ReportsService.claimReport(id, parsed.data.claimToken, parsed.data.email, req.log);
+      const result = await ReportsService.claimReport(id, parsed.data.claimToken, parsed.data.email, ip, req.log);
       res.json(result);
     } catch (err) {
       const error40 = err instanceof Error ? err : new Error(String(err));
       if (error40.message === "Report not found") res.status(404).json({ error: error40.message });
       else if (error40.message === "Invalid claim token") res.status(403).json({ error: error40.message });
+      else if (error40.message === "Rate limit exceeded") res.status(429).json({ error: error40.message });
       else res.status(500).json({ error: "Failed to claim report" });
     }
   }
@@ -111379,7 +111487,7 @@ router3.get("/shared/:shareToken", ReportsController.getSharedReport);
 var reports_default = router3;
 
 // src/routes/myReports.ts
-import crypto3 from "node:crypto";
+import crypto4 from "node:crypto";
 var import_express4 = __toESM(require_express2(), 1);
 
 // src/lib/magicLinkConstants.ts
@@ -111427,23 +111535,27 @@ var router4 = (0, import_express4.Router)();
 var SESSION_COOKIE = "sentinel_session";
 var SESSION_TTL_DAYS = 30;
 function newToken(bytes = 32) {
-  return crypto3.randomBytes(bytes).toString("hex");
+  return crypto4.randomBytes(bytes).toString("hex");
+}
+function hashToken(token2) {
+  return crypto4.createHash("sha256").update(token2).digest("hex");
 }
 function getSession(req) {
   return req.cookies?.[SESSION_COOKIE] ?? null;
 }
 async function resolveEmail(sessionToken) {
+  const sessionHash = hashToken(sessionToken);
   const now = /* @__PURE__ */ new Date();
   const rows = await db.select().from(myReportsSessionsTable).where(
     and(
-      eq(myReportsSessionsTable.token, sessionToken),
+      eq(myReportsSessionsTable.token, sessionHash),
       gt(myReportsSessionsTable.expiresAt, now)
     )
   ).limit(1);
   return rows[0]?.email ?? null;
 }
 var RequestBody = external_exports.object({
-  email: external_exports.string().email().max(254)
+  email: external_exports.string().trim().toLowerCase().email().max(254)
 });
 router4.post("/request", async (req, res) => {
   const parsed = RequestBody.safeParse(req.body);
@@ -111452,12 +111564,24 @@ router4.post("/request", async (req, res) => {
     return;
   }
   const { email: email3 } = parsed.data;
+  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+  const ipHash = crypto4.createHash("sha256").update(ip).digest("hex");
+  const emailHash = crypto4.createHash("sha256").update(email3).digest("hex");
+  const [allowIp, allowEmail] = await Promise.all([
+    consumeRateLimit(`magic-req:ip:${ipHash}`, 15, 5),
+    consumeRateLimit(`magic-req:email:${emailHash}`, 15, 3)
+  ]);
+  if (!allowIp || !allowEmail) {
+    res.status(429).json({ error: "Too many magic link requests. Please wait a few minutes." });
+    return;
+  }
   const token2 = newToken();
+  const tokenHash = hashToken(token2);
   const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1e3);
-  await db.insert(magicLinkTokensTable).values({ token: token2, email: email3, expiresAt });
+  await db.insert(magicLinkTokensTable).values({ token: tokenHash, email: email3, expiresAt });
   req.log.info({ email: email3 }, "magic_link_requested");
-  const isDev = process.env.NODE_ENV !== "production";
-  if (isDev) {
+  const allowDevToken = process.env.NODE_ENV === "development" && process.env.ALLOW_DEV_TOKEN_LEAK === "true";
+  if (allowDevToken) {
     res.json({
       ok: true,
       devToken: token2
@@ -111465,7 +111589,7 @@ router4.post("/request", async (req, res) => {
     return;
   }
   if (!isResendConfigured()) {
-    await db.delete(magicLinkTokensTable).where(eq(magicLinkTokensTable.token, token2));
+    await db.delete(magicLinkTokensTable).where(eq(magicLinkTokensTable.token, tokenHash));
     res.status(503).json({
       error: "Email delivery is not configured. Set RESEND_API_KEY (and RESEND_FROM_EMAIL for your domain)."
     });
@@ -111475,7 +111599,7 @@ router4.post("/request", async (req, res) => {
     const { subject, html, text: text2 } = buildMagicLinkLoginEmail(token2, "login");
     await sendTransactionalEmail({ to: email3, subject, html, text: text2 });
   } catch (err) {
-    await db.delete(magicLinkTokensTable).where(eq(magicLinkTokensTable.token, token2));
+    await db.delete(magicLinkTokensTable).where(eq(magicLinkTokensTable.token, tokenHash));
     req.log.error({ err, email: email3 }, "magic_link_email_failed");
     res.status(502).json({
       error: "Could not send the sign-in email. Try again in a moment."
@@ -111485,29 +111609,35 @@ router4.post("/request", async (req, res) => {
   res.json({ ok: true });
 });
 router4.get("/verify", async (req, res) => {
-  const token2 = typeof req.query.token === "string" ? req.query.token : null;
-  if (!token2) {
-    res.status(400).json({ error: "Missing token." });
+  const purpose = req.headers["purpose"] || req.headers["sec-purpose"] || req.headers["x-purpose"];
+  if (req.method === "HEAD" || purpose === "prefetch" || purpose === "preview") {
+    res.status(204).end();
     return;
   }
+  const rawToken = typeof req.query.token === "string" ? req.query.token : null;
+  if (!rawToken || rawToken.length < 16) {
+    res.status(400).json({ error: "Missing or invalid token." });
+    return;
+  }
+  const tokenHash = hashToken(rawToken);
   const now = /* @__PURE__ */ new Date();
-  const rows = await db.select().from(magicLinkTokensTable).where(
+  const updatedRows = await db.update(magicLinkTokensTable).set({ usedAt: now }).where(
     and(
-      eq(magicLinkTokensTable.token, token2),
+      eq(magicLinkTokensTable.token, tokenHash),
       isNull(magicLinkTokensTable.usedAt),
       gt(magicLinkTokensTable.expiresAt, now)
     )
-  ).limit(1);
-  const row = rows[0];
+  ).returning({ email: magicLinkTokensTable.email });
+  const row = updatedRows[0];
   if (!row) {
     res.status(401).json({ error: "Invalid or expired magic link." });
     return;
   }
   const { email: email3 } = row;
-  await db.update(magicLinkTokensTable).set({ usedAt: now }).where(eq(magicLinkTokensTable.token, token2));
   const sessionToken = newToken();
+  const sessionHash = hashToken(sessionToken);
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3);
-  await db.insert(myReportsSessionsTable).values({ token: sessionToken, email: email3, expiresAt });
+  await db.insert(myReportsSessionsTable).values({ token: sessionHash, email: email3, expiresAt });
   req.log.info({ email: email3 }, "my_reports_session_created");
   res.cookie(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
@@ -111516,8 +111646,18 @@ router4.get("/verify", async (req, res) => {
     expires: expiresAt,
     path: "/"
   });
-  const base = process.env.BASE_PATH ?? "";
-  res.redirect(`${base}/my-reports?verified=1`);
+  const rawBase = (process.env.BASE_PATH ?? "").trim();
+  let safeBase = "";
+  if (rawBase.startsWith("http://") || rawBase.startsWith("https://")) {
+    try {
+      safeBase = new URL(rawBase).origin;
+    } catch {
+      safeBase = "";
+    }
+  } else if (rawBase.startsWith("/")) {
+    safeBase = rawBase;
+  }
+  res.redirect(`${safeBase}/my-reports?verified=1`);
 });
 router4.get("/", async (req, res) => {
   const sessionToken = getSession(req);
@@ -111565,7 +111705,8 @@ router4.get("/", async (req, res) => {
 router4.delete("/session", async (req, res) => {
   const sessionToken = getSession(req);
   if (sessionToken) {
-    await db.delete(myReportsSessionsTable).where(eq(myReportsSessionsTable.token, sessionToken)).catch(() => {
+    const sessionHash = hashToken(sessionToken);
+    await db.delete(myReportsSessionsTable).where(eq(myReportsSessionsTable.token, sessionHash)).catch(() => {
     });
   }
   res.clearCookie(SESSION_COOKIE, { path: "/" });
@@ -111886,15 +112027,51 @@ function githubAuthHeaders() {
   if (token2) headers.Authorization = `Bearer ${token2}`;
   return headers;
 }
-async function findAssetOnGithub(assetName) {
+var cachedReleases = null;
+var releasesLastFetched = 0;
+var RELEASES_CACHE_TTL_MS = 5 * 60 * 1e3;
+var inflightReleasesPromise = null;
+async function fetchGithubReleases() {
   const repo = getGithubReleaseRepo();
   const headers = githubAuthHeaders();
   const listUrl = `https://api.github.com/repos/${repo}/releases?per_page=30`;
-  const listRes = await fetch(listUrl, { headers });
-  if (!listRes.ok) {
+  try {
+    const listRes = await fetch(listUrl, {
+      headers,
+      signal: AbortSignal.timeout(5e3)
+    });
+    if (!listRes.ok) {
+      return null;
+    }
+    return await listRes.json();
+  } catch {
     return null;
   }
-  const releases = await listRes.json();
+}
+async function getCachedGithubReleases() {
+  const now = Date.now();
+  if (cachedReleases && now - releasesLastFetched < RELEASES_CACHE_TTL_MS) {
+    return cachedReleases;
+  }
+  if (inflightReleasesPromise) {
+    return inflightReleasesPromise;
+  }
+  inflightReleasesPromise = fetchGithubReleases().then((releases) => {
+    if (releases) {
+      cachedReleases = releases;
+      releasesLastFetched = Date.now();
+    }
+    return releases ?? cachedReleases;
+  }).finally(() => {
+    inflightReleasesPromise = null;
+  });
+  return inflightReleasesPromise;
+}
+async function findAssetOnGithub(assetName) {
+  const releases = await getCachedGithubReleases();
+  if (!releases) {
+    return null;
+  }
   for (const release2 of releases) {
     if (release2.draft) continue;
     const asset = release2.assets.find(
@@ -111927,9 +112104,8 @@ function isDownloadSlug(value) {
 }
 function unavailableMessage(slug) {
   const filename = ASSET_FILENAMES[slug];
-  const dir = getDownloadsDirectory();
   const repo = getGithubReleaseRepo();
-  return `${filename} is not available yet. Place a signed build at ${dir}/${filename}, set SENTINEL_DOWNLOAD_URL_${slug.toUpperCase()}, or publish a GitHub Release on ${repo} with that asset attached.`;
+  return `${filename} is not available yet. Publish a release on GitHub (${repo}) with ${filename} attached, or configure SENTINEL_DOWNLOAD_URL_${slug.toUpperCase()}.`;
 }
 
 // src/routes/downloads.ts
@@ -111974,7 +112150,6 @@ router8.get("/latest/:binary", async (req, res) => {
 });
 router8.get("/latest", async (_req, res) => {
   const GITHUB_REPO = getGithubReleaseRepo();
-  const downloadsDir = getDownloadsDirectory();
   const assets = [];
   for (const slug of DOWNLOAD_SLUGS) {
     const resolved = await resolveDownload(slug);
@@ -111991,7 +112166,6 @@ router8.get("/latest", async (_req, res) => {
     name: "Sentinel native downloads",
     publishedAt: null,
     releaseUrl: `https://github.com/${GITHUB_REPO}/releases`,
-    downloadsDirectory: downloadsDir,
     assets
   });
 });
@@ -114169,11 +114343,11 @@ var StripeContext = class _StripeContext {
 };
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/platform/NodePlatformFunctions.js
-import * as crypto5 from "crypto";
+import * as crypto6 from "crypto";
 import { EventEmitter as EventEmitter7 } from "events";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/NodeCryptoProvider.js
-import * as crypto4 from "crypto";
+import * as crypto5 from "crypto";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/CryptoProvider.js
 var CryptoProvider = class {
@@ -114216,7 +114390,7 @@ var CryptoProviderOnlySupportsAsyncError = class extends Error {
 var NodeCryptoProvider = class extends CryptoProvider {
   /** @override */
   computeHMACSignature(payload, secret) {
-    return crypto4.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
+    return crypto5.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
   }
   /** @override */
   async computeHMACSignatureAsync(payload, secret) {
@@ -114225,7 +114399,7 @@ var NodeCryptoProvider = class extends CryptoProvider {
   }
   /** @override */
   async computeSHA256Async(data) {
-    return new Uint8Array(await crypto4.createHash("sha256").update(data).digest());
+    return new Uint8Array(await crypto5.createHash("sha256").update(data).digest());
   }
 };
 
@@ -114564,8 +114738,8 @@ var StreamProcessingError = class extends StripeError {
 var NodePlatformFunctions = class extends PlatformFunctions {
   /** @override */
   uuid4() {
-    if (crypto5.randomUUID) {
-      return crypto5.randomUUID();
+    if (crypto6.randomUUID) {
+      return crypto6.randomUUID();
     }
     return super.uuid4();
   }
@@ -114584,11 +114758,11 @@ var NodePlatformFunctions = class extends PlatformFunctions {
     if (a.length !== b3.length) {
       return false;
     }
-    if (crypto5.timingSafeEqual) {
+    if (crypto6.timingSafeEqual) {
       const textEncoder = new TextEncoder();
       const aEncoded = textEncoder.encode(a);
       const bEncoded = textEncoder.encode(b3);
-      return crypto5.timingSafeEqual(aEncoded, bEncoded);
+      return crypto6.timingSafeEqual(aEncoded, bEncoded);
     }
     return super.secureCompare(a, b3);
   }
@@ -129424,6 +129598,10 @@ router12.get("/stats", async (_req, res) => {
   }
 });
 router12.get("/stream", async (req, res) => {
+  if (!addClient(res)) {
+    res.status(503).json({ error: "Live stream capacity reached. Try again later." });
+    return;
+  }
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Connection", "keep-alive");
@@ -129442,7 +129620,6 @@ data: ${JSON.stringify({ recentEvents: events5 })}
 `);
   } catch {
   }
-  addClient(res);
   req.on("close", () => {
     res.end();
   });
@@ -129533,6 +129710,13 @@ app.use((err, req, res, _next) => {
 var app_default = app;
 
 // src/lib/magicLinkReminderScheduler.ts
+import crypto7 from "node:crypto";
+function newToken3(bytes = 32) {
+  return crypto7.randomBytes(bytes).toString("hex");
+}
+function hashToken2(token2) {
+  return crypto7.createHash("sha256").update(token2).digest("hex");
+}
 function startMagicLinkReminderScheduler(logger2) {
   return setInterval(() => {
     void runMagicLinkReminderTick(logger2);
@@ -129548,7 +129732,7 @@ async function runMagicLinkReminderTick(logger2) {
   );
   try {
     const rows = await db.select({
-      token: magicLinkTokensTable.token,
+      oldHash: magicLinkTokensTable.token,
       email: magicLinkTokensTable.email
     }).from(magicLinkTokensTable).where(
       and(
@@ -129560,8 +129744,25 @@ async function runMagicLinkReminderTick(logger2) {
     ).limit(25);
     for (const row of rows) {
       try {
+        const freshToken = newToken3();
+        const freshHash = hashToken2(freshToken);
+        const freshExpiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1e3);
+        const updated = await db.update(magicLinkTokensTable).set({
+          token: freshHash,
+          reminderSentAt: /* @__PURE__ */ new Date(),
+          expiresAt: freshExpiresAt
+        }).where(
+          and(
+            eq(magicLinkTokensTable.token, row.oldHash),
+            isNull(magicLinkTokensTable.reminderSentAt),
+            isNull(magicLinkTokensTable.usedAt)
+          )
+        ).returning({ email: magicLinkTokensTable.email });
+        if (updated.length === 0) {
+          continue;
+        }
         const { subject, html, text: text2 } = buildMagicLinkLoginEmail(
-          row.token,
+          freshToken,
           "reminder"
         );
         await sendTransactionalEmail({
@@ -129570,7 +129771,6 @@ async function runMagicLinkReminderTick(logger2) {
           html,
           text: text2
         });
-        await db.update(magicLinkTokensTable).set({ reminderSentAt: /* @__PURE__ */ new Date() }).where(eq(magicLinkTokensTable.token, row.token));
         logger2.info({ email: row.email }, "magic_link_reminder_sent");
       } catch (err) {
         logger2.error({ err, email: row.email }, "magic_link_reminder_failed");

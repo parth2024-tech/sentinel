@@ -5,20 +5,29 @@
  * - `GITHUB_REPOSITORY` — set automatically in GitHub Actions
  * - Default — matches this monorepo (native installers publish here)
  */
+const DEFAULT_REPO = "parth2024-tech/Marketing-Website-Plan";
+const REPO_REGEX = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
+
 export function getGithubReleaseRepo(): string {
   const explicit = process.env.SENTINEL_GITHUB_REPO?.trim();
-  if (explicit) return explicit;
+  if (explicit && REPO_REGEX.test(explicit)) return explicit;
 
   const fromCi = process.env.GITHUB_REPOSITORY?.trim();
-  if (fromCi) return fromCi;
+  if (fromCi && REPO_REGEX.test(fromCi)) return fromCi;
 
-  return "parth2024-tech/Marketing-Website-Plan";
+  return DEFAULT_REPO;
 }
 
 /** Site origin for absolute links returned by the API (e.g. version downloadUrl). */
 export function getPublicSiteOrigin(): string {
-  return (process.env.SENTINEL_PUBLIC_BASE_URL ?? "https://sentinelapp.io").replace(
+  const origin = (process.env.SENTINEL_PUBLIC_BASE_URL ?? "https://sentinelapp.io").replace(
     /\/$/,
     ""
   );
+  try {
+    const parsed = new URL(origin);
+    return parsed.origin;
+  } catch {
+    return "https://sentinelapp.io";
+  }
 }

@@ -15,6 +15,7 @@ import { MAGIC_LINK_TTL_MIN } from "../lib/magicLinkConstants.js";
 import { isResendConfigured } from "../lib/email/config.js";
 import { buildMagicLinkLoginEmail } from "../lib/email/templates/magicLinkLogin.js";
 import { sendTransactionalEmail } from "../lib/email/resendMailer.js";
+import { consumeRateLimit } from "../lib/rateLimit.js";
 
 const router = Router();
 
@@ -25,18 +26,23 @@ function newToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString("hex");
 }
 
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
 function getSession(req: Request): string | null {
   return (req.cookies as Record<string, string>)?.[SESSION_COOKIE] ?? null;
 }
 
 async function resolveEmail(sessionToken: string): Promise<string | null> {
+  const sessionHash = hashToken(sessionToken);
   const now = new Date();
   const rows = await db
     .select()
     .from(myReportsSessionsTable)
     .where(
       and(
-        eq(myReportsSessionsTable.token, sessionToken),
+        eq(myReportsSessionsTable.token, sessionHash),
         gt(myReportsSessionsTable.expiresAt, now)
       )
     )
@@ -45,11 +51,11 @@ async function resolveEmail(sessionToken: string): Promise<string | null> {
 }
 
 // ── POST /api/my-reports/request ──────────────────────────────────────────────
-// Creates a magic-link token. In development returns `devToken`; in production
-// sends email via Resend (requires RESEND_API_KEY).
+// Creates a magic-link token. In development returns `devToken` only when
+// explicitly enabled; in production sends email via Resend (requires RESEND_API_KEY).
 
 const RequestBody = z.object({
-  email: z.string().email().max(254),
+  email: z.string().trim().toLowerCase().email().max(254),
 });
 
 router.post("/request", async (req, res) => {
@@ -60,16 +66,34 @@ router.post("/request", async (req, res) => {
   }
 
   const { email } = parsed.data;
+
+  // Rate limiting: 5 requests per 15m per IP, 3 requests per 15m per email
+  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+  const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
+  const emailHash = crypto.createHash("sha256").update(email).digest("hex");
+
+  const [allowIp, allowEmail] = await Promise.all([
+    consumeRateLimit(`magic-req:ip:${ipHash}`, 15, 5),
+    consumeRateLimit(`magic-req:email:${emailHash}`, 15, 3),
+  ]);
+
+  if (!allowIp || !allowEmail) {
+    res.status(429).json({ error: "Too many magic link requests. Please wait a few minutes." });
+    return;
+  }
+
   const token = newToken();
+  const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1000);
 
-  await db.insert(magicLinkTokensTable).values({ token, email, expiresAt });
+  await db.insert(magicLinkTokensTable).values({ token: tokenHash, email, expiresAt });
 
   req.log.info({ email }, "magic_link_requested");
 
-  const isDev = process.env.NODE_ENV !== "production";
+  // Only leak devToken if explicitly running in development AND allowed via env
+  const allowDevToken = process.env.NODE_ENV === "development" && process.env.ALLOW_DEV_TOKEN_LEAK === "true";
 
-  if (isDev) {
+  if (allowDevToken) {
     res.json({
       ok: true,
       devToken: token,
@@ -80,7 +104,7 @@ router.post("/request", async (req, res) => {
   if (!isResendConfigured()) {
     await db
       .delete(magicLinkTokensTable)
-      .where(eq(magicLinkTokensTable.token, token));
+      .where(eq(magicLinkTokensTable.token, tokenHash));
     res.status(503).json({
       error:
         "Email delivery is not configured. Set RESEND_API_KEY (and RESEND_FROM_EMAIL for your domain).",
@@ -94,7 +118,7 @@ router.post("/request", async (req, res) => {
   } catch (err) {
     await db
       .delete(magicLinkTokensTable)
-      .where(eq(magicLinkTokensTable.token, token));
+      .where(eq(magicLinkTokensTable.token, tokenHash));
     req.log.error({ err, email }, "magic_link_email_failed");
     res.status(502).json({
       error: "Could not send the sign-in email. Try again in a moment.",
@@ -109,26 +133,36 @@ router.post("/request", async (req, res) => {
 // Validates magic-link token, creates a session cookie, redirects to /my-reports.
 
 router.get("/verify", async (req, res) => {
-  const token = typeof req.query.token === "string" ? req.query.token : null;
-  if (!token) {
-    res.status(400).json({ error: "Missing token." });
+  // Guard against enterprise email scanner / prefetch bots consuming the single-use token
+  const purpose = req.headers["purpose"] || req.headers["sec-purpose"] || req.headers["x-purpose"];
+  if (req.method === "HEAD" || purpose === "prefetch" || purpose === "preview") {
+    res.status(204).end();
     return;
   }
 
+  const rawToken = typeof req.query.token === "string" ? req.query.token : null;
+  if (!rawToken || rawToken.length < 16) {
+    res.status(400).json({ error: "Missing or invalid token." });
+    return;
+  }
+
+  const tokenHash = hashToken(rawToken);
   const now = new Date();
-  const rows = await db
-    .select()
-    .from(magicLinkTokensTable)
+
+  // Atomic single-query consumption with RETURNING to prevent TOCTOU race conditions
+  const updatedRows = await db
+    .update(magicLinkTokensTable)
+    .set({ usedAt: now })
     .where(
       and(
-        eq(magicLinkTokensTable.token, token),
+        eq(magicLinkTokensTable.token, tokenHash),
         isNull(magicLinkTokensTable.usedAt),
         gt(magicLinkTokensTable.expiresAt, now)
       )
     )
-    .limit(1);
+    .returning({ email: magicLinkTokensTable.email });
 
-  const row = rows[0];
+  const row = updatedRows[0];
   if (!row) {
     res.status(401).json({ error: "Invalid or expired magic link." });
     return;
@@ -136,16 +170,11 @@ router.get("/verify", async (req, res) => {
 
   const { email } = row;
 
-  // Mark token used
-  await db
-    .update(magicLinkTokensTable)
-    .set({ usedAt: now })
-    .where(eq(magicLinkTokensTable.token, token));
-
-  // Create session
+  // Create session with hashed token storage
   const sessionToken = newToken();
+  const sessionHash = hashToken(sessionToken);
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  await db.insert(myReportsSessionsTable).values({ token: sessionToken, email, expiresAt });
+  await db.insert(myReportsSessionsTable).values({ token: sessionHash, email, expiresAt });
 
   req.log.info({ email }, "my_reports_session_created");
 
@@ -157,9 +186,19 @@ router.get("/verify", async (req, res) => {
     path: "/",
   });
 
-  // Redirect to my-reports page (frontend route)
-  const base = process.env.BASE_PATH ?? "";
-  res.redirect(`${base}/my-reports?verified=1`);
+  // Redirect safely to my-reports page (frontend route)
+  const rawBase = (process.env.BASE_PATH ?? "").trim();
+  let safeBase = "";
+  if (rawBase.startsWith("http://") || rawBase.startsWith("https://")) {
+    try {
+      safeBase = new URL(rawBase).origin;
+    } catch {
+      safeBase = "";
+    }
+  } else if (rawBase.startsWith("/")) {
+    safeBase = rawBase;
+  }
+  res.redirect(`${safeBase}/my-reports?verified=1`);
 });
 
 // ── GET /api/my-reports ───────────────────────────────────────────────────────
@@ -235,9 +274,10 @@ router.get("/", async (req, res) => {
 router.delete("/session", async (req, res) => {
   const sessionToken = getSession(req);
   if (sessionToken) {
+    const sessionHash = hashToken(sessionToken);
     await db
       .delete(myReportsSessionsTable)
-      .where(eq(myReportsSessionsTable.token, sessionToken))
+      .where(eq(myReportsSessionsTable.token, sessionHash))
       .catch(() => {});
   }
   res.clearCookie(SESSION_COOKIE, { path: "/" });
