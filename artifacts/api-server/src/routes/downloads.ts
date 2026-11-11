@@ -5,6 +5,7 @@ import {
   DOWNLOAD_SLUGS,
   isDownloadSlug,
   resolveDownload,
+  getAssetSha256,
   unavailableMessage,
   type DownloadSlug,
 } from "../lib/resolveDownload.js";
@@ -83,16 +84,19 @@ router.get("/latest", async (_req: Request, res: Response) => {
     available: boolean;
     source: string | null;
     downloadUrl: string;
+    sha256?: string;
   }> = [];
 
   for (const slug of DOWNLOAD_SLUGS) {
     const resolved = await resolveDownload(slug);
+    const sha256 = await getAssetSha256(slug);
     assets.push({
       slug,
       name: ASSET_FILENAMES[slug],
       available: resolved !== null,
       source: resolved?.source ?? null,
       downloadUrl: `/api/downloads/latest/${slug}`,
+      ...(sha256 ? { sha256 } : {}),
     });
   }
 

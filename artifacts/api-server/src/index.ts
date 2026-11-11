@@ -17,7 +17,6 @@ const env = EnvSchema.parse(process.env); // throws on startup if invalid
 
 // Import app after env validation so DB init uses validated env
 import app from "./app.js";
-import { startMagicLinkReminderScheduler } from "./lib/magicLinkReminderScheduler.js";
 import { startCleanupScheduler } from "./lib/cleanupScheduler.js";
 import { initQueue, stopQueue } from "./lib/queue/index.js";
 
@@ -26,7 +25,6 @@ const port = env.PORT;
 const server = app.listen(port, async () => {
   logger.info({ port }, "Server listening");
   await initQueue();
-  startMagicLinkReminderScheduler(logger);
   startCleanupScheduler();
 });
 

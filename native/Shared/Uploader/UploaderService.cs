@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -27,6 +28,17 @@ public class UploaderService
         return await UploadWithRetryAsync(async () =>
         {
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            // Cryptographic attestation headers (X-Sentinel-Timestamp and X-Sentinel-Signature)
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string signaturePayload = $"{timestamp}.{jsonContent}";
+            using var sha256 = SHA256.Create();
+            byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(signaturePayload));
+            string signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            content.Headers.Add("X-Sentinel-Timestamp", timestamp.ToString());
+            content.Headers.Add("X-Sentinel-Signature", signature);
+
             var response = await _httpClient.PostAsync($"{BaseUrl}/api/reports", content);
             if (!response.IsSuccessStatusCode)
             {

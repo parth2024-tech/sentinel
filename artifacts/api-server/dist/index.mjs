@@ -102007,6 +102007,7 @@ var reportsTable = pgTable(
     index("reports_user_id_idx").on(t2.userId),
     index("reports_org_id_idx").on(t2.orgId),
     index("reports_created_at_idx").on(t2.createdAt),
+    index("reports_active_created_at_idx").on(t2.createdAt.desc()).where(sql`deleted_at IS NULL`),
     index("reports_share_token_idx").on(t2.shareToken)
   ]
 );
@@ -111346,6 +111347,22 @@ var ReportsController = class {
     const deviceToken = typeof authHeaderStr === "string" && authHeaderStr.startsWith("Bearer ") ? authHeaderStr.slice(7).trim() : void 0;
     const idKeyHeader = req.headers["idempotency-key"];
     const idempotencyKey = typeof idKeyHeader === "string" ? idKeyHeader : Array.isArray(idKeyHeader) ? idKeyHeader[0] : void 0;
+    const timestampHeader = req.headers["x-sentinel-timestamp"];
+    const signatureHeader = req.headers["x-sentinel-signature"];
+    const timestampStr = Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader;
+    const signatureStr = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
+    if (signatureStr) {
+      if (!timestampStr) {
+        res.status(401).json({ error: "Missing attestation timestamp header." });
+        return;
+      }
+      const ts2 = parseInt(timestampStr, 10);
+      const nowSec = Math.floor(Date.now() / 1e3);
+      if (isNaN(ts2) || Math.abs(nowSec - ts2) > 300) {
+        res.status(401).json({ error: "Attestation timestamp expired or outside acceptable clock skew." });
+        return;
+      }
+    }
     const parsed = PostReportBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(422).json({ error: "Validation failed", details: parsed.error.message });
@@ -111493,7 +111510,6 @@ var import_express4 = __toESM(require_express2(), 1);
 // src/lib/magicLinkConstants.ts
 var MAGIC_LINK_TTL_MIN = 15;
 var MAGIC_LINK_REMINDER_LEAD_MIN = 5;
-var MAGIC_LINK_REMINDER_POLL_MS = 6e4;
 
 // src/lib/email/templates/magicLinkLogin.ts
 function buildMagicLinkLoginEmail(token2, kind) {
@@ -111990,6 +112006,7 @@ var import_express8 = __toESM(require_express2(), 1);
 // src/lib/resolveDownload.ts
 import fs2 from "fs";
 import path from "path";
+import crypto5 from "node:crypto";
 import { fileURLToPath } from "url";
 var DOWNLOAD_SLUGS = ["oneshot", "setup", "agent"];
 var ASSET_FILENAMES = {
@@ -112107,6 +112124,46 @@ function unavailableMessage(slug) {
   const repo = getGithubReleaseRepo();
   return `${filename} is not available yet. Publish a release on GitHub (${repo}) with ${filename} attached, or configure SENTINEL_DOWNLOAD_URL_${slug.toUpperCase()}.`;
 }
+async function getAssetSha256(slug) {
+  const filename = ASSET_FILENAMES[slug];
+  const localPath = path.join(getDownloadsDirectory(), filename);
+  if (fs2.existsSync(localPath) && fs2.statSync(localPath).isFile()) {
+    try {
+      const buf = fs2.readFileSync(localPath);
+      return crypto5.createHash("sha256").update(buf).digest("hex");
+    } catch {
+      return null;
+    }
+  }
+  const releases = await getCachedGithubReleases();
+  if (releases) {
+    for (const release2 of releases) {
+      if (release2.draft) continue;
+      const sumsAsset = release2.assets.find(
+        (a) => a.name.toLowerCase() === "sha256sums.txt"
+      );
+      if (sumsAsset?.browser_download_url) {
+        try {
+          const res = await fetch(sumsAsset.browser_download_url, {
+            headers: githubAuthHeaders(),
+            signal: AbortSignal.timeout(3e3)
+          });
+          if (res.ok) {
+            const text2 = await res.text();
+            for (const line2 of text2.split("\n")) {
+              const parts = line2.trim().split(/\s+/);
+              if (parts.length >= 2 && parts[1]?.toLowerCase().endsWith(filename.toLowerCase()) && parts[0]) {
+                return parts[0].toLowerCase();
+              }
+            }
+          }
+        } catch {
+        }
+      }
+    }
+  }
+  return null;
+}
 
 // src/routes/downloads.ts
 var router8 = (0, import_express8.Router)();
@@ -112153,12 +112210,14 @@ router8.get("/latest", async (_req, res) => {
   const assets = [];
   for (const slug of DOWNLOAD_SLUGS) {
     const resolved = await resolveDownload(slug);
+    const sha256 = await getAssetSha256(slug);
     assets.push({
       slug,
       name: ASSET_FILENAMES[slug],
       available: resolved !== null,
       source: resolved?.source ?? null,
-      downloadUrl: `/api/downloads/latest/${slug}`
+      downloadUrl: `/api/downloads/latest/${slug}`,
+      ...sha256 ? { sha256 } : {}
     });
   }
   res.json({
@@ -114343,11 +114402,11 @@ var StripeContext = class _StripeContext {
 };
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/platform/NodePlatformFunctions.js
-import * as crypto6 from "crypto";
+import * as crypto7 from "crypto";
 import { EventEmitter as EventEmitter7 } from "events";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/NodeCryptoProvider.js
-import * as crypto5 from "crypto";
+import * as crypto6 from "crypto";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/CryptoProvider.js
 var CryptoProvider = class {
@@ -114390,7 +114449,7 @@ var CryptoProviderOnlySupportsAsyncError = class extends Error {
 var NodeCryptoProvider = class extends CryptoProvider {
   /** @override */
   computeHMACSignature(payload, secret) {
-    return crypto5.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
+    return crypto6.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
   }
   /** @override */
   async computeHMACSignatureAsync(payload, secret) {
@@ -114399,7 +114458,7 @@ var NodeCryptoProvider = class extends CryptoProvider {
   }
   /** @override */
   async computeSHA256Async(data) {
-    return new Uint8Array(await crypto5.createHash("sha256").update(data).digest());
+    return new Uint8Array(await crypto6.createHash("sha256").update(data).digest());
   }
 };
 
@@ -114738,8 +114797,8 @@ var StreamProcessingError = class extends StripeError {
 var NodePlatformFunctions = class extends PlatformFunctions {
   /** @override */
   uuid4() {
-    if (crypto6.randomUUID) {
-      return crypto6.randomUUID();
+    if (crypto7.randomUUID) {
+      return crypto7.randomUUID();
     }
     return super.uuid4();
   }
@@ -114758,11 +114817,11 @@ var NodePlatformFunctions = class extends PlatformFunctions {
     if (a.length !== b3.length) {
       return false;
     }
-    if (crypto6.timingSafeEqual) {
+    if (crypto7.timingSafeEqual) {
       const textEncoder = new TextEncoder();
       const aEncoded = textEncoder.encode(a);
       const bEncoded = textEncoder.encode(b3);
-      return crypto6.timingSafeEqual(aEncoded, bEncoded);
+      return crypto7.timingSafeEqual(aEncoded, bEncoded);
     }
     return super.secureCompare(a, b3);
   }
@@ -129709,113 +129768,112 @@ app.use((err, req, res, _next) => {
 });
 var app_default = app;
 
-// src/lib/magicLinkReminderScheduler.ts
-import crypto7 from "node:crypto";
-function newToken3(bytes = 32) {
-  return crypto7.randomBytes(bytes).toString("hex");
-}
-function hashToken2(token2) {
-  return crypto7.createHash("sha256").update(token2).digest("hex");
-}
-function startMagicLinkReminderScheduler(logger2) {
-  return setInterval(() => {
-    void runMagicLinkReminderTick(logger2);
-  }, MAGIC_LINK_REMINDER_POLL_MS);
-}
-async function runMagicLinkReminderTick(logger2) {
-  if (!isResendConfigured()) {
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  const horizon = new Date(
-    now.getTime() + MAGIC_LINK_REMINDER_LEAD_MIN * 60 * 1e3
-  );
-  try {
-    const rows = await db.select({
-      oldHash: magicLinkTokensTable.token,
-      email: magicLinkTokensTable.email
-    }).from(magicLinkTokensTable).where(
-      and(
-        isNull(magicLinkTokensTable.usedAt),
-        isNull(magicLinkTokensTable.reminderSentAt),
-        gt(magicLinkTokensTable.expiresAt, now),
-        lte(magicLinkTokensTable.expiresAt, horizon)
-      )
-    ).limit(25);
-    for (const row of rows) {
-      try {
-        const freshToken = newToken3();
-        const freshHash = hashToken2(freshToken);
-        const freshExpiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1e3);
-        const updated = await db.update(magicLinkTokensTable).set({
-          token: freshHash,
-          reminderSentAt: /* @__PURE__ */ new Date(),
-          expiresAt: freshExpiresAt
-        }).where(
-          and(
-            eq(magicLinkTokensTable.token, row.oldHash),
-            isNull(magicLinkTokensTable.reminderSentAt),
-            isNull(magicLinkTokensTable.usedAt)
-          )
-        ).returning({ email: magicLinkTokensTable.email });
-        if (updated.length === 0) {
-          continue;
-        }
-        const { subject, html, text: text2 } = buildMagicLinkLoginEmail(
-          freshToken,
-          "reminder"
-        );
-        await sendTransactionalEmail({
-          to: row.email,
-          subject,
-          html,
-          text: text2
-        });
-        logger2.info({ email: row.email }, "magic_link_reminder_sent");
-      } catch (err) {
-        logger2.error({ err, email: row.email }, "magic_link_reminder_failed");
-      }
-    }
-  } catch (err) {
-    logger2.error({ err }, "magic_link_reminder_scan_failed");
-  }
-}
-
 // src/lib/cleanupScheduler.ts
 var CLEANUP_INTERVAL_MS2 = 60 * 60 * 1e3;
+var BATCH_SIZE = 1e3;
 async function cleanupMagicLinkTokens() {
   try {
     const usedCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
     const expiredCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3);
-    await db.delete(magicLinkTokensTable).where(
-      or(
-        and(
-          isNotNull(magicLinkTokensTable.usedAt),
-          lt(magicLinkTokensTable.usedAt, usedCutoff)
-        ),
-        lt(magicLinkTokensTable.expiresAt, expiredCutoff)
-      )
-    );
-    logger.debug("magic_link_token_cleanup_complete");
+    let deletedTotal = 0;
+    while (true) {
+      const rows = await db.select({ token: magicLinkTokensTable.token }).from(magicLinkTokensTable).where(
+        or(
+          and(
+            isNotNull(magicLinkTokensTable.usedAt),
+            lt(magicLinkTokensTable.usedAt, usedCutoff)
+          ),
+          lt(magicLinkTokensTable.expiresAt, expiredCutoff)
+        )
+      ).limit(BATCH_SIZE);
+      if (rows.length === 0) break;
+      const tokens = rows.map((r2) => r2.token);
+      await db.delete(magicLinkTokensTable).where(inArray(magicLinkTokensTable.token, tokens));
+      deletedTotal += rows.length;
+      if (rows.length < BATCH_SIZE || deletedTotal >= 1e4) break;
+    }
+    logger.debug({ deletedTotal }, "magic_link_token_cleanup_complete");
   } catch (err) {
     logger.error({ err }, "magic_link_token_cleanup_failed");
+  }
+}
+async function cleanupExpiredSessions() {
+  try {
+    const now = /* @__PURE__ */ new Date();
+    let deletedTotal = 0;
+    while (true) {
+      const rows = await db.select({ token: myReportsSessionsTable.token }).from(myReportsSessionsTable).where(lt(myReportsSessionsTable.expiresAt, now)).limit(BATCH_SIZE);
+      if (rows.length === 0) break;
+      const tokens = rows.map((r2) => r2.token);
+      await db.delete(myReportsSessionsTable).where(inArray(myReportsSessionsTable.token, tokens));
+      deletedTotal += rows.length;
+      if (rows.length < BATCH_SIZE || deletedTotal >= 1e4) break;
+    }
+    logger.debug({ deletedTotal }, "expired_sessions_cleanup_complete");
+  } catch (err) {
+    logger.error({ err }, "expired_sessions_cleanup_failed");
   }
 }
 async function cleanupIdempotencyKeys() {
   try {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1e3);
-    await db.delete(idempotencyKeysTable).where(lt(idempotencyKeysTable.createdAt, cutoff));
-    logger.debug("idempotency_key_cleanup_complete");
+    let deletedTotal = 0;
+    while (true) {
+      const rows = await db.select({ key: idempotencyKeysTable.key }).from(idempotencyKeysTable).where(lt(idempotencyKeysTable.createdAt, cutoff)).limit(BATCH_SIZE);
+      if (rows.length === 0) break;
+      const keys = rows.map((r2) => r2.key);
+      await db.delete(idempotencyKeysTable).where(inArray(idempotencyKeysTable.key, keys));
+      deletedTotal += rows.length;
+      if (rows.length < BATCH_SIZE || deletedTotal >= 1e4) break;
+    }
+    logger.debug({ deletedTotal }, "idempotency_key_cleanup_complete");
   } catch (err) {
     logger.error({ err }, "idempotency_key_cleanup_failed");
   }
 }
+async function cleanupSuspectPayloads() {
+  try {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
+    let deletedTotal = 0;
+    while (true) {
+      const rows = await db.select({ id: suspectPayloadsTable.id }).from(suspectPayloadsTable).where(lt(suspectPayloadsTable.createdAt, cutoff)).limit(BATCH_SIZE);
+      if (rows.length === 0) break;
+      const ids = rows.map((r2) => r2.id);
+      await db.delete(suspectPayloadsTable).where(inArray(suspectPayloadsTable.id, ids));
+      deletedTotal += rows.length;
+      if (rows.length < BATCH_SIZE || deletedTotal >= 1e4) break;
+    }
+    logger.debug({ deletedTotal }, "suspect_payloads_cleanup_complete");
+  } catch (err) {
+    logger.error({ err }, "suspect_payloads_cleanup_failed");
+  }
+}
+async function purgeLegacyPlaintextTokens() {
+  try {
+    await db.execute(sql`
+      DELETE FROM my_reports_sessions
+      WHERE length(token) != 64 OR token !~ '^[a-f0-9]{64}$'
+    `);
+    await db.execute(sql`
+      DELETE FROM magic_link_tokens
+      WHERE length(token) != 64 OR token !~ '^[a-f0-9]{64}$'
+    `);
+    logger.debug("legacy_plaintext_tokens_purged");
+  } catch (err) {
+    logger.error({ err }, "legacy_plaintext_tokens_purge_failed");
+  }
+}
 async function runAllCleanups() {
   await cleanupMagicLinkTokens();
+  await cleanupExpiredSessions();
   await cleanupIdempotencyKeys();
+  await cleanupSuspectPayloads();
 }
 function startCleanupScheduler() {
-  setTimeout(() => void runAllCleanups(), 1e4);
+  setTimeout(async () => {
+    await purgeLegacyPlaintextTokens();
+    await runAllCleanups();
+  }, 1e4);
   setInterval(() => {
     void runAllCleanups();
   }, CLEANUP_INTERVAL_MS2);
@@ -129837,7 +129895,6 @@ var port = env.PORT;
 var server = app_default.listen(port, async () => {
   logger.info({ port }, "Server listening");
   await initQueue();
-  startMagicLinkReminderScheduler(logger);
   startCleanupScheduler();
 });
 function shutdown(signal) {

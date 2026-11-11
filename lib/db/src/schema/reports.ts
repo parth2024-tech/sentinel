@@ -1,12 +1,12 @@
 import {
   pgTable,
   text,
-  jsonb,
   boolean,
   timestamp,
   integer,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { usersTable } from "./users";
 import { organizationsTable } from "./organizations";
 
@@ -31,6 +31,9 @@ export const reportsTable = pgTable(
     index("reports_user_id_idx").on(t.userId),
     index("reports_org_id_idx").on(t.orgId),
     index("reports_created_at_idx").on(t.createdAt),
+    index("reports_active_created_at_idx")
+      .on(t.createdAt.desc())
+      .where(sql`deleted_at IS NULL`),
     index("reports_share_token_idx").on(t.shareToken),
   ],
 );

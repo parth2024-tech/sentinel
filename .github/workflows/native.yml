@@ -367,6 +367,13 @@ jobs:
           name: SentinelSetup-signed-${{ github.sha }}
           path: release-assets/
 
+      - name: Generate SHA256 Checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum SentinelOneShot.exe SentinelAgent.exe SentinelSetup.msi > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       - name: Publish prerelease for website download API
         uses: softprops/action-gh-release@v2
         with:
@@ -383,6 +390,7 @@ jobs:
             release-assets/SentinelOneShot.exe
             release-assets/SentinelAgent.exe
             release-assets/SentinelSetup.msi
+            release-assets/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -417,6 +425,13 @@ jobs:
           name: SentinelSetup-signed-${{ github.sha }}
           path: release-assets/
 
+      - name: Generate SHA256 Checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum SentinelOneShot.exe SentinelAgent.exe SentinelSetup.msi > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -429,6 +444,9 @@ jobs:
             - **SentinelSetup.msi** — Full installer with background monitoring (Tier 1).
             - **SentinelAgent.exe** — Standalone agent binary (included in installer).
 
+            ### Checksums (SHA-256)
+            Attached in `SHA256SUMS.txt`.
+
             ### What's New
             See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
           draft: false
@@ -437,5 +455,6 @@ jobs:
             release-assets/SentinelOneShot.exe
             release-assets/SentinelAgent.exe
             release-assets/SentinelSetup.msi
+            release-assets/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -34,11 +34,29 @@ export class ReportsController {
       return;
     }
 
-const authHeader = req.headers["authorization"];
+    const authHeader = req.headers["authorization"];
     const authHeaderStr = Array.isArray(authHeader) ? authHeader[0] : authHeader;
     const deviceToken = typeof authHeaderStr === "string" && authHeaderStr.startsWith("Bearer ") ? authHeaderStr.slice(7).trim() : undefined;
     const idKeyHeader = req.headers["idempotency-key"];
     const idempotencyKey = typeof idKeyHeader === "string" ? idKeyHeader : (Array.isArray(idKeyHeader) ? idKeyHeader[0] : undefined);
+
+    const timestampHeader = req.headers["x-sentinel-timestamp"];
+    const signatureHeader = req.headers["x-sentinel-signature"];
+    const timestampStr = Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader;
+    const signatureStr = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
+
+    if (signatureStr) {
+      if (!timestampStr) {
+        res.status(401).json({ error: "Missing attestation timestamp header." });
+        return;
+      }
+      const ts = parseInt(timestampStr, 10);
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (isNaN(ts) || Math.abs(nowSec - ts) > 300) {
+        res.status(401).json({ error: "Attestation timestamp expired or outside acceptable clock skew." });
+        return;
+      }
+    }
 
     const parsed = PostReportBody.safeParse(req.body);
     if (!parsed.success) {

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "url";
 import { getGithubReleaseRepo } from "../githubReleaseRepo.js";
 
@@ -174,4 +175,48 @@ export function unavailableMessage(slug: DownloadSlug): string {
     `Publish a release on GitHub (${repo}) with ${filename} attached, ` +
     `or configure SENTINEL_DOWNLOAD_URL_${slug.toUpperCase()}.`
   );
+}
+
+export async function getAssetSha256(slug: DownloadSlug): Promise<string | null> {
+  const filename = ASSET_FILENAMES[slug];
+  const localPath = path.join(getDownloadsDirectory(), filename);
+  if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+    try {
+      const buf = fs.readFileSync(localPath);
+      return crypto.createHash("sha256").update(buf).digest("hex");
+    } catch {
+      return null;
+    }
+  }
+
+  const releases = await getCachedGithubReleases();
+  if (releases) {
+    for (const release of releases) {
+      if (release.draft) continue;
+      const sumsAsset = release.assets.find(
+        (a) => a.name.toLowerCase() === "sha256sums.txt"
+      );
+      if (sumsAsset?.browser_download_url) {
+        try {
+          const res = await fetch(sumsAsset.browser_download_url, {
+            headers: githubAuthHeaders(),
+            signal: AbortSignal.timeout(3000),
+          });
+          if (res.ok) {
+            const text = await res.text();
+            for (const line of text.split("\n")) {
+              const parts = line.trim().split(/\s+/);
+              if (parts.length >= 2 && parts[1]?.toLowerCase().endsWith(filename.toLowerCase()) && parts[0]) {
+                return parts[0].toLowerCase();
+              }
+            }
+          }
+        } catch {
+          // ignore network timeout
+        }
+      }
+    }
+  }
+
+  return null;
 }
