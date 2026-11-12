@@ -141,13 +141,20 @@ export function forecastBatteryHealth(
   const daysLow = slopeLow >= 0 ? Infinity : (current - BATTERY_THRESHOLD) / (-slopeLow);
   const daysHigh = slopeHigh >= 0 ? Infinity : (current - BATTERY_THRESHOLD) / (-slopeHigh);
 
+  const safeRound = (val: number, fallback = 120): number => {
+    if (!Number.isFinite(val) || Number.isNaN(val) || val < 0) return fallback;
+    return Math.min(120, Math.round(val));
+  };
+
+  const safeRate = Number.isFinite(ratePerMonth) && !Number.isNaN(ratePerMonth) ? ratePerMonth : 0;
+
   return {
     metric: "battery_health",
     currentValue: current,
-    ratePerMonth,
+    ratePerMonth: safeRate,
     monthsUntilThreshold: {
-      value: Math.round(monthsUntil),
-      ci95: [Math.round(daysHigh / DAYS_PER_MONTH), Math.round(daysLow / DAYS_PER_MONTH)],
+      value: safeRound(monthsUntil),
+      ci95: [safeRound(daysHigh / DAYS_PER_MONTH), safeRound(daysLow / DAYS_PER_MONTH)],
     },
     model: "linear_regression",
     sampleSize: points.length,

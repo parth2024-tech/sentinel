@@ -34,6 +34,7 @@ vi.mock("@workspace/db", () => {
 import { timingSafeEqualStr, canonicalJsonHash } from "./lib/crypto.js";
 import { consumeRateLimit } from "./lib/rateLimit.js";
 import { addClient, closeAllStreams } from "./lib/liveFeed.js";
+import { SentinelReportSchema, generateReport } from "@workspace/report-engine";
 
 describe("Adversarial Security & Concurrency Test Suite", () => {
   // ── 1. Idempotency Key Ordering Invariance ────────────────────────────────
@@ -289,29 +290,31 @@ describe("Adversarial Security & Concurrency Test Suite", () => {
       expect(isTimestampValid).toBe(false);
     });
 
-    it("verifies keyed HMAC-SHA256 attestation bound to provisioned deviceToken", () => {
+    it("verifies keyed HMAC-SHA256 attestation bound to provisioned deviceToken with domain separation", () => {
       const nowSec = Math.floor(Date.now() / 1000);
       const provisionedToken = "device-secret-token-" + crypto.randomBytes(16).toString("hex");
       const wireBytes = Buffer.from('{"rawJson":{"sentinelSchema":1,"score":80.0}}', "utf8");
       const signaturePayload = `${nowSec}.${wireBytes.toString("utf8")}`;
 
-      // Client signs with provisioned deviceToken
+      // Both client and server derive signing key: SHA256("sentinel-sig-v1:" + rawDeviceToken)
+      const clientDerivedKey = crypto.createHash("sha256").update(`sentinel-sig-v1:${provisionedToken}`).digest();
       const clientHmac = crypto
-        .createHmac("sha256", provisionedToken)
+        .createHmac("sha256", clientDerivedKey)
         .update(signaturePayload)
         .digest("hex");
 
-      // Server verifies with same deviceToken
+      const serverDerivedKey = crypto.createHash("sha256").update(`sentinel-sig-v1:${provisionedToken}`).digest();
       const serverHmac = crypto
-        .createHmac("sha256", provisionedToken)
+        .createHmac("sha256", serverDerivedKey)
         .update(signaturePayload)
         .digest("hex");
 
       expect(timingSafeEqualStr(clientHmac, serverHmac)).toBe(true);
 
       // Attack scenario: Attacker attempts to forge with wrong token
+      const attackerDerivedKey = crypto.createHash("sha256").update(`sentinel-sig-v1:wrong-attacker-token`).digest();
       const attackerHmac = crypto
-        .createHmac("sha256", "wrong-attacker-token")
+        .createHmac("sha256", attackerDerivedKey)
         .update(signaturePayload)
         .digest("hex");
 
@@ -415,6 +418,49 @@ describe("Adversarial Security & Concurrency Test Suite", () => {
 
       const blockedAttempt = await consumeRateLimit(failKey, 15, 5);
       expect(blockedAttempt).toBe(false);
+    });
+  });
+
+  // ── 9. Report Engine Hardware Array Bounding & Math Resilience ───────────────
+  describe("Report Engine Hardware Array Bounding & Math Resilience", () => {
+    it("rejects telemetry payloads containing oversized arrays (> 32 devices)", () => {
+      const oversizedStorage = Array.from({ length: 33 }, (_, i) => ({
+        model: `Drive ${i}`,
+        healthPct: 100,
+        freeSpacePct: 50,
+      }));
+
+      const payload = {
+        sentinelSchema: 1,
+        generatedAt: new Date().toISOString(),
+        system: { hostname: "TEST", model: "LAPTOP", manufacturer: "OEM" },
+        storage: oversizedStorage,
+      };
+
+      const result = SentinelReportSchema.safeParse(payload);
+      expect(result.success).toBe(false);
+    });
+
+    it("ensures scoring engine handles division-by-zero without NaN or Infinity leakage", () => {
+      const mockReport: any = {
+        sentinelSchema: 1,
+        generatedAt: new Date().toISOString(),
+        system: { hostname: "TEST", model: "DESKTOP-NO-BATTERY", manufacturer: "CUSTOM" },
+        battery: {
+          designCapacity: 0,
+          fullChargeCapacity: 0,
+          dischargeRateMw: 0,
+          health: 100,
+        },
+        memory: { totalGB: 16, usedPct: 50 },
+        cpu: { cores: 8, threads: 16, avgLoadPct: 20 },
+      };
+
+      const reportResult = generateReport(mockReport);
+      expect(Number.isFinite(reportResult.overall)).toBe(true);
+      expect(Number.isNaN(reportResult.overall)).toBe(false);
+      expect(reportResult.overall).toBeGreaterThanOrEqual(0);
+      expect(reportResult.overall).toBeLessThanOrEqual(100);
     });
   });
 });

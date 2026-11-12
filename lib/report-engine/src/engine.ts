@@ -199,6 +199,7 @@ function throttlePenalty(events: number): number {
 }
 
 function clamp(n: number, min = 0, max = 100) {
+  if (!Number.isFinite(n) || Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
 
@@ -545,7 +546,9 @@ function generateFindings(r: SentinelReport): Finding[] {
     const runtimeStr = (b.dischargeRateMw != null && b.fullChargeCapacity != null && b.dischargeRateMw < 0)
       ? (() => {
           const drainMw = Math.abs(b.dischargeRateMw);
-          const runtimeHrs = (b.fullChargeCapacity / drainMw);
+          if (drainMw === 0 || !Number.isFinite(drainMw)) return "";
+          const runtimeHrs = b.fullChargeCapacity / drainMw;
+          if (!Number.isFinite(runtimeHrs) || runtimeHrs <= 0) return "";
           return ` At current draw of ${(drainMw / 1000).toFixed(1)}W, estimated remaining runtime is approximately ${runtimeHrs.toFixed(1)} hours.`;
         })()
       : "";

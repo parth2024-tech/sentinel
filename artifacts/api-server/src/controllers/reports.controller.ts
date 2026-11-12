@@ -71,8 +71,9 @@ export class ReportsController {
 
       let expectedSig: string;
       if (deviceToken && deviceToken.length >= 10) {
-        // Paired agent: Keyed HMAC-SHA256 bound to provisioned deviceToken
-        expectedSig = crypto.createHmac("sha256", deviceToken).update(signaturePayload).digest("hex");
+        // Paired agent: Keyed HMAC-SHA256 bound to domain-separated signing key derived from deviceToken
+        const derivedKey = crypto.createHash("sha256").update(`sentinel-sig-v1:${deviceToken}`).digest();
+        expectedSig = crypto.createHmac("sha256", derivedKey).update(signaturePayload).digest("hex");
       } else {
         // Anonymous OneShot client: Digest attestation over timestamp + payload wire bytes.
         // SECURITY INVARIANT: Unauthenticated OneShot clients cannot bypass authentication,

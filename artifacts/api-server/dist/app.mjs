@@ -102410,74 +102410,74 @@ import crypto4 from "node:crypto";
 
 // ../../lib/report-engine/src/schema.ts
 var StorageDeviceSchema = external_exports2.object({
-  model: external_exports2.string().nullish(),
-  type: external_exports2.string().nullish(),
+  model: external_exports2.string().max(256).nullish(),
+  type: external_exports2.string().max(64).nullish(),
   healthPct: external_exports2.number().nullish(),
   reallocatedSectors: external_exports2.number().nullish(),
   wearLevelPct: external_exports2.number().nullish(),
   freeSpacePct: external_exports2.number().nullish(),
   totalGB: external_exports2.number().nullish(),
   powerOnHours: external_exports2.number().nullish(),
-  dataSource: external_exports2.string().nullish(),
+  dataSource: external_exports2.string().max(64).nullish(),
   mediaErrors: external_exports2.number().nullish(),
   dataUnitsRead: external_exports2.number().nullish(),
   dataUnitsWritten: external_exports2.number().nullish(),
   criticalWarningFlags: external_exports2.number().nullish()
 });
 var ThermalZoneSchema = external_exports2.object({
-  name: external_exports2.string(),
+  name: external_exports2.string().max(128),
   tempC: external_exports2.number()
 });
 var GpuDeviceSchema = external_exports2.object({
-  name: external_exports2.string().nullish(),
+  name: external_exports2.string().max(256).nullish(),
   vramGb: external_exports2.number().nullish(),
-  driverVersion: external_exports2.string().nullish(),
-  driverDate: external_exports2.string().nullish(),
-  status: external_exports2.string().nullish(),
+  driverVersion: external_exports2.string().max(128).nullish(),
+  driverDate: external_exports2.string().max(64).nullish(),
+  status: external_exports2.string().max(64).nullish(),
   tempC: external_exports2.number().nullish()
 });
 var NetworkAdapterSchema = external_exports2.object({
-  name: external_exports2.string().nullish(),
-  ip: external_exports2.string().nullish(),
+  name: external_exports2.string().max(256).nullish(),
+  ip: external_exports2.string().max(64).nullish(),
   speed: external_exports2.number().nullish(),
-  desc: external_exports2.string().nullish()
+  desc: external_exports2.string().max(256).nullish()
 });
 var NetworkSchema = external_exports2.object({
-  adapters: external_exports2.array(NetworkAdapterSchema).nullish(),
+  adapters: external_exports2.array(NetworkAdapterSchema).max(32).nullish(),
   connected: external_exports2.boolean().nullish()
 });
 var UpdateSchema = external_exports2.object({
-  hotFixId: external_exports2.string().nullish(),
-  installedOn: external_exports2.string().nullish()
+  hotFixId: external_exports2.string().max(64).nullish(),
+  installedOn: external_exports2.string().max(64).nullish()
 });
 var ProcessSchema = external_exports2.object({
-  name: external_exports2.string().nullish(),
+  name: external_exports2.string().max(256).nullish(),
   cpuS: external_exports2.number().nullish(),
   ramMb: external_exports2.number().nullish()
 });
 var TopProcessesSchema = external_exports2.object({
-  cpuHogs: external_exports2.array(ProcessSchema).nullish(),
-  ramHogs: external_exports2.array(ProcessSchema).nullish()
+  cpuHogs: external_exports2.array(ProcessSchema).max(32).nullish(),
+  ramHogs: external_exports2.array(ProcessSchema).max(32).nullish()
 });
 var StartupItemSchema = external_exports2.object({
-  name: external_exports2.string().nullish(),
-  command: external_exports2.string().nullish()
+  name: external_exports2.string().max(256).nullish(),
+  command: external_exports2.string().max(512).nullish()
 });
 var SecuritySchema = external_exports2.object({
   antivirusEnabled: external_exports2.boolean().nullish(),
   realTimeProtection: external_exports2.boolean().nullish(),
-  lastFullScan: external_exports2.string().nullish(),
-  antivirusSignatureDate: external_exports2.string().nullish(),
-  firewallProfilesActive: external_exports2.string().nullish(),
+  lastFullScan: external_exports2.string().max(64).nullish(),
+  antivirusSignatureDate: external_exports2.string().max(64).nullish(),
+  firewallProfilesActive: external_exports2.string().max(128).nullish(),
   tpmActive: external_exports2.boolean().nullish(),
-  tpmVersion: external_exports2.string().nullish(),
+  tpmVersion: external_exports2.string().max(64).nullish(),
   secureBootEnabled: external_exports2.boolean().nullish(),
   lsaProtectionEnabled: external_exports2.boolean().nullish()
 });
 var RecentSystemErrorSchema = external_exports2.object({
-  time: external_exports2.string().nullish(),
-  source: external_exports2.string().nullish(),
-  error: external_exports2.string().nullish()
+  time: external_exports2.string().max(64).nullish(),
+  source: external_exports2.string().max(128).nullish(),
+  error: external_exports2.string().max(512).nullish()
 });
 var SentinelReportSchema = external_exports2.object({
   sentinelSchema: external_exports2.literal(1),
@@ -102504,13 +102504,13 @@ var SentinelReportSchema = external_exports2.object({
   }).nullish(),
   thermals: external_exports2.object({
     maxTempC: external_exports2.number().nullish(),
-    zones: external_exports2.array(ThermalZoneSchema).nullish(),
+    zones: external_exports2.array(ThermalZoneSchema).max(32).nullish(),
     zoneCount: external_exports2.number().nullish(),
     throttleEvents30min: external_exports2.number().nullish(),
-    thermalSource: external_exports2.string().nullish(),
+    thermalSource: external_exports2.string().max(64).nullish(),
     thermalSamples: external_exports2.number().nullish()
   }).nullish(),
-  storage: external_exports2.array(StorageDeviceSchema).nullish(),
+  storage: external_exports2.array(StorageDeviceSchema).max(32).nullish(),
   memory: external_exports2.object({
     totalGB: external_exports2.number(),
     usedPct: external_exports2.number(),
@@ -102520,32 +102520,33 @@ var SentinelReportSchema = external_exports2.object({
     dpcsQueuedPerSec: external_exports2.number().nullish()
   }).nullish(),
   cpu: external_exports2.object({
-    name: external_exports2.string().nullish(),
+    name: external_exports2.string().max(256).nullish(),
     cores: external_exports2.number().nullish(),
     threads: external_exports2.number().nullish(),
     avgLoadPct: external_exports2.number().nullish(),
     throttleEvents30min: external_exports2.number().nullish(),
     maxClockMhz: external_exports2.number().nullish(),
     coreTempDeltaC: external_exports2.number().nullish(),
-    throttleReason: external_exports2.string().nullish()
+    throttleReason: external_exports2.string().max(128).nullish()
   }).nullish(),
   startup: external_exports2.object({
-    lastBootTime: external_exports2.string().nullish(),
+    lastBootTime: external_exports2.string().max(64).nullish(),
     lastBootSec: external_exports2.number().nullish()
   }).nullish(),
-  gpus: external_exports2.array(GpuDeviceSchema).nullish(),
+  gpus: external_exports2.array(GpuDeviceSchema).max(16).nullish(),
   network: NetworkSchema.nullish(),
   updates: UpdateSchema.nullish(),
   topProcesses: TopProcessesSchema.nullish(),
-  startupList: external_exports2.array(StartupItemSchema).nullish(),
+  startupList: external_exports2.array(StartupItemSchema).max(64).nullish(),
   security: SecuritySchema.nullish(),
-  recentErrors: external_exports2.array(RecentSystemErrorSchema).nullish(),
+  recentErrors: external_exports2.array(RecentSystemErrorSchema).max(64).nullish(),
   runningOemServicesCount: external_exports2.number().nullish()
 });
 
 // ../../lib/report-engine/src/engine.ts
 var ALGORITHM_VERSION = 3;
 function clamp(n2, min = 0, max = 100) {
+  if (!Number.isFinite(n2) || Number.isNaN(n2)) return min;
   return Math.min(max, Math.max(min, n2));
 }
 function scoreStatus(s2) {
@@ -102783,7 +102784,9 @@ function generateFindings(r2) {
   if (b3?.health != null) {
     const runtimeStr = b3.dischargeRateMw != null && b3.fullChargeCapacity != null && b3.dischargeRateMw < 0 ? (() => {
       const drainMw = Math.abs(b3.dischargeRateMw);
+      if (drainMw === 0 || !Number.isFinite(drainMw)) return "";
       const runtimeHrs = b3.fullChargeCapacity / drainMw;
+      if (!Number.isFinite(runtimeHrs) || runtimeHrs <= 0) return "";
       return ` At current draw of ${(drainMw / 1e3).toFixed(1)}W, estimated remaining runtime is approximately ${runtimeHrs.toFixed(1)} hours.`;
     })() : "";
     if (b3.health < 60) {
@@ -106815,7 +106818,8 @@ var ReportsController = class {
       const signaturePayload = `${timestampStr}.${wireBytes}`;
       let expectedSig;
       if (deviceToken && deviceToken.length >= 10) {
-        expectedSig = crypto4.createHmac("sha256", deviceToken).update(signaturePayload).digest("hex");
+        const derivedKey = crypto4.createHash("sha256").update(`sentinel-sig-v1:${deviceToken}`).digest();
+        expectedSig = crypto4.createHmac("sha256", derivedKey).update(signaturePayload).digest("hex");
       } else {
         expectedSig = crypto4.createHash("sha256").update(signaturePayload).digest("hex");
       }
@@ -107338,6 +107342,14 @@ router6.post("/session", async (req, res) => {
   res.status(201).json({ code, expiresAt: expiresAt.toISOString() });
 });
 router6.get("/session/:code", async (req, res) => {
+  const ip = getClientIp2(req);
+  const ipHash = await sha256hex(ip);
+  const allowed = await consumeRateLimit(ipHash + ":pair_poll", 1, 60);
+  if (!allowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many requests. Please slow down." });
+    return;
+  }
   const { code } = req.params;
   if (!code || code.length < 4) {
     res.status(400).json({ status: "expired" });
@@ -107372,6 +107384,14 @@ var PushBody = external_exports2.object({
   rawJson: external_exports2.record(external_exports2.unknown())
 });
 router6.post("/push", async (req, res) => {
+  const ip = getClientIp2(req);
+  const ipHash = await sha256hex(ip);
+  const ipAllowed = await consumeRateLimit(ipHash + ":pair_push_ip", 1, 10);
+  if (!ipAllowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many push attempts from this IP. Please wait." });
+    return;
+  }
   const contentLength = parseInt(req.headers["content-length"] ?? "0", 10);
   if (contentLength > 256 * 1024) {
     res.status(413).json({ error: "Payload too large. Maximum 256 KB." });
@@ -107384,18 +107404,11 @@ router6.post("/push", async (req, res) => {
   }
   const { pairCode, rawJson } = parsed.data;
   const normalizedCode = pairCode.toUpperCase();
-  const codeRlKey = `pair_push:${normalizedCode}`;
-  const allowed = await consumeRateLimit(codeRlKey, 15, 5);
-  if (!allowed) {
-    await db.update(pairSessionsTable).set({ expiresAt: /* @__PURE__ */ new Date(0) }).where(eq(pairSessionsTable.code, normalizedCode));
-    res.set("Retry-After", "900");
-    res.status(410).json({ error: "Pairing code burned due to excessive failed attempts." });
-    return;
-  }
   const now = /* @__PURE__ */ new Date();
   const sessionRows = await db.select().from(pairSessionsTable).where(eq(pairSessionsTable.code, normalizedCode)).limit(1);
   const session = sessionRows[0];
   if (!session) {
+    await consumeRateLimit(ipHash + ":pair_scan_fail", 15, 5);
     res.status(404).json({ error: "Pair code not found or expired." });
     return;
   }
@@ -107405,6 +107418,14 @@ router6.post("/push", async (req, res) => {
   }
   if (session.reportId) {
     res.json({ ok: true, reportId: session.reportId });
+    return;
+  }
+  const codeRlKey = `pair_push_burn:${normalizedCode}`;
+  const allowed = await consumeRateLimit(codeRlKey, 15, 5);
+  if (!allowed) {
+    await db.update(pairSessionsTable).set({ expiresAt: /* @__PURE__ */ new Date(0) }).where(eq(pairSessionsTable.code, normalizedCode));
+    res.set("Retry-After", "900");
+    res.status(410).json({ error: "Pairing code burned due to excessive failed attempts." });
     return;
   }
   const reportParsed = SentinelReportSchema.safeParse(rawJson);
@@ -107417,8 +107438,8 @@ router6.post("/push", async (req, res) => {
     return;
   }
   try {
-    const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
-    const reportResult = await ReportsService.createReport({ rawJson }, ip, void 0, void 0, req.log);
+    const ip2 = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+    const reportResult = await ReportsService.createReport({ rawJson }, ip2, void 0, void 0, req.log);
     const reportId = reportResult.id;
     const claimToken = reportResult.claimToken;
     await db.update(pairSessionsTable).set({ reportId, claimToken }).where(eq(pairSessionsTable.code, normalizedCode));
@@ -125188,7 +125209,21 @@ var app = (0, import_express15.default)();
 app.set("trust proxy", 1);
 var helmetFn = helmet?.default ?? helmet;
 var pinoHttpFn = import_pino_http.default?.default ?? import_pino_http.default;
-app.use(helmetFn());
+app.use(
+  helmetFn({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https://sentinelapp.io", "https://*.vercel.app"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"]
+      }
+    }
+  })
+);
 app.use(
   pinoHttpFn({
     logger,
@@ -125211,21 +125246,39 @@ app.use(
 var defaultOrigins = [
   "https://sentinel-site-rosy.vercel.app",
   "https://sentinelapp.io"
-  // Allow Vercel preview deployments
 ];
-app.use((0, import_cors.default)({
-  origin: (origin, callback) => {
-    const allowed = process.env.ALLOWED_ORIGINS?.split(",") ?? defaultOrigins;
-    if (!origin) return callback(null, true);
-    if (allowed.includes(origin) || /\.vercel\.app$/.test(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"]
-}));
+var isAllowedPreviewOrigin = (origin) => {
+  if (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+    return true;
+  }
+  return /^https:\/\/(sentinel-site|novasentinel)[a-z0-9-]*\.vercel\.app$/.test(origin);
+};
+app.use(
+  (0, import_cors.default)({
+    origin: (origin, callback) => {
+      const allowed = process.env.ALLOWED_ORIGINS?.split(",") ?? defaultOrigins;
+      if (!origin) return callback(null, true);
+      if (allowed.includes(origin) || isAllowedPreviewOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"]
+  })
+);
 app.use((0, import_cookie_parser.default)());
+app.use((req, res, next2) => {
+  const isMutating = ["POST", "PUT", "DELETE", "PATCH"].includes(req.method);
+  const cookies = req.cookies;
+  const hasSessionCookie = Boolean(cookies?.["sentinel_session"]);
+  const secFetchSite = req.headers["sec-fetch-site"];
+  if (isMutating && hasSessionCookie && secFetchSite === "cross-site") {
+    res.status(403).json({ error: "Cross-site request forgery protection triggered." });
+    return;
+  }
+  next2();
+});
 app.use(
   import_express15.default.json({
     limit: "256kb",

@@ -78,7 +78,7 @@ static class Program
             if (string.IsNullOrEmpty(exePath)) return;
 
             string taskName = "SentinelAgentScan";
-            string xmlPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "SentinelTask.xml");
+            string xmlPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"SentinelTask_{Guid.NewGuid():N}.xml");
 
             string xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
@@ -124,13 +124,19 @@ static class Program
   </Actions>
 </Task>";
 
-            System.IO.File.WriteAllText(xmlPath, xml, System.Text.Encoding.Unicode);
+            using (var fs = new System.IO.FileStream(xmlPath, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write, System.IO.FileShare.None))
+            using (var writer = new System.IO.StreamWriter(fs, System.Text.Encoding.Unicode))
+            {
+                writer.Write(xml);
+            }
 
+            string schtasksPath = System.IO.Path.Combine(Environment.SystemDirectory, "schtasks.exe");
             var startInfo = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = schtasksPath,
                 Arguments = $"/Create /F /TN \"{taskName}\" /XML \"{xmlPath}\"",
                 CreateNoWindow = true,
+                UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
             var proc = Process.Start(startInfo);
@@ -150,7 +156,9 @@ static class Program
         if (needsUpdate)
         {
             if (showNotification) MessageBox.Show("A critical update is required.", "Sentinel", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            if (!string.IsNullOrEmpty(downloadUrl)) 
+            if (!string.IsNullOrEmpty(downloadUrl) &&
+                Uri.TryCreate(downloadUrl, UriKind.Absolute, out var updateUri) &&
+                (updateUri.Scheme == Uri.UriSchemeHttp || updateUri.Scheme == Uri.UriSchemeHttps))
             {
                 try { Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true }); } catch { }
             }

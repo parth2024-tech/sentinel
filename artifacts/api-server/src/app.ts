@@ -20,7 +20,21 @@ const pinoHttpFn = ((pinoHttp as any)?.default ?? pinoHttp) as (...args: any[]) 
 // ── Security headers (Helmet) ─────────────────────────────────────────────────
 // Adds X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security,
 // Content-Security-Policy, and other critical security headers.
-app.use(helmetFn());
+app.use(
+  helmetFn({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https://sentinelapp.io", "https://*.vercel.app"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+      },
+    },
+  })
+);
 
 app.use(
   pinoHttpFn({
@@ -42,30 +56,54 @@ app.use(
   }),
 );
 
-// ── CORS — restrict to configured origins ─────────────────────────────────────
+// ── CORS — restrict to verified production and team preview origins ──────────
 const defaultOrigins = [
   "https://sentinel-site-rosy.vercel.app",
   "https://sentinelapp.io",
-  // Allow Vercel preview deployments
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = process.env.ALLOWED_ORIGINS?.split(",") ?? defaultOrigins;
-    // Allow requests with no origin (Invoke-RestMethod, curl, mobile apps)
-    if (!origin) return callback(null, true);
-    // Allow configured origins + any vercel.app preview URL
-    if (allowed.includes(origin) || /\.vercel\.app$/.test(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
-}));
+// Scoped preview origin matcher — prevents arbitrary attacker vercel.app domains from reflecting
+const isAllowedPreviewOrigin = (origin: string): boolean => {
+  if (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+    return true;
+  }
+  return /^https:\/\/(sentinel-site|novasentinel)[a-z0-9-]*\.vercel\.app$/.test(origin);
+};
 
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const allowed = process.env.ALLOWED_ORIGINS?.split(",") ?? defaultOrigins;
+      // Allow requests with no origin (PowerShell agent, curl, CLI)
+      if (!origin) return callback(null, true);
+      // Allow configured origins or authenticated team project previews
+      if (allowed.includes(origin) || isAllowedPreviewOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
+  })
+);
 
 app.use(cookieParser());
+
+// ── Anti-CSRF Guard for Cookie-Authenticated State Mutations ─────────────────
+// Rejects mutating requests (POST, PUT, DELETE, PATCH) bearing session cookies
+// if flagged as cross-site by modern browser Sec-Fetch-Site metadata
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const isMutating = ["POST", "PUT", "DELETE", "PATCH"].includes(req.method);
+  const cookies = req.cookies as Record<string, string> | undefined;
+  const hasSessionCookie = Boolean(cookies?.["sentinel_session"]);
+  const secFetchSite = req.headers["sec-fetch-site"];
+
+  if (isMutating && hasSessionCookie && secFetchSite === "cross-site") {
+    res.status(403).json({ error: "Cross-site request forgery protection triggered." });
+    return;
+  }
+  next();
+});
 
 // ── Body parser with explicit size cap & raw buffer capture ──────────────────
 // Preserves exact wire bytes in req.rawBody for cryptographic attestation verification

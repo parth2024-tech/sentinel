@@ -54,6 +54,15 @@ router.post("/session", async (req, res) => {
 // Polling endpoint. Returns pending / ready / expired.
 
 router.get("/session/:code", async (req, res) => {
+  const ip = getClientIp(req);
+  const ipHash = await sha256hex(ip);
+  const allowed = await consumeRateLimit(ipHash + ":pair_poll", 1, 60);
+  if (!allowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many requests. Please slow down." });
+    return;
+  }
+
   const { code } = req.params;
   if (!code || code.length < 4) {
     res.status(400).json({ status: "expired" });
@@ -109,6 +118,17 @@ const PushBody = z.object({
 });
 
 router.post("/push", async (req, res) => {
+  const ip = getClientIp(req);
+  const ipHash = await sha256hex(ip);
+
+  // 1. Sliding-window IP rate limit at the perimeter (10 requests/min per IP)
+  const ipAllowed = await consumeRateLimit(ipHash + ":pair_push_ip", 1, 10);
+  if (!ipAllowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many push attempts from this IP. Please wait." });
+    return;
+  }
+
   const contentLength = parseInt(req.headers["content-length"] ?? "0", 10);
   if (contentLength > 256 * 1024) {
     res.status(413).json({ error: "Payload too large. Maximum 256 KB." });
@@ -124,25 +144,9 @@ router.post("/push", async (req, res) => {
   const { pairCode, rawJson } = parsed.data;
   const normalizedCode = pairCode.toUpperCase();
 
-  // Rate limit: max 5 requests per pair code before burning
-  const codeRlKey = `pair_push:${normalizedCode}`;
-  const allowed = await consumeRateLimit(codeRlKey, 15, 5);
-  if (!allowed) {
-    await db
-      .update(pairSessionsTable)
-      .set({ expiresAt: new Date(0) })
-      .where(eq(pairSessionsTable.code, normalizedCode));
-    res.set("Retry-After", "900");
-    res.status(410).json({ error: "Pairing code burned due to excessive failed attempts." });
-    return;
-  }
-
   const now = new Date();
 
-  // Note: Expired session cleanup has been moved to a background task
-  // to avoid database lock contention under high load on this endpoint.
-
-  // Validate pair session
+  // Validate pair session exists first
   const sessionRows = await db
     .select()
     .from(pairSessionsTable)
@@ -151,6 +155,8 @@ router.post("/push", async (req, res) => {
 
   const session = sessionRows[0];
   if (!session) {
+    // Unknown code guess: penalize IP scan counter to prevent code-space enumeration
+    await consumeRateLimit(ipHash + ":pair_scan_fail", 15, 5);
     res.status(404).json({ error: "Pair code not found or expired." });
     return;
   }
@@ -163,6 +169,19 @@ router.post("/push", async (req, res) => {
   if (session.reportId) {
     // Already pushed — return the existing report ID (idempotent)
     res.json({ ok: true, reportId: session.reportId });
+    return;
+  }
+
+  // Rate limit: max 5 failed/repeated attempts on verified active session before burning
+  const codeRlKey = `pair_push_burn:${normalizedCode}`;
+  const allowed = await consumeRateLimit(codeRlKey, 15, 5);
+  if (!allowed) {
+    await db
+      .update(pairSessionsTable)
+      .set({ expiresAt: new Date(0) })
+      .where(eq(pairSessionsTable.code, normalizedCode));
+    res.set("Retry-After", "900");
+    res.status(410).json({ error: "Pairing code burned due to excessive failed attempts." });
     return;
   }
 

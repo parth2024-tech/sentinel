@@ -41,11 +41,15 @@ static class Program
     {
         try
         {
-            Process.Start(new ProcessStartInfo
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                FileName = url,
-                UseShellExecute = true
-            });
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
         }
         catch { }
     }
@@ -54,7 +58,7 @@ static class Program
     {
         try
         {
-            string batchPath = Path.Combine(Path.GetTempPath(), "sentinel_cleanup.bat");
+            string batchPath = Path.Combine(Path.GetTempPath(), $"sentinel_cleanup_{Guid.NewGuid():N}.bat");
             string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
 
             if (string.IsNullOrEmpty(exePath)) return;
@@ -65,14 +69,20 @@ ping -n 3 127.0.0.1 > nul
 del ""{exePath}""
 del ""%~f0""
 ";
-            File.WriteAllText(batchPath, batchCode);
+            using (var fs = new FileStream(batchPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(fs, Encoding.ASCII))
+            {
+                writer.Write(batchCode);
+            }
 
+            string cmdPath = Path.Combine(Environment.SystemDirectory, "cmd.exe");
             var psi = new ProcessStartInfo
             {
-                FileName = "cmd.exe",
+                FileName = cmdPath,
                 Arguments = $"/c \"{batchPath}\"",
                 WindowStyle = ProcessWindowStyle.Hidden,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                UseShellExecute = false
             };
             Process.Start(psi);
         }

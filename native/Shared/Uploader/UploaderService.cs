@@ -55,8 +55,10 @@ public class UploaderService
             string signature;
             if (!string.IsNullOrEmpty(deviceToken))
             {
-                // Paired agent: Keyed HMAC-SHA256 bound to deviceToken
-                using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(deviceToken));
+                // Paired agent: Keyed HMAC-SHA256 bound to domain-separated signing key derived from deviceToken
+                using var sha256Key = SHA256.Create();
+                byte[] derivedKey = sha256Key.ComputeHash(Encoding.UTF8.GetBytes($"sentinel-sig-v1:{deviceToken}"));
+                using var hmac = new HMACSHA256(derivedKey);
                 byte[] hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(signaturePayload));
                 signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
                 content.Headers.Add("Authorization", $"Bearer {deviceToken}");
