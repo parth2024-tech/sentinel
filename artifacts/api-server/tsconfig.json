@@ -3,6 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": ".",
+    "noEmit": true,
+    "lib": ["es2022", "dom"],
     "noEmitOnError": false,
     "skipLibCheck": true,
     "types": ["node"]

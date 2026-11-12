@@ -65,6 +65,13 @@ type GhRelease = {
   assets: GhAsset[];
 };
 
+interface FetchResponse {
+  ok: boolean;
+  status: number;
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+}
+
 let cachedReleases: GhRelease[] | null = null;
 let releasesLastFetched = 0;
 const RELEASES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -76,10 +83,10 @@ async function fetchGithubReleases(): Promise<GhRelease[] | null> {
   const listUrl = `https://api.github.com/repos/${repo}/releases?per_page=30`;
 
   try {
-    const listRes = await fetch(listUrl, {
+    const listRes = (await fetch(listUrl, {
       headers,
       signal: AbortSignal.timeout(5_000),
-    });
+    })) as unknown as FetchResponse;
 
     if (!listRes.ok) {
       return null;
@@ -198,10 +205,10 @@ export async function getAssetSha256(slug: DownloadSlug): Promise<string | null>
       );
       if (sumsAsset?.browser_download_url) {
         try {
-          const res = await fetch(sumsAsset.browser_download_url, {
+          const res = (await fetch(sumsAsset.browser_download_url, {
             headers: githubAuthHeaders(),
             signal: AbortSignal.timeout(3000),
-          });
+          })) as unknown as FetchResponse;
           if (res.ok) {
             const text = await res.text();
             for (const line of text.split("\n")) {
