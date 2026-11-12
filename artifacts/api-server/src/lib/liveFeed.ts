@@ -260,7 +260,7 @@ export function getRecentEvents(): LiveFeedEvent[] {
 
 // ── Heartbeat / periodic stats push ──────────────────────────────────────────
 
-setInterval(async () => {
+let heartbeatTimer: NodeJS.Timeout | null = setInterval(async () => {
   if (clients.size === 0) return;
   const stats = await getStats();
   broadcast("stats", stats);
@@ -268,3 +268,29 @@ setInterval(async () => {
     try { client.write(": heartbeat\n\n"); } catch { clients.delete(client); }
   }
 }, 30_000);
+
+/**
+ * Gracefully terminates all active SSE connections during process shutdown (SIGTERM/SIGINT)
+ * so that httpServer.close() drains in <1s without hanging for SIGKILL.
+ */
+export function closeAllStreams(): void {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+  if (statsBroadcastTimer) {
+    clearTimeout(statsBroadcastTimer);
+    statsBroadcastTimer = null;
+  }
+  for (const client of clients) {
+    try {
+      if (!client.writableEnded && !client.destroyed) {
+        client.write("event: shutdown\ndata: {\"message\":\"Server shutting down\"}\n\n");
+        client.end();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  clients.clear();
+}

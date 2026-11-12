@@ -11,7 +11,7 @@ const router = Router();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const PAIR_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const PAIR_TTL_MS = 10 * 60 * 1000; // 10 minutes (RFC 8628 Device Authorization Grant)
 
 function getClientIp(req: Request): string {
   // Use Express's built-in req.ip which respects the "trust proxy" setting.
@@ -124,12 +124,16 @@ router.post("/push", async (req, res) => {
   const { pairCode, rawJson } = parsed.data;
   const normalizedCode = pairCode.toUpperCase();
 
-  // Rate limit: 3 requests per pair code (code is the key, not IP)
+  // Rate limit: max 5 requests per pair code before burning
   const codeRlKey = `pair_push:${normalizedCode}`;
-  const allowed = await consumeRateLimit(codeRlKey, 15, 3);
+  const allowed = await consumeRateLimit(codeRlKey, 15, 5);
   if (!allowed) {
+    await db
+      .update(pairSessionsTable)
+      .set({ expiresAt: new Date(0) })
+      .where(eq(pairSessionsTable.code, normalizedCode));
     res.set("Retry-After", "900");
-    res.status(429).json({ error: "Too many push attempts for this code." });
+    res.status(410).json({ error: "Pairing code burned due to excessive failed attempts." });
     return;
   }
 

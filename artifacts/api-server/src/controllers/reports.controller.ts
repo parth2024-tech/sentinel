@@ -74,7 +74,10 @@ export class ReportsController {
         // Paired agent: Keyed HMAC-SHA256 bound to provisioned deviceToken
         expectedSig = crypto.createHmac("sha256", deviceToken).update(signaturePayload).digest("hex");
       } else {
-        // OneShot client: Digest attestation over timestamp + payload wire bytes
+        // Anonymous OneShot client: Digest attestation over timestamp + payload wire bytes.
+        // SECURITY INVARIANT: Unauthenticated OneShot clients cannot bypass authentication,
+        // rate-limits, or plausibility checks with this signature. It functions strictly as a
+        // wire-integrity/anti-tamper checksum to detect in-transit payload corruption.
         expectedSig = crypto.createHash("sha256").update(signaturePayload).digest("hex");
       }
 

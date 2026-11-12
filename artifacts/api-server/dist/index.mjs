@@ -102011,7 +102011,7 @@ var reportsTable = pgTable(
     index("reports_user_id_idx").on(t2.userId),
     index("reports_org_id_idx").on(t2.orgId),
     index("reports_created_at_idx").on(t2.createdAt),
-    index("reports_active_created_at_idx").on(t2.createdAt.desc()).where(sql`deleted_at IS NULL`),
+    index("reports_active_created_at_covering_idx").on(t2.createdAt.desc()).where(sql`deleted_at IS NULL`),
     index("reports_share_token_idx").on(t2.shareToken)
   ]
 );
@@ -108894,11 +108894,11 @@ var Manager = class extends EventEmitter2 {
     if (worker) {
       worker.abortController = ac;
     }
-    let heartbeatTimer = null;
+    let heartbeatTimer2 = null;
     if (heartbeatSeconds > 0) {
       const refreshSeconds = heartbeatRefreshSeconds ?? heartbeatSeconds / 2;
       const intervalMs = refreshSeconds * 1e3;
-      heartbeatTimer = setInterval(async () => {
+      heartbeatTimer2 = setInterval(async () => {
         try {
           await this.touch(name2, jobIds);
         } catch (err) {
@@ -108914,8 +108914,8 @@ var Manager = class extends EventEmitter2 {
       await this.fail(name2, jobIds, err);
       this.#trackJobsFailed(name2, jobs, err);
     } finally {
-      if (heartbeatTimer)
-        clearInterval(heartbeatTimer);
+      if (heartbeatTimer2)
+        clearInterval(heartbeatTimer2);
       if (worker) {
         worker.abortController = null;
       }
@@ -110974,7 +110974,7 @@ function emitNewReport(event) {
 function getRecentEvents() {
   return [...recentEvents];
 }
-setInterval(async () => {
+var heartbeatTimer = setInterval(async () => {
   if (clients.size === 0) return;
   const stats = await getStats();
   broadcast("stats", stats);
@@ -110986,6 +110986,26 @@ setInterval(async () => {
     }
   }
 }, 3e4);
+function closeAllStreams() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+  if (statsBroadcastTimer) {
+    clearTimeout(statsBroadcastTimer);
+    statsBroadcastTimer = null;
+  }
+  for (const client2 of clients) {
+    try {
+      if (!client2.writableEnded && !client2.destroyed) {
+        client2.write('event: shutdown\ndata: {"message":"Server shutting down"}\n\n');
+        client2.end();
+      }
+    } catch {
+    }
+  }
+  clients.clear();
+}
 
 // src/lib/queue/index.ts
 var boss = null;
@@ -111095,9 +111115,10 @@ var ReportsService = class {
     }
     let agentDeviceOrgId = null;
     if (deviceToken && deviceToken.length >= 10) {
-      const deviceRows = await db.select().from(devicesTable).where(eq(devicesTable.deviceToken, deviceToken)).limit(1);
+      const deviceTokenHash = await sha256hex(deviceToken);
+      const deviceRows = await db.select().from(devicesTable).where(or(eq(devicesTable.deviceToken, deviceTokenHash), eq(devicesTable.deviceToken, deviceToken))).limit(1);
       const dev = deviceRows[0];
-      if (!dev || !timingSafeEqualStr(dev.deviceToken, deviceToken)) {
+      if (!dev || !timingSafeEqualStr(dev.deviceToken, deviceTokenHash) && !timingSafeEqualStr(dev.deviceToken, deviceToken)) {
         throw new Error("Invalid device token");
       }
       agentDeviceOrgId = dev.orgId ?? null;
@@ -111777,7 +111798,7 @@ function newDeviceId() {
 function getClientIp(req) {
   return req.ip ?? req.socket?.remoteAddress ?? "unknown";
 }
-var PAIR_TOKEN_TTL_MS = 15 * 60 * 1e3;
+var PAIR_TOKEN_TTL_MS = 10 * 60 * 1e3;
 router5.post("/pair", async (req, res) => {
   const ip = getClientIp(req);
   const ipHash = await sha256hex(ip);
@@ -111789,9 +111810,16 @@ router5.post("/pair", async (req, res) => {
   }
   const pairToken = newToken2(24);
   const deviceToken = newToken2(32);
+  const pairTokenHash = await sha256hex(pairToken);
+  const deviceTokenHash = await sha256hex(deviceToken);
   const id = newDeviceId();
   const expiresAt = new Date(Date.now() + PAIR_TOKEN_TTL_MS);
-  await db.insert(devicesTable).values({ id, pairToken, deviceToken, expiresAt });
+  await db.insert(devicesTable).values({
+    id,
+    pairToken: pairTokenHash,
+    deviceToken: deviceTokenHash,
+    expiresAt
+  });
   req.log.info({ deviceId: id, ipHash }, "device_pair_initiated");
   res.status(201).json({ pairToken, deviceToken });
 });
@@ -111808,26 +111836,37 @@ router5.post("/claim", async (req, res) => {
     res.status(429).json({ error: "Too many claim attempts. Try again later." });
     return;
   }
+  const ipAttemptsAllowed = await consumeRateLimit(ipHash + ":device_claim_ip_fail", 15, 10);
+  if (!ipAttemptsAllowed) {
+    res.set("Retry-After", "900");
+    res.status(429).json({ error: "Excessive failed claim attempts from this IP. Blocked for 15 minutes." });
+    return;
+  }
   const parsed = ClaimBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(422).json({ error: "Invalid request", details: parsed.error.message });
     return;
   }
   const { pairToken } = parsed.data;
+  const pairTokenHash = await sha256hex(pairToken);
   const now = /* @__PURE__ */ new Date();
   const rows = await db.select().from(devicesTable).where(
     and(
-      eq(devicesTable.pairToken, pairToken),
+      or(eq(devicesTable.pairToken, pairTokenHash), eq(devicesTable.pairToken, pairToken)),
       gt(devicesTable.expiresAt, now)
     )
   ).limit(1);
-  if (rows.length === 0) {
+  const device = rows[0];
+  if (!device || !timingSafeEqualStr(device.pairToken, pairTokenHash) && !timingSafeEqualStr(device.pairToken, pairToken)) {
     res.status(404).json({ error: "Invalid or expired pairing token" });
     return;
   }
-  const device = rows[0];
-  if (!device) {
-    res.status(404).json({ error: "Invalid or expired pairing token" });
+  const failKey = `device_pair_burn:${device.id}`;
+  const tokenAttemptsAllowed = await consumeRateLimit(failKey, 15, 5);
+  if (!tokenAttemptsAllowed) {
+    await db.update(devicesTable).set({ expiresAt: /* @__PURE__ */ new Date(0) }).where(eq(devicesTable.id, device.id));
+    req.log.warn({ deviceId: device.id, ipHash }, "device_pair_burned_excessive_attempts");
+    res.status(410).json({ error: "Pairing request burned due to excessive failed attempts." });
     return;
   }
   if (device.claimed) {
@@ -111844,15 +111883,16 @@ router5.get("/pair-status", async (req, res) => {
     res.status(400).json({ error: "Missing token" });
     return;
   }
+  const tokenHash = await sha256hex(token2);
   const now = /* @__PURE__ */ new Date();
-  const rows = await db.select({ id: devicesTable.id, claimed: devicesTable.claimed }).from(devicesTable).where(
+  const rows = await db.select({ id: devicesTable.id, pairToken: devicesTable.pairToken, claimed: devicesTable.claimed }).from(devicesTable).where(
     and(
-      eq(devicesTable.pairToken, token2),
+      or(eq(devicesTable.pairToken, tokenHash), eq(devicesTable.pairToken, token2)),
       gt(devicesTable.expiresAt, now)
     )
   ).limit(1);
   const foundDevice = rows[0];
-  if (!foundDevice) {
+  if (!foundDevice || !timingSafeEqualStr(foundDevice.pairToken, tokenHash) && !timingSafeEqualStr(foundDevice.pairToken, token2)) {
     res.status(404).json({ valid: false });
     return;
   }
@@ -111863,7 +111903,7 @@ var devices_default = router5;
 // src/routes/pair.ts
 var import_express6 = __toESM(require_express2(), 1);
 var router6 = (0, import_express6.Router)();
-var PAIR_TTL_MS = 15 * 60 * 1e3;
+var PAIR_TTL_MS = 10 * 60 * 1e3;
 function getClientIp2(req) {
   return req.ip ?? req.socket?.remoteAddress ?? "unknown";
 }
@@ -111938,10 +111978,11 @@ router6.post("/push", async (req, res) => {
   const { pairCode, rawJson } = parsed.data;
   const normalizedCode = pairCode.toUpperCase();
   const codeRlKey = `pair_push:${normalizedCode}`;
-  const allowed = await consumeRateLimit(codeRlKey, 15, 3);
+  const allowed = await consumeRateLimit(codeRlKey, 15, 5);
   if (!allowed) {
+    await db.update(pairSessionsTable).set({ expiresAt: /* @__PURE__ */ new Date(0) }).where(eq(pairSessionsTable.code, normalizedCode));
     res.set("Retry-After", "900");
-    res.status(429).json({ error: "Too many push attempts for this code." });
+    res.status(410).json({ error: "Pairing code burned due to excessive failed attempts." });
     return;
   }
   const now = /* @__PURE__ */ new Date();
@@ -129940,6 +129981,7 @@ var server = app_default.listen(port, async () => {
 });
 function shutdown(signal) {
   logger.info({ signal }, "shutdown_initiated");
+  closeAllStreams();
   server.close(async () => {
     logger.info("http_server_closed");
     await stopQueue();

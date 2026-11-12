@@ -52,5 +52,8 @@ jobs:
     - name: Lint Codebase
       run: pnpm run lint
       
+    - name: Run Database Migrations
+      run: pnpm --filter @workspace/db migrate
+
     - name: Run Test Suite
       run: pnpm run test

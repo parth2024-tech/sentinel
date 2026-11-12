@@ -19,6 +19,7 @@ const env = EnvSchema.parse(process.env); // throws on startup if invalid
 import app from "./app.js";
 import { startCleanupScheduler } from "./lib/cleanupScheduler.js";
 import { initQueue, stopQueue } from "./lib/queue/index.js";
+import { closeAllStreams } from "./lib/liveFeed.js";
 
 const port = env.PORT;
 
@@ -32,6 +33,8 @@ const server = app.listen(port, async () => {
 // Allows in-flight requests to complete before process exits on SIGTERM/SIGINT.
 function shutdown(signal: string) {
   logger.info({ signal }, "shutdown_initiated");
+  // Drain all active SSE connections immediately so server.close() does not hang
+  closeAllStreams();
   server.close(async () => {
     logger.info("http_server_closed");
     await stopQueue();

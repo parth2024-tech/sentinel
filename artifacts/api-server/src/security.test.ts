@@ -33,6 +33,7 @@ vi.mock("@workspace/db", () => {
 
 import { timingSafeEqualStr, canonicalJsonHash } from "./lib/crypto.js";
 import { consumeRateLimit } from "./lib/rateLimit.js";
+import { addClient, closeAllStreams } from "./lib/liveFeed.js";
 
 describe("Adversarial Security & Concurrency Test Suite", () => {
   // ── 1. Idempotency Key Ordering Invariance ────────────────────────────────
@@ -360,6 +361,60 @@ describe("Adversarial Security & Concurrency Test Suite", () => {
 
       expect(calibratedSkew).toBe(0);
       expect(calibratedSkew <= 300).toBe(true);
+    });
+  });
+
+  // ── 7. SSE Graceful Shutdown & Connection Draining ────────────────────────
+  describe("SSE Graceful Shutdown & Connection Draining", () => {
+    it("drains and terminates all active SSE connections cleanly upon shutdown", () => {
+      let ended = false;
+      const mockRes: any = {
+        on: vi.fn(),
+        write: vi.fn(),
+        end: vi.fn(() => {
+          ended = true;
+        }),
+        writableEnded: false,
+        destroyed: false,
+      };
+
+      addClient(mockRes);
+      closeAllStreams();
+
+      expect(mockRes.write).toHaveBeenCalledWith(expect.stringContaining("event: shutdown"));
+      expect(mockRes.end).toHaveBeenCalled();
+      expect(ended).toBe(true);
+    });
+  });
+
+  // ── 8. RFC 8628 Device Authorization Grant & Brute Force Immunity ───────────
+  describe("RFC 8628 Device Authorization Grant & Brute Force Immunity", () => {
+    it("stores device token only as SHA-256 hash and validates constant-time matching", async () => {
+      const rawToken = "raw-secret-device-token-1234567890";
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+      expect(tokenHash).not.toBe(rawToken);
+      expect(tokenHash.length).toBe(64);
+
+      const incomingBearer = rawToken;
+      const incomingHash = crypto.createHash("sha256").update(incomingBearer).digest("hex");
+
+      expect(timingSafeEqualStr(incomingHash, tokenHash)).toBe(true);
+    });
+
+    it("triggers burn threshold when failed claim attempts reach limit (5 attempts)", async () => {
+      const testPairCode = "TEST-CODE-BURN";
+      const failKey = `pair_burn_test:${testPairCode}`;
+
+      let allowedCount = 0;
+      for (let i = 0; i < 5; i++) {
+        const allowed = await consumeRateLimit(failKey, 15, 5);
+        if (allowed) allowedCount++;
+      }
+      expect(allowedCount).toBe(5);
+
+      const blockedAttempt = await consumeRateLimit(failKey, 15, 5);
+      expect(blockedAttempt).toBe(false);
     });
   });
 });

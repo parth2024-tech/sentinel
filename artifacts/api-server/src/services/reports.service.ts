@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db, reportsTable, reportPayloadsTable, idempotencyKeysTable, reportHabitAnswersTable, devicesTable, usersTable, suspectPayloadsTable } from "@workspace/db";
 import { SentinelReportSchema, generateReport, computeHabitScore, combinedScore, validatePlausibility } from "@workspace/report-engine";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, or } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import crypto from "node:crypto";
 import { newClaimToken, newShareToken, sha256hex } from "../lib/ids.js";
@@ -44,16 +44,17 @@ export class ReportsService {
       throw new Error(`UPGRADE_REQUIRED: Agent schema version ${version || "unknown"} is no longer supported. Minimum required: ${MIN_SUPPORTED_VERSION}`);
     }
 
-    // 3. Constant-Time Device Token Auth
+    // 3. Constant-Time Device Token Auth (Supports SHA-256 hash & legacy migration)
     let agentDeviceOrgId: string | null = null;
     if (deviceToken && deviceToken.length >= 10) {
+      const deviceTokenHash = await sha256hex(deviceToken);
       const deviceRows = await db
         .select()
         .from(devicesTable)
-        .where(eq(devicesTable.deviceToken, deviceToken))
+        .where(or(eq(devicesTable.deviceToken, deviceTokenHash), eq(devicesTable.deviceToken, deviceToken)))
         .limit(1);
       const dev = deviceRows[0];
-      if (!dev || !timingSafeEqualStr(dev.deviceToken, deviceToken)) {
+      if (!dev || (!timingSafeEqualStr(dev.deviceToken, deviceTokenHash) && !timingSafeEqualStr(dev.deviceToken, deviceToken))) {
         throw new Error("Invalid device token");
       }
       agentDeviceOrgId = dev.orgId ?? null;
