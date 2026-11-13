@@ -1,5 +1,6 @@
 import {
   db,
+  withUserScope,
   reportsTable,
   magicLinkTokensTable,
   myReportsSessionsTable,
@@ -267,30 +268,32 @@ router.get("/", async (req, res) => {
 
   if (user) {
     // Single LEFT JOIN query fetches reports and habit scores in one round-trip,
-    // fixing the previous N+1 query pattern and the bug where only the first
-    // report's habit score was fetched.
-    reports = await db
-      .select({
-        id: reportsTable.id,
-        resultJson: reportPayloadsTable.resultJson,
-        createdAt: reportsTable.createdAt,
-        habitScore: reportHabitAnswersTable.habitScore,
-        combinedScore: reportHabitAnswersTable.combinedScore,
-      })
-      .from(reportsTable)
-      .innerJoin(reportPayloadsTable, eq(reportsTable.id, reportPayloadsTable.reportId))
-      .leftJoin(
-        reportHabitAnswersTable,
-        eq(reportsTable.id, reportHabitAnswersTable.reportId)
-      )
-      .where(
-        and(
-          eq(reportsTable.userId, user.id),
-          isNull(reportsTable.deletedAt),
-          eq(reportsTable.claimed, true)
+    // executed inside withUserScope so claimed reports belonging to this user
+    // are visible even when assigned to an organization under PostgreSQL RLS.
+    reports = await withUserScope(user.id, async (tx) => {
+      return await tx
+        .select({
+          id: reportsTable.id,
+          resultJson: reportPayloadsTable.resultJson,
+          createdAt: reportsTable.createdAt,
+          habitScore: reportHabitAnswersTable.habitScore,
+          combinedScore: reportHabitAnswersTable.combinedScore,
+        })
+        .from(reportsTable)
+        .innerJoin(reportPayloadsTable, eq(reportsTable.id, reportPayloadsTable.reportId))
+        .leftJoin(
+          reportHabitAnswersTable,
+          eq(reportsTable.id, reportHabitAnswersTable.reportId)
         )
-      )
-      .orderBy(reportsTable.createdAt);
+        .where(
+          and(
+            eq(reportsTable.userId, user.id),
+            isNull(reportsTable.deletedAt),
+            eq(reportsTable.claimed, true)
+          )
+        )
+        .orderBy(reportsTable.createdAt);
+    });
   }
 
   res.json({

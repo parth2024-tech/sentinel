@@ -33,6 +33,15 @@ app.use(
         objectSrc: ["'none'"],
       },
     },
+    hsts: {
+      maxAge: 63072000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: {
+      policy: "no-referrer",
+    },
+    xContentTypeOptions: true,
   })
 );
 

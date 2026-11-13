@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import pg from "pg";
 import * as schema from "./schema";
 
-const { Pool } = pg;
+const { Pool, Client } = pg;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -23,6 +23,18 @@ export const pool = new Pool({
 export const db = drizzle(pool, { schema });
 
 /**
+ * Creates a dedicated persistent pg.Client with TCP keep-alives configured
+ * for long-lived LISTEN subscriptions outside the connection pool.
+ */
+export function createDedicatedClient(): pg.Client {
+  return new Client({
+    connectionString: process.env.DATABASE_URL,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+  });
+}
+
+/**
  * Execute operations within a tenant-scoped transaction.
  * Sets PostgreSQL session variable `app.current_org_id` locally within the transaction
  * to enforce database-level Row Level Security (RLS) across tenant-scoped queries.
@@ -33,6 +45,21 @@ export async function withTenantScope<T>(
 ): Promise<T> {
   return await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT set_config('app.current_org_id', ${orgId}, true)`);
+    return await fn(tx as unknown as typeof db);
+  });
+}
+
+/**
+ * Execute operations within a user-scoped transaction.
+ * Sets PostgreSQL session variable `app.current_user_id` locally within the transaction
+ * to enforce database-level Row Level Security (RLS) across user-claimed queries.
+ */
+export async function withUserScope<T>(
+  userId: string,
+  fn: (tx: typeof db) => Promise<T>
+): Promise<T> {
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
     return await fn(tx as unknown as typeof db);
   });
 }

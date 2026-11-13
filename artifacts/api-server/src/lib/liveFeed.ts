@@ -1,7 +1,7 @@
 import { type Response } from "express";
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
-import { pool, withSystemScope } from "@workspace/db";
+import { createDedicatedClient, withSystemScope } from "@workspace/db";
 import crypto from "node:crypto";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -32,6 +32,9 @@ export interface LiveFeedEvent {
 const INSTANCE_ID = crypto.randomUUID();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let listenerClient: any = null;
+let isShuttingDown = false;
+let reconnectTimer: NodeJS.Timeout | null = null;
+let reconnectAttempts = 0;
 
 const clients = new Set<Response>();
 const fleetClients = new Map<string, Set<Response>>();
@@ -52,55 +55,96 @@ let statsBroadcastTimer: NodeJS.Timeout | null = null;
 const recentEvents: LiveFeedEvent[] = [];
 const MAX_FEED_SIZE = 50;
 
-// ── DB init & Postgres LISTEN/NOTIFY Fan-Out ──────────────────────────────────
+// ── DB init & Resilient Postgres LISTEN/NOTIFY Fan-Out ────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: NodePgDatabase<any> | null = null;
 
+async function connectPgListener() {
+  if (isShuttingDown || !process.env.DATABASE_URL) return;
+
+  try {
+    const client = createDedicatedClient();
+    await client.connect();
+    await client.query("LISTEN sentinel_live_events");
+
+    listenerClient = client;
+    reconnectAttempts = 0;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on("notification", (msg: any) => {
+      if (msg.channel === "sentinel_live_events" && msg.payload) {
+        try {
+          const event = JSON.parse(msg.payload);
+          // Skip echo from this process instance
+          if (event.instanceId === INSTANCE_ID) return;
+
+          if (event.type === "new_report" && event.data) {
+            recentEvents.unshift(event.data);
+            if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
+            cachedStats = null;
+            broadcast("new_report", event.data);
+          } else if (event.type === "fleet_delta" && event.orgId && event.data) {
+            const orgSet = fleetClients.get(event.orgId);
+            if (orgSet && orgSet.size > 0) {
+              for (const c of orgSet) {
+                sendToClient(c, "fleet_delta", event.data);
+              }
+            }
+          } else if (event.type === "fleet_delta_ref" && event.orgId) {
+            const orgSet = fleetClients.get(event.orgId);
+            if (orgSet && orgSet.size > 0) {
+              for (const c of orgSet) {
+                sendToClient(c, "fleet_delta_ref", { orgId: event.orgId, reportId: event.reportId });
+              }
+            }
+          }
+        } catch {
+          // Ignore corrupted payload
+        }
+      }
+    });
+
+    const handleDisconnect = () => {
+      if (listenerClient === client) {
+        listenerClient = null;
+      }
+      try {
+        client.end().catch(() => {});
+      } catch {
+        // ignore
+      }
+      scheduleReconnect();
+    };
+
+    client.on("error", handleDisconnect);
+    client.on("end", handleDisconnect);
+  } catch {
+    listenerClient = null;
+    scheduleReconnect();
+  }
+}
+
+function scheduleReconnect() {
+  if (isShuttingDown || reconnectTimer || !process.env.DATABASE_URL) return;
+
+  reconnectAttempts++;
+  // Exponential backoff: 1s, 2s, 4s, 8s, up to 30s + random jitter
+  const baseDelay = Math.min(30_000, 1000 * Math.pow(2, Math.max(0, reconnectAttempts - 1)));
+  const jitter = Math.floor(Math.random() * 1000);
+  const delay = baseDelay + jitter;
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectPgListener().catch(() => {});
+  }, delay);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function initLiveFeed(db: NodePgDatabase<any>) {
   _db = db;
-
-  // Setup cross-instance LISTEN connection if database is configured
   if (!listenerClient && process.env.DATABASE_URL) {
-    try {
-      listenerClient = await pool.connect();
-      await listenerClient.query("LISTEN sentinel_live_events");
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      listenerClient.on("notification", (msg: any) => {
-        if (msg.channel === "sentinel_live_events" && msg.payload) {
-          try {
-            const event = JSON.parse(msg.payload);
-            // Skip echo from this process instance
-            if (event.instanceId === INSTANCE_ID) return;
-
-            if (event.type === "new_report" && event.data) {
-              recentEvents.unshift(event.data);
-              if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
-              cachedStats = null;
-              broadcast("new_report", event.data);
-            } else if (event.type === "fleet_delta" && event.orgId && event.data) {
-              const orgSet = fleetClients.get(event.orgId);
-              if (orgSet && orgSet.size > 0) {
-                for (const client of orgSet) {
-                  sendToClient(client, "fleet_delta", event.data);
-                }
-              }
-            }
-          } catch {
-            // Ignore corrupted payload
-          }
-        }
-      });
-
-      listenerClient.on("error", () => {
-        listenerClient = null;
-      });
-    } catch {
-      // Non-fatal fallback for environments where DB is offline or mock
-      listenerClient = null;
-    }
+    await connectPgListener();
   }
 }
 
@@ -328,14 +372,27 @@ export function emitFleetDelta(orgId: string, delta: unknown) {
     }
   }
 
-  // Cross-instance fanout via Postgres NOTIFY
+  // Cross-instance fanout via Postgres NOTIFY (with 7,500-byte payload limit guard)
   if (_db) {
-    const notifyPayload = JSON.stringify({
+    let notifyPayload = JSON.stringify({
       type: "fleet_delta",
       orgId,
       data: delta,
       instanceId: INSTANCE_ID,
     });
+
+    if (Buffer.byteLength(notifyPayload, "utf8") >= 7500) {
+      // Delta exceeds Postgres 8000-byte NOTIFY ceiling; broadcast lightweight reference pointer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const reportId = (delta as any)?.id ?? (delta as any)?.reportId;
+      notifyPayload = JSON.stringify({
+        type: "fleet_delta_ref",
+        orgId,
+        reportId,
+        instanceId: INSTANCE_ID,
+      });
+    }
+
     _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {});
   }
 }
@@ -385,14 +442,16 @@ export function emitNewReport(event: LiveFeedEvent) {
   // Broadcast the new event immediately to local connections
   broadcast("new_report", sanitized);
 
-  // Cross-instance fanout via Postgres NOTIFY
+  // Cross-instance fanout via Postgres NOTIFY (with 7,500-byte payload limit guard)
   if (_db) {
     const notifyPayload = JSON.stringify({
       type: "new_report",
       data: sanitized,
       instanceId: INSTANCE_ID,
     });
-    _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {});
+    if (Buffer.byteLength(notifyPayload, "utf8") < 7500) {
+      _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {});
+    }
   }
 
   // Debounce refreshed stats broadcast (1000ms delay to let DB write settle)
@@ -422,10 +481,15 @@ let heartbeatTimer: NodeJS.Timeout | null = setInterval(async () => {
 }, 30_000);
 
 /**
- * Gracefully terminates all active SSE connections during process shutdown (SIGTERM/SIGINT)
- * so that httpServer.close() drains in <1s without hanging for SIGKILL.
+ * Gracefully terminates all active SSE connections and Postgres listener client
+ * during process shutdown (SIGTERM/SIGINT) so that httpServer.close() drains in <1s.
  */
 export function closeAllStreams(): void {
+  isShuttingDown = true;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer);
     heartbeatTimer = null;
@@ -463,7 +527,7 @@ export function closeAllStreams(): void {
 
   if (listenerClient) {
     try {
-      listenerClient.release();
+      listenerClient.end().catch(() => {});
     } catch {
       // ignore
     }

@@ -296,6 +296,22 @@ describe("PostgreSQL Real-DB Integration & Constraints", () => {
         expect(visibleIds).toContain(repB);
         expect(visibleIds).toContain(repAnon);
       });
+
+      // 5. User-claimed scope: claimed enterprise report with org_id is visible to claiming user
+      const repClaimed = `rep_test_claimed_${Date.now()}`;
+      await pool.query(`INSERT INTO reports (id, org_id, user_id, claimed) VALUES ($1, $2, $3, true)`, [repClaimed, orgA, ownerId]);
+
+      await testDb.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL ROLE sentinel_app`);
+        await tx.execute(sql`SELECT set_config('app.current_user_id', ${ownerId}, true)`);
+
+        const visibleReports = await tx.select({ id: reportsTable.id }).from(reportsTable);
+        const visibleIds = visibleReports.map(r => r.id);
+
+        expect(visibleIds).toContain(repClaimed);
+      });
+
+      await pool.query(`DELETE FROM reports WHERE id = $1`, [repClaimed]);
     } finally {
       await pool.query(`DELETE FROM reports WHERE id IN ($1, $2, $3)`, [repA, repB, repAnon]);
       await pool.query(`DELETE FROM organizations WHERE id IN ($1, $2)`, [orgA, orgB]);

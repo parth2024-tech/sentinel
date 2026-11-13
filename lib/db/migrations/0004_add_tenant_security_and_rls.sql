@@ -20,6 +20,7 @@ ALTER TABLE organizations FORCE ROW LEVEL SECURITY;
 -- 1. Anonymous & personal reports (org_id IS NULL) are freely accessible
 -- 2. Administrative jobs (cleanup, global stats) can set app.bypass_rls = 'on'
 -- 3. Tenant-scoped transactions strictly isolate rows matching app.current_org_id
+-- 4. User-scoped transactions permit claimed reports matching app.current_user_id (even if org_id is set)
 DROP POLICY IF EXISTS tenant_isolation_policy_reports ON reports;
 CREATE POLICY tenant_isolation_policy_reports ON reports
   FOR ALL
@@ -27,17 +28,20 @@ CREATE POLICY tenant_isolation_policy_reports ON reports
     org_id IS NULL 
     OR current_setting('app.bypass_rls', true) = 'on' 
     OR org_id = current_setting('app.current_org_id', true)
+    OR (user_id IS NOT NULL AND user_id = current_setting('app.current_user_id', true))
   )
   WITH CHECK (
     org_id IS NULL 
     OR current_setting('app.bypass_rls', true) = 'on' 
     OR org_id = current_setting('app.current_org_id', true)
+    OR (user_id IS NOT NULL AND user_id = current_setting('app.current_user_id', true))
   );
 
 -- Devices policy:
 -- 1. Unclaimed/consumer devices (org_id IS NULL) are freely accessible
 -- 2. Administrative jobs can set app.bypass_rls = 'on'
 -- 3. Enterprise fleet devices strictly isolate rows matching app.current_org_id
+-- 4. User-scoped devices permit claimed devices matching app.current_user_id
 DROP POLICY IF EXISTS tenant_isolation_policy_devices ON devices;
 CREATE POLICY tenant_isolation_policy_devices ON devices
   FOR ALL
@@ -45,11 +49,13 @@ CREATE POLICY tenant_isolation_policy_devices ON devices
     org_id IS NULL 
     OR current_setting('app.bypass_rls', true) = 'on' 
     OR org_id = current_setting('app.current_org_id', true)
+    OR (user_id IS NOT NULL AND user_id = current_setting('app.current_user_id', true))
   )
   WITH CHECK (
     org_id IS NULL 
     OR current_setting('app.bypass_rls', true) = 'on' 
     OR org_id = current_setting('app.current_org_id', true)
+    OR (user_id IS NOT NULL AND user_id = current_setting('app.current_user_id', true))
   );
 
 -- Organizations policy:

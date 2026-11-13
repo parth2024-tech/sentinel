@@ -32315,7 +32315,7 @@ var require_client = __commonJS({
       }
       return defaultValue;
     }
-    var Client2 = class extends EventEmitter8 {
+    var Client3 = class extends EventEmitter8 {
       constructor(config2) {
         super();
         this.connectionParameters = new ConnectionParameters(config2);
@@ -32900,8 +32900,8 @@ var require_client = __commonJS({
         return this._queryQueue;
       }
     };
-    Client2.Query = Query2;
-    module.exports = Client2;
+    Client3.Query = Query2;
+    module.exports = Client3;
   }
 });
 
@@ -32961,7 +32961,7 @@ var require_pg_pool = __commonJS({
       };
     }
     var Pool4 = class extends EventEmitter8 {
-      constructor(options, Client2) {
+      constructor(options, Client3) {
         super();
         this.options = Object.assign({}, options);
         if (options != null && "password" in options) {
@@ -32984,7 +32984,7 @@ var require_pg_pool = __commonJS({
         this.options.maxLifetimeSeconds = this.options.maxLifetimeSeconds || 0;
         this.log = this.options.log || function() {
         };
-        this.Client = this.options.Client || Client2 || require_lib5().Client;
+        this.Client = this.options.Client || Client3 || require_lib5().Client;
         this.Promise = this.options.Promise || global.Promise;
         if (typeof this.options.idleTimeoutMillis === "undefined") {
           this.options.idleTimeoutMillis = 1e4;
@@ -33492,7 +33492,7 @@ var require_client2 = __commonJS({
       },
       "Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead."
     );
-    var Client2 = module.exports = function(config2) {
+    var Client3 = module.exports = function(config2) {
       EventEmitter8.call(this);
       config2 = config2 || {};
       this._Promise = config2.Promise || global.Promise;
@@ -33519,9 +33519,9 @@ var require_client2 = __commonJS({
       this.port = cp.port;
       this.namedQueries = {};
     };
-    Client2.Query = NativeQuery;
-    util2.inherits(Client2, EventEmitter8);
-    Client2.prototype._errorAllQueries = function(err) {
+    Client3.Query = NativeQuery;
+    util2.inherits(Client3, EventEmitter8);
+    Client3.prototype._errorAllQueries = function(err) {
       const enqueueError = (query) => {
         process.nextTick(() => {
           query.native = this.native;
@@ -33535,7 +33535,7 @@ var require_client2 = __commonJS({
       this._queryQueue.forEach(enqueueError);
       this._queryQueue.length = 0;
     };
-    Client2.prototype._connect = function(cb) {
+    Client3.prototype._connect = function(cb) {
       const self = this;
       if (this._connecting) {
         process.nextTick(() => cb(new Error("Client has already been connected. You cannot reuse a client.")));
@@ -33568,7 +33568,7 @@ var require_client2 = __commonJS({
         });
       });
     };
-    Client2.prototype.connect = function(callback) {
+    Client3.prototype.connect = function(callback) {
       if (callback) {
         this._connect(callback);
         return;
@@ -33583,7 +33583,7 @@ var require_client2 = __commonJS({
         });
       });
     };
-    Client2.prototype.query = function(config2, values, callback) {
+    Client3.prototype.query = function(config2, values, callback) {
       let query;
       let result;
       let readTimeout;
@@ -33655,7 +33655,7 @@ var require_client2 = __commonJS({
       this._pulseQueryQueue();
       return result;
     };
-    Client2.prototype.end = function(cb) {
+    Client3.prototype.end = function(cb) {
       const self = this;
       this._ending = true;
       if (this._connecting && !this._connected) {
@@ -33680,10 +33680,10 @@ var require_client2 = __commonJS({
       });
       return result;
     };
-    Client2.prototype._hasActiveQuery = function() {
+    Client3.prototype._hasActiveQuery = function() {
       return this._activeQuery && this._activeQuery.state !== "error" && this._activeQuery.state !== "end";
     };
-    Client2.prototype._pulseQueryQueue = function(initialConnection) {
+    Client3.prototype._pulseQueryQueue = function(initialConnection) {
       if (!this._connected) {
         return;
       }
@@ -33704,7 +33704,7 @@ var require_client2 = __commonJS({
         self._pulseQueryQueue();
       });
     };
-    Client2.prototype.cancel = function(query) {
+    Client3.prototype.cancel = function(query) {
       if (this._activeQuery === query) {
         this.native.cancel(function() {
         });
@@ -33712,20 +33712,20 @@ var require_client2 = __commonJS({
         this._queryQueue.splice(this._queryQueue.indexOf(query), 1);
       }
     };
-    Client2.prototype.ref = function() {
+    Client3.prototype.ref = function() {
     };
-    Client2.prototype.unref = function() {
+    Client3.prototype.unref = function() {
     };
-    Client2.prototype.setTypeParser = function(oid, format, parseFn) {
+    Client3.prototype.setTypeParser = function(oid, format, parseFn) {
       return this._types.setTypeParser(oid, format, parseFn);
     };
-    Client2.prototype.getTypeParser = function(oid, format) {
+    Client3.prototype.getTypeParser = function(oid, format) {
       return this._types.getTypeParser(oid, format);
     };
-    Client2.prototype.isConnected = function() {
+    Client3.prototype.isConnected = function() {
       return this._connected;
     };
-    Client2.prototype.getTransactionStatus = function() {
+    Client3.prototype.getTransactionStatus = function() {
       return this.native.getTransactionStatus();
     };
   }
@@ -33743,7 +33743,7 @@ var require_native = __commonJS({
 var require_lib5 = __commonJS({
   "../../node_modules/.pnpm/pg@8.21.0/node_modules/pg/lib/index.js"(exports, module) {
     "use strict";
-    var Client2 = require_client();
+    var Client3 = require_client();
     var defaults3 = require_defaults();
     var Connection2 = require_connection();
     var Result2 = require_result();
@@ -33752,10 +33752,10 @@ var require_lib5 = __commonJS({
     var TypeOverrides2 = require_type_overrides();
     var { DatabaseError: DatabaseError2 } = require_dist3();
     var { escapeIdentifier: escapeIdentifier2, escapeLiteral: escapeLiteral2 } = require_utils4();
-    var poolFactory = (Client3) => {
+    var poolFactory = (Client4) => {
       return class BoundPool extends Pool4 {
         constructor(options) {
-          super(options, Client3);
+          super(options, Client4);
         }
       };
     };
@@ -33774,7 +33774,7 @@ var require_lib5 = __commonJS({
       this.Result = Result2;
       this.utils = utils;
     };
-    var clientConstructor = Client2;
+    var clientConstructor = Client3;
     var forceNative = false;
     try {
       forceNative = !!process.env.NODE_PG_FORCE_NATIVE;
@@ -102176,7 +102176,7 @@ var suspectPayloadsTable = pgTable(
 );
 
 // ../../lib/db/src/index.ts
-var { Pool: Pool3 } = esm_default;
+var { Pool: Pool3, Client: Client2 } = esm_default;
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?"
@@ -102192,9 +102192,22 @@ var pool = new Pool3({
   // Fail fast if can't connect in 5 seconds
 });
 var db = drizzle(pool, { schema: schema_exports });
+function createDedicatedClient() {
+  return new Client2({
+    connectionString: process.env.DATABASE_URL,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 1e4
+  });
+}
 async function withTenantScope(orgId, fn2) {
   return await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT set_config('app.current_org_id', ${orgId}, true)`);
+    return await fn2(tx);
+  });
+}
+async function withUserScope(userId, fn2) {
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
     return await fn2(tx);
   });
 }
@@ -110855,6 +110868,9 @@ async function sendTransactionalEmail(input) {
 import crypto2 from "node:crypto";
 var INSTANCE_ID = crypto2.randomUUID();
 var listenerClient = null;
+var isShuttingDown = false;
+var reconnectTimer = null;
+var reconnectAttempts = 0;
 var clients = /* @__PURE__ */ new Set();
 var fleetClients = /* @__PURE__ */ new Map();
 var activeIpCounts = /* @__PURE__ */ new Map();
@@ -110868,40 +110884,77 @@ var statsBroadcastTimer = null;
 var recentEvents = [];
 var MAX_FEED_SIZE = 50;
 var _db = null;
+async function connectPgListener() {
+  if (isShuttingDown || !process.env.DATABASE_URL) return;
+  try {
+    const client2 = createDedicatedClient();
+    await client2.connect();
+    await client2.query("LISTEN sentinel_live_events");
+    listenerClient = client2;
+    reconnectAttempts = 0;
+    client2.on("notification", (msg) => {
+      if (msg.channel === "sentinel_live_events" && msg.payload) {
+        try {
+          const event = JSON.parse(msg.payload);
+          if (event.instanceId === INSTANCE_ID) return;
+          if (event.type === "new_report" && event.data) {
+            recentEvents.unshift(event.data);
+            if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
+            cachedStats = null;
+            broadcast("new_report", event.data);
+          } else if (event.type === "fleet_delta" && event.orgId && event.data) {
+            const orgSet = fleetClients.get(event.orgId);
+            if (orgSet && orgSet.size > 0) {
+              for (const c2 of orgSet) {
+                sendToClient(c2, "fleet_delta", event.data);
+              }
+            }
+          } else if (event.type === "fleet_delta_ref" && event.orgId) {
+            const orgSet = fleetClients.get(event.orgId);
+            if (orgSet && orgSet.size > 0) {
+              for (const c2 of orgSet) {
+                sendToClient(c2, "fleet_delta_ref", { orgId: event.orgId, reportId: event.reportId });
+              }
+            }
+          }
+        } catch {
+        }
+      }
+    });
+    const handleDisconnect = () => {
+      if (listenerClient === client2) {
+        listenerClient = null;
+      }
+      try {
+        client2.end().catch(() => {
+        });
+      } catch {
+      }
+      scheduleReconnect();
+    };
+    client2.on("error", handleDisconnect);
+    client2.on("end", handleDisconnect);
+  } catch {
+    listenerClient = null;
+    scheduleReconnect();
+  }
+}
+function scheduleReconnect() {
+  if (isShuttingDown || reconnectTimer || !process.env.DATABASE_URL) return;
+  reconnectAttempts++;
+  const baseDelay = Math.min(3e4, 1e3 * Math.pow(2, Math.max(0, reconnectAttempts - 1)));
+  const jitter = Math.floor(Math.random() * 1e3);
+  const delay2 = baseDelay + jitter;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectPgListener().catch(() => {
+    });
+  }, delay2);
+}
 async function initLiveFeed(db2) {
   _db = db2;
   if (!listenerClient && process.env.DATABASE_URL) {
-    try {
-      listenerClient = await pool.connect();
-      await listenerClient.query("LISTEN sentinel_live_events");
-      listenerClient.on("notification", (msg) => {
-        if (msg.channel === "sentinel_live_events" && msg.payload) {
-          try {
-            const event = JSON.parse(msg.payload);
-            if (event.instanceId === INSTANCE_ID) return;
-            if (event.type === "new_report" && event.data) {
-              recentEvents.unshift(event.data);
-              if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
-              cachedStats = null;
-              broadcast("new_report", event.data);
-            } else if (event.type === "fleet_delta" && event.orgId && event.data) {
-              const orgSet = fleetClients.get(event.orgId);
-              if (orgSet && orgSet.size > 0) {
-                for (const client2 of orgSet) {
-                  sendToClient(client2, "fleet_delta", event.data);
-                }
-              }
-            }
-          } catch {
-          }
-        }
-      });
-      listenerClient.on("error", () => {
-        listenerClient = null;
-      });
-    } catch {
-      listenerClient = null;
-    }
+    await connectPgListener();
   }
 }
 function normalizeOs(raw) {
@@ -111088,12 +111141,21 @@ function emitFleetDelta(orgId, delta) {
     }
   }
   if (_db) {
-    const notifyPayload = JSON.stringify({
+    let notifyPayload = JSON.stringify({
       type: "fleet_delta",
       orgId,
       data: delta,
       instanceId: INSTANCE_ID
     });
+    if (Buffer.byteLength(notifyPayload, "utf8") >= 7500) {
+      const reportId = delta?.id ?? delta?.reportId;
+      notifyPayload = JSON.stringify({
+        type: "fleet_delta_ref",
+        orgId,
+        reportId,
+        instanceId: INSTANCE_ID
+      });
+    }
     _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {
     });
   }
@@ -111142,8 +111204,10 @@ function emitNewReport(event) {
       data: sanitized,
       instanceId: INSTANCE_ID
     });
-    _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {
-    });
+    if (Buffer.byteLength(notifyPayload, "utf8") < 7500) {
+      _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {
+      });
+    }
   }
   if (statsBroadcastTimer) {
     clearTimeout(statsBroadcastTimer);
@@ -111170,6 +111234,11 @@ var heartbeatTimer = setInterval(async () => {
   }
 }, 3e4);
 function closeAllStreams() {
+  isShuttingDown = true;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer);
     heartbeatTimer = null;
@@ -111203,7 +111272,8 @@ function closeAllStreams() {
   activeIpCounts.clear();
   if (listenerClient) {
     try {
-      listenerClient.release();
+      listenerClient.end().catch(() => {
+      });
     } catch {
     }
     listenerClient = null;
@@ -112000,22 +112070,24 @@ router4.get("/", async (req, res) => {
   const user = userRows[0];
   let reports = [];
   if (user) {
-    reports = await db.select({
-      id: reportsTable.id,
-      resultJson: reportPayloadsTable.resultJson,
-      createdAt: reportsTable.createdAt,
-      habitScore: reportHabitAnswersTable.habitScore,
-      combinedScore: reportHabitAnswersTable.combinedScore
-    }).from(reportsTable).innerJoin(reportPayloadsTable, eq(reportsTable.id, reportPayloadsTable.reportId)).leftJoin(
-      reportHabitAnswersTable,
-      eq(reportsTable.id, reportHabitAnswersTable.reportId)
-    ).where(
-      and(
-        eq(reportsTable.userId, user.id),
-        isNull(reportsTable.deletedAt),
-        eq(reportsTable.claimed, true)
-      )
-    ).orderBy(reportsTable.createdAt);
+    reports = await withUserScope(user.id, async (tx) => {
+      return await tx.select({
+        id: reportsTable.id,
+        resultJson: reportPayloadsTable.resultJson,
+        createdAt: reportsTable.createdAt,
+        habitScore: reportHabitAnswersTable.habitScore,
+        combinedScore: reportHabitAnswersTable.combinedScore
+      }).from(reportsTable).innerJoin(reportPayloadsTable, eq(reportsTable.id, reportPayloadsTable.reportId)).leftJoin(
+        reportHabitAnswersTable,
+        eq(reportsTable.id, reportHabitAnswersTable.reportId)
+      ).where(
+        and(
+          eq(reportsTable.userId, user.id),
+          isNull(reportsTable.deletedAt),
+          eq(reportsTable.claimed, true)
+        )
+      ).orderBy(reportsTable.createdAt);
+    });
   }
   res.json({
     email: email3,
@@ -130362,7 +130434,16 @@ app.use(
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"]
       }
-    }
+    },
+    hsts: {
+      maxAge: 63072e3,
+      includeSubDomains: true,
+      preload: true
+    },
+    referrerPolicy: {
+      policy: "no-referrer"
+    },
+    xContentTypeOptions: true
   })
 );
 app.use(
