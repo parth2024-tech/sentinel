@@ -125288,7 +125288,7 @@ app.use(
   })
 );
 app.use(import_express15.default.urlencoded({ extended: true, limit: "256kb" }));
-app.get("/health", (_req, res) => {
+app.get(["/", "/health"], (_req, res) => {
   res.status(200).json({
     status: "ok",
     service: "sentinel-api",

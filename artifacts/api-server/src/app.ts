@@ -118,8 +118,8 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: "256kb" }));
 
 // ── Health check ─────────────────────────────────────────────────────────────
-// Used by Render health checks, uptime monitors, and the PowerShell script.
-app.get("/health", (_req: Request, res: Response) => {
+// Used by Render health checks, uptime monitors, root ping, and the PowerShell script.
+app.get(["/", "/health"], (_req: Request, res: Response) => {
   res.status(200).json({
     status: "ok",
     service: "sentinel-api",

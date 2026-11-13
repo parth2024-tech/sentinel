@@ -5,6 +5,7 @@ services:
     plan: free
     region: oregon
     branch: main
+    healthCheckPath: /health
     # Build only the API server — skips full workspace typecheck that fails on Render
     buildCommand: "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build"
     startCommand: "node artifacts/api-server/dist/index.mjs"
@@ -14,3 +15,7 @@ services:
         value: production
       - key: PORT
         value: "10000"
+      - key: DATABASE_URL
+        sync: false
+      - key: SERVER_SECRET
+        generateValue: true

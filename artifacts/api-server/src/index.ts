@@ -13,7 +13,16 @@ const EnvSchema = z.object({
   SERVER_SECRET: z.string().default("sentinel-default-server-secret-key-32-chars-long"),
 });
 
-const env = EnvSchema.parse(process.env); // throws on startup if invalid
+let env: z.infer<typeof EnvSchema>;
+try {
+  env = EnvSchema.parse(process.env);
+} catch (error) {
+  logger.fatal(
+    { error },
+    "Startup environment validation failed. Ensure required environment variables (e.g. DATABASE_URL) are set."
+  );
+  process.exit(1);
+}
 
 // Import app after env validation so DB init uses validated env
 import app from "./app.js";
@@ -23,10 +32,16 @@ import { closeAllStreams } from "./lib/liveFeed.js";
 
 const port = env.PORT;
 
-const server = app.listen(port, async () => {
-  logger.info({ port }, "Server listening");
-  await initQueue();
-  startCleanupScheduler();
+const server = app.listen(port, "0.0.0.0", () => {
+  logger.info({ port, host: "0.0.0.0" }, "Server listening");
+  initQueue().catch((err) => {
+    logger.error({ err }, "Background queue failed to initialize");
+  });
+  try {
+    startCleanupScheduler();
+  } catch (err) {
+    logger.error({ err }, "Cleanup scheduler failed to start");
+  }
 });
 
 // ── Graceful shutdown (#13) ───────────────────────────────────────────────────

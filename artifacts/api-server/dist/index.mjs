@@ -111017,34 +111017,42 @@ async function initQueue() {
     logger.warn("DATABASE_URL not set. Background queue will not be initialized.");
     return;
   }
-  boss = new PgBoss(process.env.DATABASE_URL);
-  boss.on("error", (error40) => logger.error({ error: error40 }, "pg-boss error"));
-  await boss.start();
-  logger.info("Background queue started successfully");
-  await boss.createQueue("send-claim-email");
-  await boss.createQueue("emit-live-feed");
-  await boss.work("send-claim-email", async (job) => {
-    try {
-      const { email: email3, reportId } = job.data;
-      if (!isResendConfigured()) {
-        logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
-        return;
+  try {
+    boss = new PgBoss(process.env.DATABASE_URL);
+    boss.on("error", (error40) => logger.error({ error: error40 }, "pg-boss error"));
+    await boss.start();
+    logger.info("Background queue started successfully");
+    await boss.createQueue("send-claim-email").catch((err) => {
+      logger.warn({ err }, "createQueue send-claim-email warning");
+    });
+    await boss.createQueue("emit-live-feed").catch((err) => {
+      logger.warn({ err }, "createQueue emit-live-feed warning");
+    });
+    await boss.work("send-claim-email", async (job) => {
+      try {
+        const { email: email3, reportId } = job.data;
+        if (!isResendConfigured()) {
+          logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
+          return;
+        }
+        const { subject, html, text: text2 } = buildReportClaimedEmail(email3, reportId);
+        await sendTransactionalEmail({ to: email3, subject, html, text: text2 });
+      } catch (err) {
+        logger.error({ err, jobId: job.id }, "send-claim-email worker failed");
+        throw err;
       }
-      const { subject, html, text: text2 } = buildReportClaimedEmail(email3, reportId);
-      await sendTransactionalEmail({ to: email3, subject, html, text: text2 });
-    } catch (err) {
-      logger.error({ err, jobId: job.id }, "send-claim-email worker failed");
-      throw err;
-    }
-  });
-  await boss.work("emit-live-feed", async (job) => {
-    try {
-      const data = job.data;
-      emitNewReport(data);
-    } catch (err) {
-      logger.error({ err, jobId: job.id }, "emit-live-feed worker failed");
-    }
-  });
+    });
+    await boss.work("emit-live-feed", async (job) => {
+      try {
+        const data = job.data;
+        emitNewReport(data);
+      } catch (err) {
+        logger.error({ err, jobId: job.id }, "emit-live-feed worker failed");
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "pg-boss initQueue failed to start");
+  }
 }
 async function stopQueue() {
   if (boss) {
@@ -129881,7 +129889,7 @@ app.use(
   })
 );
 app.use(import_express15.default.urlencoded({ extended: true, limit: "256kb" }));
-app.get("/health", (_req, res) => {
+app.get(["/", "/health"], (_req, res) => {
   res.status(200).json({
     status: "ok",
     service: "sentinel-api",
@@ -130025,12 +130033,27 @@ var EnvSchema = external_exports.object({
   ALLOWED_ORIGINS: external_exports.string().optional(),
   SERVER_SECRET: external_exports.string().default("sentinel-default-server-secret-key-32-chars-long")
 });
-var env = EnvSchema.parse(process.env);
+var env;
+try {
+  env = EnvSchema.parse(process.env);
+} catch (error40) {
+  logger.fatal(
+    { error: error40 },
+    "Startup environment validation failed. Ensure required environment variables (e.g. DATABASE_URL) are set."
+  );
+  process.exit(1);
+}
 var port = env.PORT;
-var server = app_default.listen(port, async () => {
-  logger.info({ port }, "Server listening");
-  await initQueue();
-  startCleanupScheduler();
+var server = app_default.listen(port, "0.0.0.0", () => {
+  logger.info({ port, host: "0.0.0.0" }, "Server listening");
+  initQueue().catch((err) => {
+    logger.error({ err }, "Background queue failed to initialize");
+  });
+  try {
+    startCleanupScheduler();
+  } catch (err) {
+    logger.error({ err }, "Cleanup scheduler failed to start");
+  }
 });
 function shutdown(signal) {
   logger.info({ signal }, "shutdown_initiated");

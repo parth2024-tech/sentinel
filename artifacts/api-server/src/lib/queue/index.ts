@@ -16,41 +16,49 @@ export async function initQueue() {
     return;
   }
 
-  boss = new PgBoss(process.env.DATABASE_URL);
+  try {
+    boss = new PgBoss(process.env.DATABASE_URL);
 
-  boss.on("error", (error: unknown) => logger.error({ error }, "pg-boss error"));
+    boss.on("error", (error: unknown) => logger.error({ error }, "pg-boss error"));
 
-  await boss.start();
-  logger.info("Background queue started successfully");
+    await boss.start();
+    logger.info("Background queue started successfully");
 
-  // Ensure queues exist (required in pg-boss v10+ strict mode)
-  await boss.createQueue("send-claim-email");
-  await boss.createQueue("emit-live-feed");
+    // Ensure queues exist (required in pg-boss v10+ strict mode)
+    await boss.createQueue("send-claim-email").catch((err: unknown) => {
+      logger.warn({ err }, "createQueue send-claim-email warning");
+    });
+    await boss.createQueue("emit-live-feed").catch((err: unknown) => {
+      logger.warn({ err }, "createQueue emit-live-feed warning");
+    });
 
-  // Define workers
-  await boss.work("send-claim-email", async (job: any) => {
-    try {
-      const { email, reportId } = job.data as { email: string; reportId: string };
-      if (!isResendConfigured()) {
-        logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
-        return;
+    // Define workers
+    await boss.work("send-claim-email", async (job: any) => {
+      try {
+        const { email, reportId } = job.data as { email: string; reportId: string };
+        if (!isResendConfigured()) {
+          logger.warn(`Resend is not configured, skipping claim email for ${reportId}`);
+          return;
+        }
+        const { subject, html, text } = buildReportClaimedEmail(email, reportId);
+        await sendTransactionalEmail({ to: email, subject, html, text });
+      } catch (err) {
+        logger.error({ err, jobId: job.id }, "send-claim-email worker failed");
+        throw err;
       }
-      const { subject, html, text } = buildReportClaimedEmail(email, reportId);
-      await sendTransactionalEmail({ to: email, subject, html, text });
-    } catch (err) {
-      logger.error({ err, jobId: job.id }, "send-claim-email worker failed");
-      throw err;
-    }
-  });
+    });
 
-  await boss.work("emit-live-feed", async (job: any) => {
-    try {
-      const data = job.data as any;
-      emitNewReport(data);
-    } catch (err) {
-      logger.error({ err, jobId: job.id }, "emit-live-feed worker failed");
-    }
-  });
+    await boss.work("emit-live-feed", async (job: any) => {
+      try {
+        const data = job.data as any;
+        emitNewReport(data);
+      } catch (err) {
+        logger.error({ err, jobId: job.id }, "emit-live-feed worker failed");
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "pg-boss initQueue failed to start");
+  }
 }
 
 export async function stopQueue() {
