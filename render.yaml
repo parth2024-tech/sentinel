@@ -7,7 +7,7 @@ services:
     branch: main
     healthCheckPath: /health
     # Build only the API server — skips full workspace typecheck that fails on Render
-    buildCommand: "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build"
+    buildCommand: "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build"
     startCommand: "node artifacts/api-server/dist/index.mjs"
     autoDeploy: true
     envVars:
