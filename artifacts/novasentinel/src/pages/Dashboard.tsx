@@ -207,9 +207,38 @@ export default function Dashboard() {
       }
     }
 
-    fetchData(); // Initial
-    const t = setInterval(fetchData, 4000); // Poll every 4 seconds
-    return () => clearInterval(t);
+    fetchData(); // Initial load
+
+    // ── Real-time SSE stream for instant telemetry deltas ────────────────────
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/fleet/stream");
+      es.addEventListener("fleet_delta", () => {
+        fetchData();
+      });
+      es.onerror = () => {
+        // Fallback gracefully to low-frequency polling if SSE disconnected
+        es?.close();
+      };
+    } catch {
+      // EventSource unavailable
+    }
+
+    // ── Low-frequency 60s fallback poll + immediate refresh on tab focus ──────
+    const pollTimer = setInterval(fetchData, 60000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchData();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      es?.close();
+      clearInterval(pollTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   const live = history[history.length - 1] ?? { cpu: 0, ram: 0, cpuTemp: 0, chassisTemp: 0, net: 0 };

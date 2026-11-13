@@ -1,3 +1,6 @@
+# Enforce modern TLS 1.2 and TLS 1.3 protocol security at start
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
 # ============================================================
 # DELL LAPTOP COMPREHENSIVE DIAGNOSTIC SCRIPT
 # Covers: XPS, Inspiron, Latitude, Vostro, Alienware, G-Series, Precision

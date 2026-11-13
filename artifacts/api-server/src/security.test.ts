@@ -463,4 +463,102 @@ describe("Adversarial Security & Concurrency Test Suite", () => {
       expect(reportResult.overall).toBeLessThanOrEqual(100);
     });
   });
+
+  // ── 10. Active SSE Concurrency Gauge ─────────────────────────────────────────
+  describe("Active SSE Concurrency Gauge (Fix 1.5)", () => {
+    it("allows up to 3 concurrent connections per IP and rejects the 4th, recovering upon close", () => {
+      const testIp = "test-gauge-" + crypto.randomBytes(4).toString("hex");
+
+      const closeCallbacks: Array<() => void> = [];
+      const createMockRes = () => {
+        let onClose: (() => void) | null = null;
+        return {
+          on: vi.fn((event: string, cb: () => void) => {
+            if (event === "close") {
+              onClose = cb;
+              closeCallbacks.push(cb);
+            }
+          }),
+          write: vi.fn(),
+          end: vi.fn(),
+          writableEnded: false,
+          destroyed: false,
+          triggerClose: () => onClose?.(),
+        } as any;
+      };
+
+      const res1 = createMockRes();
+      const res2 = createMockRes();
+      const res3 = createMockRes();
+      const res4 = createMockRes();
+
+      // 1st, 2nd, 3rd allowed
+      expect(addClient(res1, testIp)).toBe(true);
+      expect(addClient(res2, testIp)).toBe(true);
+      expect(addClient(res3, testIp)).toBe(true);
+
+      // 4th must be rejected by concurrency gauge
+      expect(addClient(res4, testIp)).toBe(false);
+
+      // When 1 connection terminates, gauge decrements and a new client is accepted
+      res1.triggerClose();
+      expect(addClient(res4, testIp)).toBe(true);
+
+      // Clean up
+      closeAllStreams();
+    });
+  });
+
+  // ── 11. Schema String Length Bounds ──────────────────────────────────────────
+  describe("Schema String Length Bounds (Finding 2.3)", () => {
+    it("rejects telemetry payloads containing oversized string fields", () => {
+      const basePayload = {
+        sentinelSchema: 1,
+        generatedAt: new Date().toISOString(),
+        system: {
+          hostname: "WORKSTATION-01",
+          model: "ThinkPad X1",
+          manufacturer: "Lenovo",
+        },
+      };
+
+      // Oversized hostname > 256 chars
+      const invalidHostnamePayload = {
+        ...basePayload,
+        system: {
+          ...basePayload.system,
+          hostname: "A".repeat(257),
+        },
+      };
+      expect(SentinelReportSchema.safeParse(invalidHostnamePayload).success).toBe(false);
+
+      // Oversized generatedAt > 64 chars
+      const invalidGenAtPayload = {
+        ...basePayload,
+        generatedAt: "2026-11-13T" + "9".repeat(60),
+      };
+      expect(SentinelReportSchema.safeParse(invalidGenAtPayload).success).toBe(false);
+
+      // Valid bounds pass
+      expect(SentinelReportSchema.safeParse(basePayload).success).toBe(true);
+    });
+  });
+
+  // ── 12. Pre-Query Rate Limiting & Scan Fail Defense ──────────────────────────
+  describe("Pre-Query Rate Limiting & Scan Fail Defense (Fix 2.2)", () => {
+    it("enforces attempt rate limits before executing database queries", async () => {
+      const ip = "attacker-ip-" + crypto.randomBytes(4).toString("hex");
+      const attemptKey = `${ip}:pair_attempt`;
+
+      const attempts: boolean[] = [];
+      for (let i = 0; i < 11; i++) {
+        attempts.push(await consumeRateLimit(attemptKey, 15, 10));
+      }
+
+      // First 10 allowed
+      expect(attempts.slice(0, 10)).toEqual(new Array(10).fill(true));
+      // 11th blocked before DB query
+      expect(attempts[10]).toBe(false);
+    });
+  });
 });

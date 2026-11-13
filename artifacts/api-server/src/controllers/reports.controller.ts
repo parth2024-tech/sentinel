@@ -47,6 +47,17 @@ export class ReportsController {
     const timestampStr = Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader;
     const signatureStr = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
 
+    // Finding 2.1: Authenticated paired agents MUST provide HMAC attestation
+    if (deviceToken && (!signatureStr || !timestampStr)) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+      res.status(401).json({
+        error: "Mandatory agent HMAC attestation missing: X-Sentinel-Signature and X-Sentinel-Timestamp required.",
+        serverTime: nowSec,
+      });
+      return;
+    }
+
     if (signatureStr) {
       const nowSec = Math.floor(Date.now() / 1000);
       if (!timestampStr) {

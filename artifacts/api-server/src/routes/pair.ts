@@ -146,7 +146,15 @@ router.post("/push", async (req, res) => {
 
   const now = new Date();
 
-  // Validate pair session exists first
+  // Fix 2.2: Check attempt rate limit BEFORE executing database query to prevent DB exhaustion
+  const attemptAllowed = await consumeRateLimit(ipHash + ":pair_attempt", 15, 10);
+  if (!attemptAllowed) {
+    res.set("Retry-After", "900");
+    res.status(429).json({ error: "Excessive pairing attempts from this IP. Blocked for 15 minutes." });
+    return;
+  }
+
+  // Validate pair session exists
   const sessionRows = await db
     .select()
     .from(pairSessionsTable)

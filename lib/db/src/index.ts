@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import { sql } from "drizzle-orm";
 import pg from "pg";
 import * as schema from "./schema";
 
@@ -20,5 +21,20 @@ export const pool = new Pool({
 });
 
 export const db = drizzle(pool, { schema });
+
+/**
+ * Execute operations within a tenant-scoped transaction.
+ * Sets PostgreSQL session variable `app.current_org_id` locally within the transaction
+ * to enforce database-level Row Level Security (RLS) across tenant-scoped queries.
+ */
+export async function withTenantScope<T>(
+  orgId: string,
+  fn: (tx: typeof db) => Promise<T>
+): Promise<T> {
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.current_org_id', ${orgId}, true)`);
+    return await fn(tx as unknown as typeof db);
+  });
+}
 
 export * from "./schema";

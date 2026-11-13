@@ -57,3 +57,12 @@ jobs:
 
     - name: Run Test Suite
       run: pnpm run test
+
+    - name: Script Integrity & Canonical URL Audit
+      run: |
+        echo "Verifying no legacy onrender.com URLs exist in scripts or source files..."
+        if grep -rEi "onrender\.com" artifacts/ lib/ native/ scripts/; then
+          echo "ERROR: Legacy onrender.com URL detected! All endpoints must use https://sentinelapp.io or https://api.sentinelapp.io"
+          exit 1
+        fi
+        echo "Script integrity audit passed."

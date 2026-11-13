@@ -4,6 +4,7 @@ import {
   idempotencyKeysTable,
   myReportsSessionsTable,
   suspectPayloadsTable,
+  pairSessionsTable,
 } from "@workspace/db";
 import { lt, or, and, isNotNull, inArray, sql } from "drizzle-orm";
 import { logger } from "./logger.js";
@@ -157,6 +158,46 @@ async function cleanupSuspectPayloads(): Promise<void> {
 }
 
 /**
+ * Delete expired or used pair sessions older than 24 hours in bounded batches.
+ */
+async function cleanupPairSessions(): Promise<void> {
+  try {
+    const expiredCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours
+    let deletedTotal = 0;
+
+    while (true) {
+      const rows = await db
+        .select({ code: pairSessionsTable.code })
+        .from(pairSessionsTable)
+        .where(
+          or(
+            lt(pairSessionsTable.expiresAt, expiredCutoff),
+            and(
+              isNotNull(pairSessionsTable.usedAt),
+              lt(pairSessionsTable.usedAt, expiredCutoff)
+            )
+          )
+        )
+        .limit(BATCH_SIZE);
+
+      if (rows.length === 0) break;
+
+      const codes = rows.map((r) => r.code);
+      await db
+        .delete(pairSessionsTable)
+        .where(inArray(pairSessionsTable.code, codes));
+
+      deletedTotal += rows.length;
+      if (rows.length < BATCH_SIZE || deletedTotal >= 10_000) break;
+    }
+
+    logger.debug({ deletedTotal }, "pair_sessions_cleanup_complete");
+  } catch (err) {
+    logger.error({ err }, "pair_sessions_cleanup_failed");
+  }
+}
+
+/**
  * One-time startup migration: Purge legacy non-hashed plaintext sessions
  * to ensure no unhashed tokens remain valid.
  */
@@ -184,6 +225,7 @@ async function runAllCleanups(): Promise<void> {
   await cleanupExpiredSessions();
   await cleanupIdempotencyKeys();
   await cleanupSuspectPayloads();
+  await cleanupPairSessions();
 }
 
 /**

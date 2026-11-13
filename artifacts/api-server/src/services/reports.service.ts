@@ -8,6 +8,7 @@ import { newClaimToken, newShareToken, sha256hex } from "../lib/ids.js";
 import { consumeRateLimit } from "../lib/rateLimit.js";
 import { enqueueClaimEmail, enqueueLiveFeed } from "../lib/queue/index.js";
 import { timingSafeEqualStr, canonicalJsonHash, getRequiredServerSecret } from "../lib/crypto.js";
+import { emitFleetDelta } from "../lib/liveFeed.js";
 import pino from "pino";
 
 // A dummy logger for service use if req.log isn't passed (though passing it is better)
@@ -180,6 +181,15 @@ export class ReportsService {
       batteryHealth: raw.battery?.health ?? null,
       timestamp: new Date().toISOString(),
     }).catch((e) => logger.error({ err: e }, "Failed to enqueue live feed"));
+
+    if (agentDeviceOrgId) {
+      emitFleetDelta(agentDeviceOrgId, {
+        reportId: id,
+        overall: (resultJson as any).overall,
+        components: (resultJson as any).components,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     return { id, claimToken, result: resultJson, habitScore, combinedScore: combined, deduplicated: false };
   }

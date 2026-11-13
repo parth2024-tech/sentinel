@@ -1,11 +1,17 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
+import crypto from "node:crypto";
 import { db } from "@workspace/db";
 import { addClient, getStats, getRecentEvents, initLiveFeed } from "../lib/liveFeed.js";
+import { consumeRateLimit } from "../lib/rateLimit.js";
 
 // Initialise live feed with DB (once on first import)
 initLiveFeed(db);
 
 const router = Router();
+
+function getClientIp(req: Request): string {
+  return req.ip ?? req.socket?.remoteAddress ?? "unknown";
+}
 
 // ── GET /api/live/stats ───────────────────────────────────────────────────────
 
@@ -25,8 +31,20 @@ router.get("/stats", async (_req, res) => {
 // ── GET /api/live/stream ──────────────────────────────────────────────────────
 
 router.get("/stream", async (req, res) => {
-  if (!addClient(res)) {
-    res.status(503).json({ error: "Live stream capacity reached. Try again later." });
+  const ip = getClientIp(req);
+  const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
+
+  // Burst connection rate limit: max 10 connections per minute per IP
+  const burstAllowed = await consumeRateLimit(ipHash + ":sse_burst", 1, 10);
+  if (!burstAllowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many stream connection attempts. Please slow down." });
+    return;
+  }
+
+  // Active concurrent connection gauge: max 3 concurrent active streams per IP
+  if (!addClient(res, ipHash)) {
+    res.status(503).json({ error: "Active stream capacity reached or too many concurrent streams from this IP." });
     return;
   }
 

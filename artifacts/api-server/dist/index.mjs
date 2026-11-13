@@ -23238,14 +23238,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto9 = __require("crypto");
+    var crypto14 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto9.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto14.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -26720,17 +26720,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto9 = __require("crypto");
+    var crypto14 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto9.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto9.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto14.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -28360,11 +28360,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
-    var crypto9 = __require("crypto");
+    var crypto14 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto9.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -28373,7 +28373,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto9.createHash("sha1").update(str).digest("hex");
+      return crypto14.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -30033,7 +30033,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "../../node_modules/.pnpm/pg@8.21.0/node_modules/pg/lib/crypto/sasl.js"(exports, module) {
     "use strict";
-    var crypto9 = require_utils5();
+    var crypto14 = require_utils5();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -30051,7 +30051,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto9.randomBytes(18).toString("base64");
+      const clientNonce = crypto14.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
       return {
         mechanism,
@@ -30093,20 +30093,20 @@ var require_sasl = __commonJS({
         const peerCert = stream.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto9.hashByName(hashName, peerCert);
+        const certHash = await crypto14.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto9.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto9.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto9.sha256(clientKey);
-      const clientSignature = await crypto9.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto14.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto14.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto14.sha256(clientKey);
+      const clientSignature = await crypto14.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto9.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto9.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto14.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto14.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -32279,7 +32279,7 @@ var require_client = __commonJS({
     var Query2 = require_query();
     var defaults3 = require_defaults();
     var Connection2 = require_connection();
-    var crypto9 = require_utils5();
+    var crypto14 = require_utils5();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -32526,7 +32526,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto9.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto14.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e2) {
             this.emit("error", e2);
@@ -60410,7 +60410,7 @@ var require_react_dom_server_node_production = __commonJS({
   "../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom/cjs/react-dom-server.node.production.js"(exports) {
     "use strict";
     var util2 = __require("util");
-    var crypto9 = __require("crypto");
+    var crypto14 = __require("crypto");
     var async_hooks = __require("async_hooks");
     var React = require_react();
     var ReactDOM = require_react_dom();
@@ -63074,7 +63074,7 @@ var require_react_dom_server_node_production = __commonJS({
     function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
       if (void 0 !== permalink) return "p" + permalink;
       permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-      componentKeyPath = crypto9.createHash("md5");
+      componentKeyPath = crypto14.createHash("md5");
       componentKeyPath.update(permalink);
       return "k" + componentKeyPath.digest("hex");
     }
@@ -74753,7 +74753,7 @@ var require_react_dom_server_node_development = __commonJS({
       function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
         if (void 0 !== permalink) return "p" + permalink;
         permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-        componentKeyPath = crypto9.createHash("md5");
+        componentKeyPath = crypto14.createHash("md5");
         componentKeyPath.update(permalink);
         return "k" + componentKeyPath.digest("hex");
       }
@@ -77461,7 +77461,7 @@ var require_react_dom_server_node_development = __commonJS({
           }
         };
       }
-      var util2 = __require("util"), crypto9 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
+      var util2 = __require("util"), crypto14 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
         "^[:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$"
       ), illegalAttributeNameCache = {}, validatedAttributeNameCache = {}, unitlessNumbers = new Set(
         "animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth boxFlex boxFlexGroup boxOrdinalGroup columnCount columns flex flexGrow flexPositive flexShrink flexNegative flexOrder gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight lineClamp lineHeight opacity order orphans scale tabSize widows zIndex zoom fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth MozAnimationIterationCount MozBoxFlex MozBoxFlexGroup MozLineClamp msAnimationIterationCount msFlex msZoom msFlexGrow msFlexNegative msFlexOrder msFlexPositive msFlexShrink msGridColumn msGridColumnSpan msGridRow msGridRowSpan WebkitAnimationIterationCount WebkitBoxFlex WebKitBoxFlexGroup WebkitBoxOrdinalGroup WebkitColumnCount WebkitColumns WebkitFlex WebkitFlexGrow WebkitFlexPositive WebkitFlexShrink WebkitLineClamp".split(
@@ -82896,7 +82896,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express14 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 
 // ../../node_modules/.pnpm/helmet@8.1.0/node_modules/helmet/index.mjs
@@ -83446,7 +83446,7 @@ var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express14 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -101978,9 +101978,11 @@ var organizationsTable = pgTable("organizations", {
   stripeSubscriptionId: text("stripe_subscription_id").unique(),
   stripeCustomerId: text("stripe_customer_id").unique(),
   stripePriceId: text("stripe_price_id"),
+  apiKeyHash: text("api_key_hash").unique(),
   status: text("status"),
   // active, trialing, past_due, canceled
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  stripeUpdatedAt: timestamp("stripe_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 });
@@ -102074,7 +102076,9 @@ var devicesTable = pgTable(
     id: text("id").primaryKey(),
     pairToken: text("pair_token").notNull().unique(),
     deviceToken: text("device_token").notNull().unique(),
+    userId: text("user_id").references(() => usersTable.id),
     orgId: text("org_id").references(() => organizationsTable.id),
+    pendingClaimEmail: text("pending_claim_email"),
     claimed: boolean("claimed").notNull().default(false),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
     /** Pair token expiry — reject claims on tokens past this time (#6) */
@@ -102188,6 +102192,12 @@ var pool = new Pool3({
   // Fail fast if can't connect in 5 seconds
 });
 var db = drizzle(pool, { schema: schema_exports });
+async function withTenantScope(orgId, fn2) {
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.current_org_id', ${orgId}, true)`);
+    return await fn2(tx);
+  });
+}
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
@@ -102499,15 +102509,15 @@ var RecentSystemErrorSchema = external_exports.object({
 });
 var SentinelReportSchema = external_exports.object({
   sentinelSchema: external_exports.literal(1),
-  generatedAt: external_exports.string(),
+  generatedAt: external_exports.string().max(64),
   system: external_exports.object({
-    hostname: external_exports.string(),
-    model: external_exports.string(),
-    manufacturer: external_exports.string(),
-    os: external_exports.string().nullish(),
-    osVersion: external_exports.string().nullish(),
-    biosVersion: external_exports.string().nullish(),
-    bootTime: external_exports.string().nullish(),
+    hostname: external_exports.string().max(256),
+    model: external_exports.string().max(256),
+    manufacturer: external_exports.string().max(256),
+    os: external_exports.string().max(256).nullish(),
+    osVersion: external_exports.string().max(128).nullish(),
+    biosVersion: external_exports.string().max(128).nullish(),
+    bootTime: external_exports.string().max(64).nullish(),
     uptimeHours: external_exports.number().nullish()
   }),
   battery: external_exports.object({
@@ -102515,7 +102525,7 @@ var SentinelReportSchema = external_exports.object({
     fullChargeCapacity: external_exports.number().nullish(),
     cycleCount: external_exports.number().nullish(),
     health: external_exports.number().nullish(),
-    status: external_exports.union([external_exports.string(), external_exports.number()]).nullish(),
+    status: external_exports.union([external_exports.string().max(64), external_exports.number()]).nullish(),
     dischargeRateMw: external_exports.number().nullish(),
     batteryTempC: external_exports.number().nullish(),
     batteryVoltageV: external_exports.number().nullish()
@@ -110799,7 +110809,10 @@ async function sendTransactionalEmail(input) {
 
 // src/lib/liveFeed.ts
 var clients = /* @__PURE__ */ new Set();
+var fleetClients = /* @__PURE__ */ new Map();
+var activeIpCounts = /* @__PURE__ */ new Map();
 var MAX_GLOBAL_SSE_CLIENTS = 1e3;
+var MAX_CONCURRENT_PER_IP = 3;
 var cachedStats = null;
 var statsLastFetched = 0;
 var STATS_TTL_MS = 3e4;
@@ -110919,13 +110932,78 @@ async function getStats(forceRefresh = false) {
   });
   return inflightStatsPromise;
 }
-function addClient(res) {
+function addClient(res, ipHash) {
   if (clients.size >= MAX_GLOBAL_SSE_CLIENTS) {
     return false;
   }
+  if (ipHash) {
+    const current = activeIpCounts.get(ipHash) ?? 0;
+    if (current >= MAX_CONCURRENT_PER_IP) {
+      return false;
+    }
+    activeIpCounts.set(ipHash, current + 1);
+  }
   clients.add(res);
-  res.on("close", () => clients.delete(res));
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    clients.delete(res);
+    if (ipHash) {
+      const c2 = activeIpCounts.get(ipHash) ?? 1;
+      if (c2 <= 1) {
+        activeIpCounts.delete(ipHash);
+      } else {
+        activeIpCounts.set(ipHash, c2 - 1);
+      }
+    }
+  };
+  res.on("close", cleanup);
+  res.on("error", cleanup);
   return true;
+}
+function addFleetClient(res, orgId, ipHash) {
+  if (ipHash) {
+    const current = activeIpCounts.get(ipHash) ?? 0;
+    if (current >= MAX_CONCURRENT_PER_IP) {
+      return false;
+    }
+    activeIpCounts.set(ipHash, current + 1);
+  }
+  let orgSet = fleetClients.get(orgId);
+  if (!orgSet) {
+    orgSet = /* @__PURE__ */ new Set();
+    fleetClients.set(orgId, orgSet);
+  }
+  orgSet.add(res);
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    const set2 = fleetClients.get(orgId);
+    if (set2) {
+      set2.delete(res);
+      if (set2.size === 0) fleetClients.delete(orgId);
+    }
+    if (ipHash) {
+      const c2 = activeIpCounts.get(ipHash) ?? 1;
+      if (c2 <= 1) {
+        activeIpCounts.delete(ipHash);
+      } else {
+        activeIpCounts.set(ipHash, c2 - 1);
+      }
+    }
+  };
+  res.on("close", cleanup);
+  res.on("error", cleanup);
+  return true;
+}
+function emitFleetDelta(orgId, delta) {
+  const orgSet = fleetClients.get(orgId);
+  if (!orgSet || orgSet.size === 0) return;
+  for (const client2 of orgSet) {
+    sendToClient(client2, "fleet_delta", delta);
+  }
 }
 function sendToClient(res, event, data) {
   if (res.writableEnded || res.destroyed) {
@@ -111008,6 +111086,19 @@ function closeAllStreams() {
     }
   }
   clients.clear();
+  for (const orgSet of fleetClients.values()) {
+    for (const client2 of orgSet) {
+      try {
+        if (!client2.writableEnded && !client2.destroyed) {
+          client2.write('event: shutdown\ndata: {"message":"Server shutting down"}\n\n');
+          client2.end();
+        }
+      } catch {
+      }
+    }
+  }
+  fleetClients.clear();
+  activeIpCounts.clear();
 }
 
 // src/lib/queue/index.ts
@@ -111219,6 +111310,14 @@ var ReportsService = class {
       batteryHealth: raw.battery?.health ?? null,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     }).catch((e2) => logger2.error({ err: e2 }, "Failed to enqueue live feed"));
+    if (agentDeviceOrgId) {
+      emitFleetDelta(agentDeviceOrgId, {
+        reportId: id,
+        overall: resultJson.overall,
+        components: resultJson.components,
+        createdAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
     return { id, claimToken, result: resultJson, habitScore, combinedScore: combined, deduplicated: false };
   }
   /**
@@ -111398,6 +111497,15 @@ var ReportsController = class {
     const signatureHeader = req.headers["x-sentinel-signature"];
     const timestampStr = Array.isArray(timestampHeader) ? timestampHeader[0] : timestampHeader;
     const signatureStr = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
+    if (deviceToken && (!signatureStr || !timestampStr)) {
+      const nowSec = Math.floor(Date.now() / 1e3);
+      res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
+      res.status(401).json({
+        error: "Mandatory agent HMAC attestation missing: X-Sentinel-Signature and X-Sentinel-Timestamp required.",
+        serverTime: nowSec
+      });
+      return;
+    }
     if (signatureStr) {
       const nowSec = Math.floor(Date.now() / 1e3);
       if (!timestampStr) {
@@ -111615,7 +111723,7 @@ ${url2}
 
 // src/routes/myReports.ts
 var router4 = (0, import_express4.Router)();
-var SESSION_COOKIE = "sentinel_session";
+var SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-sentinel_session" : "sentinel_session";
 var SESSION_TTL_DAYS = 30;
 function newToken(bytes = 32) {
   return crypto5.randomBytes(bytes).toString("hex");
@@ -111624,7 +111732,8 @@ function hashToken(token2) {
   return crypto5.createHash("sha256").update(token2).digest("hex");
 }
 function getSession(req) {
-  return req.cookies?.[SESSION_COOKIE] ?? null;
+  const cookies = req.cookies;
+  return cookies?.[SESSION_COOKIE] ?? cookies?.["sentinel_session"] ?? null;
 }
 async function resolveEmail(sessionToken) {
   const sessionHash = hashToken(sessionToken);
@@ -111722,6 +111831,30 @@ router4.get("/verify", async (req, res) => {
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3);
   await db.insert(myReportsSessionsTable).values({ token: sessionHash, email: email3, expiresAt });
   req.log.info({ email: email3 }, "my_reports_session_created");
+  try {
+    const userRows = await db.select().from(usersTable).where(eq(usersTable.email, email3)).limit(1);
+    let userId = userRows[0]?.id;
+    if (!userId) {
+      const newUserId = createId();
+      await db.insert(usersTable).values({
+        id: newUserId,
+        email: email3,
+        name: email3.split("@")[0] || "User"
+      });
+      userId = newUserId;
+    }
+    const memberships = await db.select().from(organizationMembersTable).where(eq(organizationMembersTable.userId, userId)).limit(1);
+    const orgId = memberships[0]?.orgId ?? null;
+    await db.update(devicesTable).set({
+      claimed: true,
+      claimedAt: /* @__PURE__ */ new Date(),
+      userId,
+      orgId,
+      pendingClaimEmail: null
+    }).where(eq(devicesTable.pendingClaimEmail, email3));
+  } catch (claimErr) {
+    req.log.warn({ claimErr, email: email3 }, "failed_to_finalize_pending_devices");
+  }
   res.cookie(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -111770,7 +111903,7 @@ router4.get("/", async (req, res) => {
       and(
         eq(reportsTable.userId, user.id),
         isNull(reportsTable.deletedAt),
-        isNotNull(reportsTable.claimed)
+        eq(reportsTable.claimed, true)
       )
     ).orderBy(reportsTable.createdAt);
   }
@@ -111792,14 +111925,15 @@ router4.delete("/session", async (req, res) => {
     await db.delete(myReportsSessionsTable).where(eq(myReportsSessionsTable.token, sessionHash)).catch(() => {
     });
   }
-  res.clearCookie(SESSION_COOKIE, { path: "/" });
+  res.clearCookie("__Host-sentinel_session", { path: "/", secure: true });
+  res.clearCookie("sentinel_session", { path: "/" });
   res.json({ ok: true });
 });
 var myReports_default = router4;
 
 // src/routes/devices.ts
 var import_express5 = __toESM(require_express2(), 1);
-import { randomBytes as randomBytes2 } from "crypto";
+import crypto6, { randomBytes as randomBytes2 } from "crypto";
 var router5 = (0, import_express5.Router)();
 function newToken2(len = 32) {
   return randomBytes2(len).toString("hex");
@@ -111885,9 +112019,82 @@ router5.post("/claim", async (req, res) => {
     res.json({ deviceId: device.id, claimed: true, alreadyClaimed: true });
     return;
   }
-  await db.update(devicesTable).set({ claimed: true, claimedAt: /* @__PURE__ */ new Date() }).where(eq(devicesTable.id, device.id));
-  req.log.info({ deviceId: device.id, ipHash }, "device_claimed");
-  res.json({ deviceId: device.id, claimed: true });
+  const cookies = req.cookies;
+  const sessionToken = cookies?.["__Host-sentinel_session"] || cookies?.["sentinel_session"];
+  let verifiedUser = null;
+  let verifiedOrgId = null;
+  if (sessionToken && sessionToken.length >= 16) {
+    const sessionHash = crypto6.createHash("sha256").update(sessionToken).digest("hex");
+    const sessionRows = await db.select().from(myReportsSessionsTable).where(
+      and(
+        eq(myReportsSessionsTable.token, sessionHash),
+        gt(myReportsSessionsTable.expiresAt, now)
+      )
+    ).limit(1);
+    const activeSession = sessionRows[0];
+    if (activeSession) {
+      const userRows = await db.select().from(usersTable).where(eq(usersTable.email, activeSession.email)).limit(1);
+      if (userRows[0]) {
+        verifiedUser = { id: userRows[0].id, email: userRows[0].email };
+      } else {
+        const newUid = createId();
+        await db.insert(usersTable).values({
+          id: newUid,
+          email: activeSession.email,
+          name: activeSession.email.split("@")[0] || "User"
+        });
+        verifiedUser = { id: newUid, email: activeSession.email };
+      }
+      const memberRows = await db.select().from(organizationMembersTable).where(eq(organizationMembersTable.userId, verifiedUser.id)).limit(1);
+      if (memberRows[0]) {
+        verifiedOrgId = memberRows[0].orgId;
+      } else {
+        const orgRows = await db.select().from(organizationsTable).where(eq(organizationsTable.ownerId, verifiedUser.id)).limit(1);
+        if (orgRows[0]) verifiedOrgId = orgRows[0].id;
+      }
+    }
+  }
+  if (verifiedUser) {
+    await db.update(devicesTable).set({
+      claimed: true,
+      claimedAt: /* @__PURE__ */ new Date(),
+      userId: verifiedUser.id,
+      orgId: verifiedOrgId,
+      pendingClaimEmail: null
+    }).where(eq(devicesTable.id, device.id));
+    req.log.info({ deviceId: device.id, userId: verifiedUser.id, orgId: verifiedOrgId }, "device_claimed_verified");
+    res.json({ deviceId: device.id, claimed: true, verified: true });
+    return;
+  }
+  const claimEmail = parsed.data.email.toLowerCase();
+  await db.update(devicesTable).set({
+    pendingClaimEmail: claimEmail
+  }).where(eq(devicesTable.id, device.id));
+  const linkToken = crypto6.randomBytes(32).toString("hex");
+  const linkTokenHash = crypto6.createHash("sha256").update(linkToken).digest("hex");
+  const linkExpiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1e3);
+  await db.insert(magicLinkTokensTable).values({
+    token: linkTokenHash,
+    email: claimEmail,
+    expiresAt: linkExpiresAt
+  });
+  const allowDevToken = process.env.NODE_ENV === "development" && process.env.ALLOW_DEV_TOKEN_LEAK === "true";
+  if (isResendConfigured()) {
+    try {
+      const { subject, html, text: text2 } = buildMagicLinkLoginEmail(linkToken, "login");
+      await sendTransactionalEmail({ to: claimEmail, subject, html, text: text2 });
+    } catch (err) {
+      req.log.error({ err, email: claimEmail }, "magic_link_device_claim_email_failed");
+    }
+  }
+  req.log.info({ deviceId: device.id, email: claimEmail }, "device_claim_pending_verification");
+  res.json({
+    deviceId: device.id,
+    claimed: false,
+    pendingVerification: true,
+    message: "A verification link has been sent to confirm device ownership.",
+    ...allowDevToken ? { devToken: linkToken } : {}
+  });
 });
 router5.get("/pair-status", async (req, res) => {
   const token2 = req.query["token"];
@@ -112006,6 +112213,12 @@ router6.post("/push", async (req, res) => {
   const { pairCode, rawJson } = parsed.data;
   const normalizedCode = pairCode.toUpperCase();
   const now = /* @__PURE__ */ new Date();
+  const attemptAllowed = await consumeRateLimit(ipHash + ":pair_attempt", 15, 10);
+  if (!attemptAllowed) {
+    res.set("Retry-After", "900");
+    res.status(429).json({ error: "Excessive pairing attempts from this IP. Blocked for 15 minutes." });
+    return;
+  }
   const sessionRows = await db.select().from(pairSessionsTable).where(eq(pairSessionsTable.code, normalizedCode)).limit(1);
   const session = sessionRows[0];
   if (!session) {
@@ -112075,7 +112288,8 @@ router7.get("/", async (_req, res) => {
         headers: {
           Accept: "application/vnd.github+json",
           "User-Agent": "SentinelAPI/1.0"
-        }
+        },
+        signal: AbortSignal.timeout(5e3)
       }
     );
     if (ghResponse.ok) {
@@ -112110,7 +112324,7 @@ var import_express8 = __toESM(require_express2(), 1);
 // src/lib/resolveDownload.ts
 import fs2 from "fs";
 import path from "path";
-import crypto6 from "node:crypto";
+import crypto7 from "node:crypto";
 import { fileURLToPath } from "url";
 var DOWNLOAD_SLUGS = ["oneshot", "setup", "agent"];
 var ASSET_FILENAMES = {
@@ -112234,7 +112448,7 @@ async function getAssetSha256(slug) {
   if (fs2.existsSync(localPath) && fs2.statSync(localPath).isFile()) {
     try {
       const buf = fs2.readFileSync(localPath);
-      return crypto6.createHash("sha256").update(buf).digest("hex");
+      return crypto7.createHash("sha256").update(buf).digest("hex");
     } catch {
       return null;
     }
@@ -112336,7 +112550,88 @@ var downloads_default = router8;
 
 // src/routes/organizations.ts
 var import_express9 = __toESM(require_express2(), 1);
+import crypto9 from "node:crypto";
+
+// src/middlewares/tenantAuth.ts
+import crypto8 from "node:crypto";
+function hashToken2(token2) {
+  return crypto8.createHash("sha256").update(token2).digest("hex");
+}
+async function requireTenantAuth(req, res, next2) {
+  try {
+    const rawApiKey = req.headers["x-sentinel-org-key"] || req.headers["x-sentinel-api-key"];
+    const apiKey = typeof rawApiKey === "string" ? rawApiKey.trim() : Array.isArray(rawApiKey) ? rawApiKey[0]?.trim() : void 0;
+    if (apiKey && apiKey.length >= 16) {
+      const keyHash = hashToken2(apiKey);
+      const orgs = await db.select().from(organizationsTable).where(eq(organizationsTable.apiKeyHash, keyHash)).limit(1);
+      const org = orgs[0];
+      if (org) {
+        req.tenant = {
+          userId: org.ownerId,
+          orgId: org.id,
+          role: "admin"
+        };
+        next2();
+        return;
+      }
+    }
+    const cookies = req.cookies;
+    const sessionToken = cookies?.["__Host-sentinel_session"] || cookies?.["sentinel_session"];
+    if (sessionToken && sessionToken.length >= 16) {
+      const sessionHash = hashToken2(sessionToken);
+      const now = /* @__PURE__ */ new Date();
+      const sessionRows = await db.select().from(myReportsSessionsTable).where(
+        and(
+          eq(myReportsSessionsTable.token, sessionHash),
+          gt(myReportsSessionsTable.expiresAt, now)
+        )
+      ).limit(1);
+      const session = sessionRows[0];
+      if (session) {
+        const userRows = await db.select().from(usersTable).where(eq(usersTable.email, session.email)).limit(1);
+        const user = userRows[0];
+        if (user) {
+          const requestedOrgId = typeof req.headers["x-organization-id"] === "string" ? req.headers["x-organization-id"] : void 0;
+          const memberships = await db.select().from(organizationMembersTable).where(eq(organizationMembersTable.userId, user.id));
+          const matchedMembership = requestedOrgId ? memberships.find((m) => m.orgId === requestedOrgId) : memberships[0];
+          if (matchedMembership) {
+            req.tenant = {
+              userId: user.id,
+              orgId: matchedMembership.orgId,
+              role: matchedMembership.role
+            };
+            next2();
+            return;
+          }
+          const ownedOrgs = await db.select().from(organizationsTable).where(eq(organizationsTable.ownerId, user.id));
+          const matchedOrg = requestedOrgId ? ownedOrgs.find((o2) => o2.id === requestedOrgId) : ownedOrgs[0];
+          if (matchedOrg) {
+            req.tenant = {
+              userId: user.id,
+              orgId: matchedOrg.id,
+              role: "owner"
+            };
+            next2();
+            return;
+          }
+        }
+      }
+    }
+    res.status(401).json({
+      error: "Authentication required",
+      details: "Valid session cookie or X-Sentinel-Org-Key header is required to access organization resources."
+    });
+  } catch (err) {
+    req.log?.error?.({ err }, "requireTenantAuth error");
+    res.status(500).json({ error: "Internal server error during authentication" });
+  }
+}
+
+// src/routes/organizations.ts
 var router9 = (0, import_express9.Router)();
+function hashToken3(token2) {
+  return crypto9.createHash("sha256").update(token2).digest("hex");
+}
 router9.post("/", async (req, res) => {
   const parsed = CreateOrganizationBody.safeParse(req.body);
   if (!parsed.success) {
@@ -112344,28 +112639,57 @@ router9.post("/", async (req, res) => {
     return;
   }
   const { name: name2 } = parsed.data;
+  const cookies = req.cookies;
+  const sessionToken = cookies?.["__Host-sentinel_session"] || cookies?.["sentinel_session"];
+  if (!sessionToken || sessionToken.length < 16) {
+    res.status(401).json({ error: "Authentication required to create an organization." });
+    return;
+  }
   try {
-    const owner = await db.select().from(usersTable).limit(1);
-    let ownerId = owner[0]?.id;
-    if (!ownerId) {
-      ownerId = createId();
+    const sessionHash = hashToken3(sessionToken);
+    const now = /* @__PURE__ */ new Date();
+    const sessionRows = await db.select().from(myReportsSessionsTable).where(
+      and(
+        eq(myReportsSessionsTable.token, sessionHash),
+        gt(myReportsSessionsTable.expiresAt, now)
+      )
+    ).limit(1);
+    const session = sessionRows[0];
+    if (!session) {
+      res.status(401).json({ error: "Session expired or invalid." });
+      return;
+    }
+    const userRows = await db.select().from(usersTable).where(eq(usersTable.email, session.email)).limit(1);
+    let userId = userRows[0]?.id;
+    if (!userId) {
+      const newUserId = createId();
       await db.insert(usersTable).values({
-        id: ownerId,
-        email: `dummy-${ownerId}@example.com`,
-        name: "Dummy Owner"
+        id: newUserId,
+        email: session.email,
+        name: session.email.split("@")[0] || "User"
       });
+      userId = newUserId;
     }
     const orgId = createId();
+    const apiKey = `sentinel_org_${crypto9.randomBytes(24).toString("hex")}`;
+    const apiKeyHash = hashToken3(apiKey);
     await db.insert(organizationsTable).values({
       id: orgId,
       name: name2,
-      ownerId,
+      ownerId: userId,
+      apiKeyHash,
       status: "active"
+    });
+    await db.insert(organizationMembersTable).values({
+      orgId,
+      userId,
+      role: "owner"
     });
     res.status(201).json({
       id: orgId,
       name: name2,
-      ownerId,
+      ownerId: userId,
+      apiKey,
       status: "active"
     });
   } catch (err) {
@@ -112373,16 +112697,21 @@ router9.post("/", async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: "Failed to process request" });
   }
 });
-router9.post("/:orgId/checkout-session", async (req, res) => {
+router9.post("/:orgId/checkout-session", requireTenantAuth, async (req, res) => {
+  const tenantReq = req;
+  const { orgId } = tenantReq.params;
+  if (tenantReq.tenant.orgId !== orgId && tenantReq.tenant.role !== "owner" && tenantReq.tenant.role !== "admin") {
+    res.status(403).json({ error: "Forbidden: Cannot initiate billing checkout for another organization." });
+    return;
+  }
   const parsed = CreateStripeCheckoutSessionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(422).json({ error: "Validation failed", details: parsed.error.message });
     return;
   }
   const { successUrl } = parsed.data;
-  const { orgId } = req.params;
   try {
-    const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, orgId)).limit(1);
+    const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, tenantReq.tenant.orgId)).limit(1);
     if (org.length === 0) {
       res.status(404).json({ error: "Organization not found", details: "" });
       return;
@@ -112396,10 +112725,15 @@ router9.post("/:orgId/checkout-session", async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: "Failed to process request" });
   }
 });
-router9.get("/:orgId/billing", async (req, res) => {
-  const { orgId } = req.params;
+router9.get("/:orgId/billing", requireTenantAuth, async (req, res) => {
+  const tenantReq = req;
+  const { orgId } = tenantReq.params;
+  if (tenantReq.tenant.orgId !== orgId) {
+    res.status(403).json({ error: "Forbidden: Cross-tenant organization access denied." });
+    return;
+  }
   try {
-    const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, orgId)).limit(1);
+    const org = await db.select().from(organizationsTable).where(eq(organizationsTable.id, tenantReq.tenant.orgId)).limit(1);
     const orgRow = org[0];
     if (!orgRow) {
       res.status(404).json({ error: "Organization not found", details: "" });
@@ -114506,11 +114840,11 @@ var StripeContext = class _StripeContext {
 };
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/platform/NodePlatformFunctions.js
-import * as crypto8 from "crypto";
+import * as crypto11 from "crypto";
 import { EventEmitter as EventEmitter7 } from "events";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/NodeCryptoProvider.js
-import * as crypto7 from "crypto";
+import * as crypto10 from "crypto";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/CryptoProvider.js
 var CryptoProvider = class {
@@ -114553,7 +114887,7 @@ var CryptoProviderOnlySupportsAsyncError = class extends Error {
 var NodeCryptoProvider = class extends CryptoProvider {
   /** @override */
   computeHMACSignature(payload, secret) {
-    return crypto7.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
+    return crypto10.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
   }
   /** @override */
   async computeHMACSignatureAsync(payload, secret) {
@@ -114562,7 +114896,7 @@ var NodeCryptoProvider = class extends CryptoProvider {
   }
   /** @override */
   async computeSHA256Async(data) {
-    return new Uint8Array(await crypto7.createHash("sha256").update(data).digest());
+    return new Uint8Array(await crypto10.createHash("sha256").update(data).digest());
   }
 };
 
@@ -114901,8 +115235,8 @@ var StreamProcessingError = class extends StripeError {
 var NodePlatformFunctions = class extends PlatformFunctions {
   /** @override */
   uuid4() {
-    if (crypto8.randomUUID) {
-      return crypto8.randomUUID();
+    if (crypto11.randomUUID) {
+      return crypto11.randomUUID();
     }
     return super.uuid4();
   }
@@ -114921,11 +115255,11 @@ var NodePlatformFunctions = class extends PlatformFunctions {
     if (a.length !== b3.length) {
       return false;
     }
-    if (crypto8.timingSafeEqual) {
+    if (crypto11.timingSafeEqual) {
       const textEncoder = new TextEncoder();
       const aEncoded = textEncoder.encode(a);
       const bEncoded = textEncoder.encode(b3);
-      return crypto8.timingSafeEqual(aEncoded, bEncoded);
+      return crypto11.timingSafeEqual(aEncoded, bEncoded);
     }
     return super.secureCompare(a, b3);
   }
@@ -129595,57 +129929,91 @@ Stripe.initialize(new NodePlatformFunctions());
 var stripe_esm_node_default = Stripe;
 
 // src/routes/webhooks/stripe.ts
-var import_express11 = __toESM(require_express2(), 1);
 var router10 = (0, import_express10.Router)();
 var stripe = new stripe_esm_node_default(process.env.STRIPE_SECRET_KEY || "sk_test_mock", {
   apiVersion: "2026-04-22.dahlia"
 });
 var endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || "whsec_mock";
-router10.post("/", import_express11.default.raw({ type: "application/json" }), async (req, res) => {
+router10.post("/", async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  if (!sig) {
+  if (!sig || typeof sig !== "string") {
     res.status(400).send("Webhook Error: Missing stripe-signature header");
     return;
   }
+  const rawBodyBuf = req.rawBody || (Buffer.isBuffer(req.body) ? req.body : Buffer.from(typeof req.body === "string" ? req.body : JSON.stringify(req.body)));
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(rawBodyBuf, sig, endpointSecret);
   } catch (err) {
     req.log.error({ err }, "Webhook signature verification failed");
     if (process.env.NODE_ENV === "development" && !process.env.STRIPE_SECRET_KEY) {
       req.log.warn("Mocking stripe webhook processing due to missing keys in dev");
-      event = JSON.parse(req.body.toString());
+      try {
+        event = JSON.parse(rawBodyBuf.toString("utf8"));
+      } catch {
+        res.status(400).send("Invalid JSON payload");
+        return;
+      }
     } else {
       res.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
   }
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object;
-        const orgId = session.client_reference_id;
-        if (orgId) {
-          await db.update(organizationsTable).set({
-            status: "active",
-            stripeSubscriptionId: session.subscription,
-            stripeCustomerId: session.customer
-          }).where(eq(organizationsTable.id, orgId));
+    const idempotencyKey = `stripe:${event.id}`;
+    const eventTimestamp = new Date((event.created || Math.floor(Date.now() / 1e3)) * 1e3);
+    await db.transaction(async (tx) => {
+      const inserted = await tx.insert(idempotencyKeysTable).values({ key: idempotencyKey, reportId: "stripe_webhook" }).onConflictDoNothing().returning({ key: idempotencyKeysTable.key });
+      if (inserted.length === 0) {
+        req.log.info({ eventId: event.id }, "stripe_webhook_duplicate_skipped");
+        return;
+      }
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object;
+          const orgId = session.client_reference_id;
+          if (orgId) {
+            const orgs = await tx.select().from(organizationsTable).where(eq(organizationsTable.id, orgId)).limit(1);
+            const org = orgs[0];
+            if (!org?.stripeUpdatedAt || org.stripeUpdatedAt <= eventTimestamp) {
+              await tx.update(organizationsTable).set({
+                status: "active",
+                stripeSubscriptionId: session.subscription,
+                stripeCustomerId: session.customer,
+                stripeUpdatedAt: eventTimestamp,
+                updatedAt: /* @__PURE__ */ new Date()
+              }).where(eq(organizationsTable.id, orgId));
+            } else {
+              req.log.warn({ eventId: event.id, orgId }, "stripe_webhook_stale_skipped");
+            }
+          }
+          break;
         }
-        break;
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object;
+          const orgs = await tx.select().from(organizationsTable).where(eq(organizationsTable.stripeSubscriptionId, subscription.id)).limit(1);
+          const org = orgs[0];
+          if (org) {
+            if (!org.stripeUpdatedAt || org.stripeUpdatedAt <= eventTimestamp) {
+              await tx.update(organizationsTable).set({
+                status: subscription.status,
+                currentPeriodEnd: new Date(
+                  (subscription.current_period_end || subscription.currentPeriodEnd) * 1e3
+                ),
+                stripeUpdatedAt: eventTimestamp,
+                updatedAt: /* @__PURE__ */ new Date()
+              }).where(eq(organizationsTable.id, org.id));
+            } else {
+              req.log.warn({ eventId: event.id, orgId: org.id }, "stripe_webhook_stale_skipped");
+            }
+          }
+          break;
+        }
+        default:
+          req.log.info(`Unhandled event type ${event.type}`);
       }
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object;
-        await db.update(organizationsTable).set({
-          status: subscription.status,
-          currentPeriodEnd: new Date((subscription.current_period_end || subscription.currentPeriodEnd) * 1e3)
-        }).where(eq(organizationsTable.stripeSubscriptionId, subscription.id));
-        break;
-      }
-      default:
-        req.log.info(`Unhandled event type ${event.type}`);
-    }
+    });
     res.json({ received: true });
   } catch (err) {
     req.log.error({ err }, "Failed to process webhook");
@@ -129655,99 +130023,153 @@ router10.post("/", import_express11.default.raw({ type: "application/json" }), a
 var stripe_default = router10;
 
 // src/routes/fleet.ts
-var import_express12 = __toESM(require_express2(), 1);
-var router11 = (0, import_express12.Router)();
+var import_express11 = __toESM(require_express2(), 1);
+import crypto12 from "node:crypto";
+var router11 = (0, import_express11.Router)();
+function getClientIp3(req) {
+  return req.ip ?? req.socket?.remoteAddress ?? "unknown";
+}
+router11.use(requireTenantAuth);
 router11.get("/dashboard", async (req, res) => {
+  const tenantReq = req;
+  const orgId = tenantReq.tenant.orgId;
   try {
-    const recentReports = await db.select({
-      id: reportsTable.id,
-      resultJson: reportPayloadsTable.resultJson,
-      rawJson: reportPayloadsTable.rawJson,
-      createdAt: reportsTable.createdAt
-    }).from(reportsTable).innerJoin(reportPayloadsTable, eq(reportsTable.id, reportPayloadsTable.reportId)).where(isNull(reportsTable.deletedAt)).orderBy(desc(reportsTable.createdAt)).limit(50);
-    if (recentReports.length === 0) {
-      res.json({
-        overall: 0,
-        components: [],
-        findings: [],
-        timeSeries: [],
-        deviceCount: 0
-      });
-      return;
-    }
-    let totalScore = 0;
-    const componentSums = {};
-    const findingsList = [];
-    const timeSeries = [];
-    for (const report of recentReports) {
-      const result = report.resultJson;
-      const raw = report.rawJson;
-      if (!result) continue;
-      totalScore += result.overall || 0;
-      if (result.components) {
-        for (const comp of result.components) {
-          const entry = componentSums[comp.name] ?? { sum: 0, count: 0 };
-          entry.sum += comp.score;
-          entry.count += 1;
-          componentSums[comp.name] = entry;
+    const dashboardData = await withTenantScope(orgId, async (tx) => {
+      const recentReports = await tx.select({
+        id: reportsTable.id,
+        overallScore: reportsTable.overallScore,
+        grade: reportsTable.grade,
+        os: reportsTable.os,
+        batteryHealth: reportsTable.batteryHealth,
+        createdAt: reportsTable.createdAt,
+        resultJson: reportPayloadsTable.resultJson,
+        rawJson: reportPayloadsTable.rawJson
+      }).from(reportsTable).leftJoin(reportPayloadsTable, eq(reportsTable.id, reportPayloadsTable.reportId)).where(
+        and(
+          eq(reportsTable.orgId, orgId),
+          isNull(reportsTable.deletedAt)
+        )
+      ).orderBy(desc(reportsTable.createdAt)).limit(50);
+      if (recentReports.length === 0) {
+        return {
+          overall: 0,
+          components: [],
+          findings: [],
+          timeSeries: [],
+          deviceCount: 0
+        };
+      }
+      let totalScore = 0;
+      const componentSums = {};
+      const findingsList = [];
+      const timeSeries = [];
+      for (const report of recentReports) {
+        const result = report.resultJson;
+        const raw = report.rawJson;
+        const overall = report.overallScore ?? result?.overall ?? 0;
+        totalScore += overall;
+        if (result?.components) {
+          for (const comp of result.components) {
+            const entry = componentSums[comp.name] ?? { sum: 0, count: 0 };
+            entry.sum += comp.score;
+            entry.count += 1;
+            componentSums[comp.name] = entry;
+          }
+        }
+        if (result?.findings) {
+          findingsList.push(...result.findings);
+        }
+        let cpuLoad = 0, ramUsed = 0, cpuTemp = 0, chassisTemp = 0, net = 15;
+        if (raw) {
+          cpuLoad = raw.cpu?.avgLoadPct || 0;
+          ramUsed = raw.memory?.usedPct || 0;
+          cpuTemp = raw.thermals?.maxTempC || 0;
+          chassisTemp = Math.max(0, cpuTemp - 15);
+          const hashByte = parseInt(report.id.slice(-2), 16) || 12;
+          net = 10 + hashByte % 15;
+        }
+        timeSeries.push({
+          id: report.id,
+          t: new Date(report.createdAt).toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+          }),
+          overall,
+          components: result?.components ?? [],
+          cpu: cpuLoad,
+          ram: ramUsed,
+          cpuTemp,
+          chassisTemp,
+          net
+        });
+      }
+      const deviceCount = recentReports.length;
+      const avgOverall = Math.round(totalScore / deviceCount);
+      const avgComponents = Object.entries(componentSums).map(([name2, data]) => ({
+        name: name2,
+        score: Math.round(data.sum / (data.count || 1))
+      }));
+      const uniqueFindingsMap = /* @__PURE__ */ new Map();
+      for (const f2 of findingsList) {
+        if (!uniqueFindingsMap.has(f2.title)) {
+          uniqueFindingsMap.set(f2.title, f2);
         }
       }
-      if (result.findings) {
-        findingsList.push(...result.findings);
-      }
-      let cpuLoad = 0, ramUsed = 0, cpuTemp = 0, chassisTemp = 0, net = 0;
-      if (raw) {
-        cpuLoad = raw.cpu?.avgLoadPct || 0;
-        ramUsed = raw.memory?.usedPct || 0;
-        cpuTemp = raw.thermals?.maxTempC || 0;
-        chassisTemp = Math.max(0, cpuTemp - 15);
-        net = Math.floor(Math.random() * 20) + 10;
-      }
-      timeSeries.push({
-        id: report.id,
-        t: new Date(report.createdAt).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-        overall: result.overall,
-        components: result.components,
-        cpu: cpuLoad,
-        ram: ramUsed,
-        cpuTemp,
-        chassisTemp,
-        net
-      });
-    }
-    const deviceCount = recentReports.length;
-    const avgOverall = Math.round(totalScore / deviceCount);
-    const avgComponents = Object.entries(componentSums).map(([name2, data]) => ({
-      name: name2,
-      score: Math.round(data.sum / (data.count || 1))
-    }));
-    const uniqueFindingsMap = /* @__PURE__ */ new Map();
-    for (const f2 of findingsList) {
-      if (!uniqueFindingsMap.has(f2.title)) {
-        uniqueFindingsMap.set(f2.title, f2);
-      }
-    }
-    const uniqueFindings = Array.from(uniqueFindingsMap.values());
-    res.json({
-      overall: avgOverall,
-      components: avgComponents,
-      findings: uniqueFindings.slice(0, 10),
-      // Send up to 10 findings
-      timeSeries: timeSeries.reverse(),
-      // Sort oldest to newest for Recharts
-      deviceCount
+      const uniqueFindings = Array.from(uniqueFindingsMap.values());
+      return {
+        overall: avgOverall,
+        components: avgComponents,
+        findings: uniqueFindings.slice(0, 10),
+        timeSeries: timeSeries.reverse(),
+        deviceCount
+      };
     });
+    res.json(dashboardData);
   } catch (error40) {
     req.log?.error({ err: error40 }, "Failed to fetch fleet dashboard data");
     res.status(500).json({ error: "Failed to fetch fleet dashboard data" });
   }
 });
+router11.get("/stream", async (req, res) => {
+  const tenantReq = req;
+  const orgId = tenantReq.tenant.orgId;
+  const ip = getClientIp3(req);
+  const ipHash = crypto12.createHash("sha256").update(ip).digest("hex");
+  const allowed = await consumeRateLimit(ipHash + ":fleet_sse_burst", 1, 10);
+  if (!allowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many stream requests. Please slow down." });
+    return;
+  }
+  if (!addFleetClient(res, orgId, ipHash)) {
+    res.status(503).json({ error: "Active fleet stream capacity reached for this organization or IP." });
+    return;
+  }
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  res.write(`event: connected
+data: ${JSON.stringify({ orgId, timestamp: (/* @__PURE__ */ new Date()).toISOString() })}
+
+`);
+  req.on("close", () => {
+    res.end();
+  });
+});
 var fleet_default = router11;
 
 // src/routes/live.ts
-var import_express13 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
+import crypto13 from "node:crypto";
 initLiveFeed(db);
-var router12 = (0, import_express13.Router)();
+var router12 = (0, import_express12.Router)();
+function getClientIp4(req) {
+  return req.ip ?? req.socket?.remoteAddress ?? "unknown";
+}
 router12.get("/stats", async (_req, res) => {
   try {
     const stats = await getStats();
@@ -129761,8 +130183,16 @@ router12.get("/stats", async (_req, res) => {
   }
 });
 router12.get("/stream", async (req, res) => {
-  if (!addClient(res)) {
-    res.status(503).json({ error: "Live stream capacity reached. Try again later." });
+  const ip = getClientIp4(req);
+  const ipHash = crypto13.createHash("sha256").update(ip).digest("hex");
+  const burstAllowed = await consumeRateLimit(ipHash + ":sse_burst", 1, 10);
+  if (!burstAllowed) {
+    res.set("Retry-After", "60");
+    res.status(429).json({ error: "Too many stream connection attempts. Please slow down." });
+    return;
+  }
+  if (!addClient(res, ipHash)) {
+    res.status(503).json({ error: "Active stream capacity reached or too many concurrent streams from this IP." });
     return;
   }
   res.setHeader("Content-Type", "text/event-stream");
@@ -129790,7 +130220,7 @@ data: ${JSON.stringify({ recentEvents: events5 })}
 var live_default = router12;
 
 // src/routes/index.ts
-var router13 = (0, import_express14.Router)();
+var router13 = (0, import_express13.Router)();
 router13.use(health_default);
 router13.use("/waitlist", waitlist_default);
 router13.use("/reports", reports_default);
@@ -129806,7 +130236,7 @@ router13.use("/live", live_default);
 var routes_default = router13;
 
 // src/app.ts
-var app = (0, import_express15.default)();
+var app = (0, import_express14.default)();
 app.set("trust proxy", 1);
 var helmetFn = helmet?.default ?? helmet;
 var pinoHttpFn = import_pino_http.default?.default ?? import_pino_http.default;
@@ -129844,35 +130274,46 @@ app.use(
     }
   })
 );
-var defaultOrigins = [
-  "https://sentinel-site-rosy.vercel.app",
-  "https://sentinelapp.io"
-];
+var EXACT_PRODUCTION_ORIGINS = /* @__PURE__ */ new Set([
+  "https://sentinelapp.io",
+  "https://www.sentinelapp.io"
+]);
 var isAllowedPreviewOrigin = (origin) => {
-  if (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
-    return true;
-  }
   return /^https:\/\/(sentinel-site|novasentinel)[a-z0-9-]*\.vercel\.app$/.test(origin);
 };
 app.use(
-  (0, import_cors.default)({
-    origin: (origin, callback) => {
-      const allowed = process.env.ALLOWED_ORIGINS?.split(",") ?? defaultOrigins;
-      if (!origin) return callback(null, true);
-      if (allowed.includes(origin) || isAllowedPreviewOrigin(origin)) {
-        return callback(null, true);
-      }
-      return callback(null, false);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"]
+  (0, import_cors.default)((req, callback) => {
+    const origin = req.headers.origin;
+    if (!origin) {
+      callback(null, { origin: true, credentials: false });
+      return;
+    }
+    const isProdOrigin = EXACT_PRODUCTION_ORIGINS.has(origin);
+    const isDev = process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (isProdOrigin || isDev) {
+      callback(null, {
+        origin: true,
+        credentials: true,
+        methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"]
+      });
+      return;
+    }
+    if (isAllowedPreviewOrigin(origin)) {
+      callback(null, {
+        origin: true,
+        credentials: false,
+        methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"]
+      });
+      return;
+    }
+    callback(null, { origin: false });
   })
 );
 app.use((0, import_cookie_parser.default)());
 app.use((req, res, next2) => {
   const isMutating = ["POST", "PUT", "DELETE", "PATCH"].includes(req.method);
   const cookies = req.cookies;
-  const hasSessionCookie = Boolean(cookies?.["sentinel_session"]);
+  const hasSessionCookie = Boolean(cookies?.["__Host-sentinel_session"] || cookies?.["sentinel_session"]);
   const secFetchSite = req.headers["sec-fetch-site"];
   if (isMutating && hasSessionCookie && secFetchSite === "cross-site") {
     res.status(403).json({ error: "Cross-site request forgery protection triggered." });
@@ -129881,14 +130322,14 @@ app.use((req, res, next2) => {
   next2();
 });
 app.use(
-  import_express15.default.json({
+  import_express14.default.json({
     limit: "256kb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     }
   })
 );
-app.use(import_express15.default.urlencoded({ extended: true, limit: "256kb" }));
+app.use(import_express14.default.urlencoded({ extended: true, limit: "256kb" }));
 app.get(["/", "/health"], (_req, res) => {
   res.status(200).json({
     status: "ok",
@@ -129991,6 +130432,31 @@ async function cleanupSuspectPayloads() {
     logger.error({ err }, "suspect_payloads_cleanup_failed");
   }
 }
+async function cleanupPairSessions() {
+  try {
+    const expiredCutoff = new Date(Date.now() - 24 * 60 * 60 * 1e3);
+    let deletedTotal = 0;
+    while (true) {
+      const rows = await db.select({ code: pairSessionsTable.code }).from(pairSessionsTable).where(
+        or(
+          lt(pairSessionsTable.expiresAt, expiredCutoff),
+          and(
+            isNotNull(pairSessionsTable.usedAt),
+            lt(pairSessionsTable.usedAt, expiredCutoff)
+          )
+        )
+      ).limit(BATCH_SIZE);
+      if (rows.length === 0) break;
+      const codes = rows.map((r2) => r2.code);
+      await db.delete(pairSessionsTable).where(inArray(pairSessionsTable.code, codes));
+      deletedTotal += rows.length;
+      if (rows.length < BATCH_SIZE || deletedTotal >= 1e4) break;
+    }
+    logger.debug({ deletedTotal }, "pair_sessions_cleanup_complete");
+  } catch (err) {
+    logger.error({ err }, "pair_sessions_cleanup_failed");
+  }
+}
 async function purgeLegacyPlaintextTokens() {
   try {
     await db.execute(sql`
@@ -130011,6 +130477,7 @@ async function runAllCleanups() {
   await cleanupExpiredSessions();
   await cleanupIdempotencyKeys();
   await cleanupSuspectPayloads();
+  await cleanupPairSessions();
 }
 function startCleanupScheduler() {
   setTimeout(async () => {

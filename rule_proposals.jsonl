@@ -1,0 +1,1 @@
+{"timestamp":"2026-11-13T15:53:59.464Z","ruleType":"never_do","action":"add","content":"Never reflect credentials: true for cross-origin preview deployments; use Vercel rewrite proxies for same-origin routing and reserve credentials: true exclusively for exact production origins.","status":"pending"}

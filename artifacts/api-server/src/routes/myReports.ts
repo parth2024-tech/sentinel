@@ -6,8 +6,11 @@ import {
   reportHabitAnswersTable,
   reportPayloadsTable,
   usersTable,
+  devicesTable,
+  organizationMembersTable,
 } from "@workspace/db";
-import { eq, and, gt, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, gt, isNull } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { Router, type Request } from "express";
@@ -19,7 +22,7 @@ import { consumeRateLimit } from "../lib/rateLimit.js";
 
 const router = Router();
 
-const SESSION_COOKIE = "sentinel_session";
+const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-sentinel_session" : "sentinel_session";
 const SESSION_TTL_DAYS = 30;
 
 function newToken(bytes = 32): string {
@@ -31,7 +34,8 @@ function hashToken(token: string): string {
 }
 
 function getSession(req: Request): string | null {
-  return (req.cookies as Record<string, string>)?.[SESSION_COOKIE] ?? null;
+  const cookies = req.cookies as Record<string, string> | undefined;
+  return cookies?.[SESSION_COOKIE] ?? cookies?.["sentinel_session"] ?? null;
 }
 
 async function resolveEmail(sessionToken: string): Promise<string | null> {
@@ -178,6 +182,37 @@ router.get("/verify", async (req, res) => {
 
   req.log.info({ email }, "my_reports_session_created");
 
+  // Finalize pending device claims for this verified email
+  try {
+    const userRows = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    let userId = userRows[0]?.id;
+    if (!userId) {
+      const newUserId = createId();
+      await db.insert(usersTable).values({
+        id: newUserId,
+        email,
+        name: email.split("@")[0] || "User",
+      });
+      userId = newUserId;
+    }
+
+    const memberships = await db.select().from(organizationMembersTable).where(eq(organizationMembersTable.userId, userId)).limit(1);
+    const orgId = memberships[0]?.orgId ?? null;
+
+    await db
+      .update(devicesTable)
+      .set({
+        claimed: true,
+        claimedAt: new Date(),
+        userId,
+        orgId,
+        pendingClaimEmail: null,
+      })
+      .where(eq(devicesTable.pendingClaimEmail, email));
+  } catch (claimErr) {
+    req.log.warn({ claimErr, email }, "failed_to_finalize_pending_devices");
+  }
+
   res.cookie(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -250,7 +285,7 @@ router.get("/", async (req, res) => {
         and(
           eq(reportsTable.userId, user.id),
           isNull(reportsTable.deletedAt),
-          isNotNull(reportsTable.claimed)
+          eq(reportsTable.claimed, true)
         )
       )
       .orderBy(reportsTable.createdAt);
@@ -280,7 +315,8 @@ router.delete("/session", async (req, res) => {
       .where(eq(myReportsSessionsTable.token, sessionHash))
       .catch(() => {});
   }
-  res.clearCookie(SESSION_COOKIE, { path: "/" });
+  res.clearCookie("__Host-sentinel_session", { path: "/", secure: true });
+  res.clearCookie("sentinel_session", { path: "/" });
   res.json({ ok: true });
 });
 

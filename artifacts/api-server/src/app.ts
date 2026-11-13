@@ -57,33 +57,50 @@ app.use(
 );
 
 // ── CORS — restrict to verified production and team preview origins ──────────
-const defaultOrigins = [
-  "https://sentinel-site-rosy.vercel.app",
+const EXACT_PRODUCTION_ORIGINS = new Set([
   "https://sentinelapp.io",
-];
+  "https://www.sentinelapp.io",
+]);
 
-// Scoped preview origin matcher — prevents arbitrary attacker vercel.app domains from reflecting
+// Scoped preview origin matcher — allows preview builds without credential reflection
 const isAllowedPreviewOrigin = (origin: string): boolean => {
-  if (process.env.NODE_ENV !== "production" && /^http:\/\/localhost(:\d+)?$/.test(origin)) {
-    return true;
-  }
   return /^https:\/\/(sentinel-site|novasentinel)[a-z0-9-]*\.vercel\.app$/.test(origin);
 };
 
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      const allowed = process.env.ALLOWED_ORIGINS?.split(",") ?? defaultOrigins;
-      // Allow requests with no origin (PowerShell agent, curl, CLI)
-      if (!origin) return callback(null, true);
-      // Allow configured origins or authenticated team project previews
-      if (allowed.includes(origin) || isAllowedPreviewOrigin(origin)) {
-        return callback(null, true);
-      }
-      return callback(null, false);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
+  cors((req, callback) => {
+    const origin = req.headers.origin;
+    // Allow non-browser agents (PowerShell, CLI, curl) with no origin header
+    if (!origin) {
+      callback(null, { origin: true, credentials: false });
+      return;
+    }
+
+    const isProdOrigin = EXACT_PRODUCTION_ORIGINS.has(origin);
+    const isDev = process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+    if (isProdOrigin || isDev) {
+      // Credentials exclusively allowed for verified production and local dev origins
+      callback(null, {
+        origin: true,
+        credentials: true,
+        methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
+      });
+      return;
+    }
+
+    if (isAllowedPreviewOrigin(origin)) {
+      // Preview branches use Vercel Rewrite Proxies (/api/* -> backend) for same-origin session auth.
+      // Cross-origin preview requests NEVER reflect credentials to prevent XSS exfiltration of sentinel_session.
+      callback(null, {
+        origin: true,
+        credentials: false,
+        methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
+      });
+      return;
+    }
+
+    callback(null, { origin: false });
   })
 );
 
@@ -95,7 +112,7 @@ app.use(cookieParser());
 app.use((req: Request, res: Response, next: NextFunction) => {
   const isMutating = ["POST", "PUT", "DELETE", "PATCH"].includes(req.method);
   const cookies = req.cookies as Record<string, string> | undefined;
-  const hasSessionCookie = Boolean(cookies?.["sentinel_session"]);
+  const hasSessionCookie = Boolean(cookies?.["__Host-sentinel_session"] || cookies?.["sentinel_session"]);
   const secFetchSite = req.headers["sec-fetch-site"];
 
   if (isMutating && hasSessionCookie && secFetchSite === "cross-site") {

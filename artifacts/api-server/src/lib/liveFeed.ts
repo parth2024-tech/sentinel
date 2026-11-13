@@ -28,7 +28,14 @@ export interface LiveFeedEvent {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const clients = new Set<Response>();
+const fleetClients = new Map<string, Set<Response>>();
+const activeIpCounts = new Map<string, number>();
 const MAX_GLOBAL_SSE_CLIENTS = 1000;
+const MAX_CONCURRENT_PER_IP = 3;
+
+export function getActiveIpCount(ipHash: string): number {
+  return activeIpCounts.get(ipHash) ?? 0;
+}
 
 let cachedStats: LiveStats | null = null;
 let statsLastFetched = 0;
@@ -189,13 +196,86 @@ export async function getStats(forceRefresh = false): Promise<LiveStats> {
 
 // ── Client management ─────────────────────────────────────────────────────────
 
-export function addClient(res: Response): boolean {
+export function addClient(res: Response, ipHash?: string): boolean {
   if (clients.size >= MAX_GLOBAL_SSE_CLIENTS) {
     return false;
   }
+  if (ipHash) {
+    const current = activeIpCounts.get(ipHash) ?? 0;
+    if (current >= MAX_CONCURRENT_PER_IP) {
+      return false;
+    }
+    activeIpCounts.set(ipHash, current + 1);
+  }
+
   clients.add(res);
-  res.on("close", () => clients.delete(res));
+
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    clients.delete(res);
+    if (ipHash) {
+      const c = activeIpCounts.get(ipHash) ?? 1;
+      if (c <= 1) {
+        activeIpCounts.delete(ipHash);
+      } else {
+        activeIpCounts.set(ipHash, c - 1);
+      }
+    }
+  };
+
+  res.on("close", cleanup);
+  res.on("error", cleanup);
   return true;
+}
+
+export function addFleetClient(res: Response, orgId: string, ipHash?: string): boolean {
+  if (ipHash) {
+    const current = activeIpCounts.get(ipHash) ?? 0;
+    if (current >= MAX_CONCURRENT_PER_IP) {
+      return false;
+    }
+    activeIpCounts.set(ipHash, current + 1);
+  }
+
+  let orgSet = fleetClients.get(orgId);
+  if (!orgSet) {
+    orgSet = new Set<Response>();
+    fleetClients.set(orgId, orgSet);
+  }
+  orgSet.add(res);
+
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    const set = fleetClients.get(orgId);
+    if (set) {
+      set.delete(res);
+      if (set.size === 0) fleetClients.delete(orgId);
+    }
+    if (ipHash) {
+      const c = activeIpCounts.get(ipHash) ?? 1;
+      if (c <= 1) {
+        activeIpCounts.delete(ipHash);
+      } else {
+        activeIpCounts.set(ipHash, c - 1);
+      }
+    }
+  };
+
+  res.on("close", cleanup);
+  res.on("error", cleanup);
+  return true;
+}
+
+export function emitFleetDelta(orgId: string, delta: unknown) {
+  const orgSet = fleetClients.get(orgId);
+  if (!orgSet || orgSet.size === 0) return;
+  for (const client of orgSet) {
+    sendToClient(client, "fleet_delta", delta);
+  }
 }
 
 function sendToClient(res: Response, event: string, data: unknown) {
@@ -293,4 +373,19 @@ export function closeAllStreams(): void {
     }
   }
   clients.clear();
+
+  for (const orgSet of fleetClients.values()) {
+    for (const client of orgSet) {
+      try {
+        if (!client.writableEnded && !client.destroyed) {
+          client.write("event: shutdown\ndata: {\"message\":\"Server shutting down\"}\n\n");
+          client.end();
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+  fleetClients.clear();
+  activeIpCounts.clear();
 }

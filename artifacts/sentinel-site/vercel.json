@@ -19,7 +19,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://sentinel-api-zaue.onrender.com/api/:path*"
+      "destination": "https://api.sentinelapp.io/api/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

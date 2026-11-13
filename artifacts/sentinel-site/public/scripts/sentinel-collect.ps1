@@ -1,3 +1,6 @@
+# Enforce modern TLS 1.2 and TLS 1.3 protocol security at start
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
 # ============================================================
 #  sentinel-collect.ps1  --  Sentinel Hardware Collector v1
 #  Schema version: 1 (Integrated CLI Diagnostic Extensions)
@@ -6,8 +9,8 @@
 #  and errors, then automatically uploads to the Sentinel Cloud.
 # ============================================================
 
-$SENTINEL_API_URL      = "https://sentinel-api-zaue.onrender.com"
-$SENTINEL_FRONTEND_URL = "https://sentinel-site-rosy.vercel.app"
+$SENTINEL_API_URL      = "https://api.sentinelapp.io"
+$SENTINEL_FRONTEND_URL = "https://sentinelapp.io"
 
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference    = 'SilentlyContinue'

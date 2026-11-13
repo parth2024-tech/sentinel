@@ -8,8 +8,10 @@ export const organizationsTable = pgTable("organizations", {
   stripeSubscriptionId: text("stripe_subscription_id").unique(),
   stripeCustomerId: text("stripe_customer_id").unique(),
   stripePriceId: text("stripe_price_id"),
+  apiKeyHash: text("api_key_hash").unique(),
   status: text("status"), // active, trialing, past_due, canceled
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  stripeUpdatedAt: timestamp("stripe_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

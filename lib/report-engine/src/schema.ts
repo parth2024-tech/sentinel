@@ -89,15 +89,15 @@ export const RecentSystemErrorSchema = z.object({
 
 export const SentinelReportSchema = z.object({
   sentinelSchema: z.literal(1),
-  generatedAt: z.string(),
+  generatedAt: z.string().max(64),
   system: z.object({
-    hostname: z.string(),
-    model: z.string(),
-    manufacturer: z.string(),
-    os: z.string().nullish(),
-    osVersion: z.string().nullish(),
-    biosVersion: z.string().nullish(),
-    bootTime: z.string().nullish(),
+    hostname: z.string().max(256),
+    model: z.string().max(256),
+    manufacturer: z.string().max(256),
+    os: z.string().max(256).nullish(),
+    osVersion: z.string().max(128).nullish(),
+    biosVersion: z.string().max(128).nullish(),
+    bootTime: z.string().max(64).nullish(),
     uptimeHours: z.number().nullish(),
   }),
   battery: z
@@ -106,7 +106,7 @@ export const SentinelReportSchema = z.object({
       fullChargeCapacity: z.number().nullish(),
       cycleCount: z.number().nullish(),
       health: z.number().nullish(),
-      status: z.union([z.string(), z.number()]).nullish(),
+      status: z.union([z.string().max(64), z.number()]).nullish(),
       dischargeRateMw: z.number().nullish(),
       batteryTempC: z.number().nullish(),
       batteryVoltageV: z.number().nullish(),

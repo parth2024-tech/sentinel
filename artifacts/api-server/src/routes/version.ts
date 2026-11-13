@@ -26,6 +26,7 @@ router.get("/", async (_req: Request, res: ExpressResponse) => {
           Accept: "application/vnd.github+json",
           "User-Agent": "SentinelAPI/1.0",
         },
+        signal: AbortSignal.timeout(5000),
       }
     );
 

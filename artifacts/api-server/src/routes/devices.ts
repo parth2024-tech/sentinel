@@ -1,11 +1,24 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
-import { db, devicesTable } from "@workspace/db";
+import crypto, { randomBytes } from "crypto";
+import {
+  db,
+  devicesTable,
+  usersTable,
+  organizationsTable,
+  organizationMembersTable,
+  myReportsSessionsTable,
+  magicLinkTokensTable,
+} from "@workspace/db";
 import { eq, and, gt, or } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { createId } from "@paralleldrive/cuid2";
 import { consumeRateLimit } from "../lib/rateLimit.js";
 import { sha256hex } from "../lib/ids.js";
 import { timingSafeEqualStr } from "../lib/crypto.js";
+import { MAGIC_LINK_TTL_MIN } from "../lib/magicLinkConstants.js";
+import { isResendConfigured } from "../lib/email/config.js";
+import { buildMagicLinkLoginEmail } from "../lib/email/templates/magicLinkLogin.js";
+import { sendTransactionalEmail } from "../lib/email/resendMailer.js";
 
 const router = Router();
 
@@ -137,14 +150,125 @@ router.post("/claim", async (req, res) => {
     return;
   }
 
+  // ── Session check for verified ownership binding ────────────────────────────
+  const cookies = req.cookies as Record<string, string> | undefined;
+  const sessionToken = cookies?.["__Host-sentinel_session"] || cookies?.["sentinel_session"];
+
+  let verifiedUser: { id: string; email: string } | null = null;
+  let verifiedOrgId: string | null = null;
+
+  if (sessionToken && sessionToken.length >= 16) {
+    const sessionHash = crypto.createHash("sha256").update(sessionToken).digest("hex");
+    const sessionRows = await db
+      .select()
+      .from(myReportsSessionsTable)
+      .where(
+        and(
+          eq(myReportsSessionsTable.token, sessionHash),
+          gt(myReportsSessionsTable.expiresAt, now)
+        )
+      )
+      .limit(1);
+
+    const activeSession = sessionRows[0];
+    if (activeSession) {
+      const userRows = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, activeSession.email))
+        .limit(1);
+
+      if (userRows[0]) {
+        verifiedUser = { id: userRows[0].id, email: userRows[0].email };
+      } else {
+        const newUid = createId();
+        await db.insert(usersTable).values({
+          id: newUid,
+          email: activeSession.email,
+          name: activeSession.email.split("@")[0] || "User",
+        });
+        verifiedUser = { id: newUid, email: activeSession.email };
+      }
+
+      // Check organization membership
+      const memberRows = await db
+        .select()
+        .from(organizationMembersTable)
+        .where(eq(organizationMembersTable.userId, verifiedUser.id))
+        .limit(1);
+
+      if (memberRows[0]) {
+        verifiedOrgId = memberRows[0].orgId;
+      } else {
+        const orgRows = await db
+          .select()
+          .from(organizationsTable)
+          .where(eq(organizationsTable.ownerId, verifiedUser.id))
+          .limit(1);
+        if (orgRows[0]) verifiedOrgId = orgRows[0].id;
+      }
+    }
+  }
+
+  if (verifiedUser) {
+    // Verified authenticated session: bind foreign keys directly
+    await db
+      .update(devicesTable)
+      .set({
+        claimed: true,
+        claimedAt: new Date(),
+        userId: verifiedUser.id,
+        orgId: verifiedOrgId,
+        pendingClaimEmail: null,
+      })
+      .where(eq(devicesTable.id, device.id));
+
+    req.log.info({ deviceId: device.id, userId: verifiedUser.id, orgId: verifiedOrgId }, "device_claimed_verified");
+    res.json({ deviceId: device.id, claimed: true, verified: true });
+    return;
+  }
+
+  // Unauthenticated user claiming via email:
+  // Store as pending_claim_email and send magic verification link.
+  // Foreign keys (userId/orgId) are NEVER bound until the email magic link is confirmed.
+  const claimEmail = parsed.data.email.toLowerCase();
   await db
     .update(devicesTable)
-    .set({ claimed: true, claimedAt: new Date() })
+    .set({
+      pendingClaimEmail: claimEmail,
+    })
     .where(eq(devicesTable.id, device.id));
 
-  req.log.info({ deviceId: device.id, ipHash }, "device_claimed");
+  // Issue magic link for verification
+  const linkToken = crypto.randomBytes(32).toString("hex");
+  const linkTokenHash = crypto.createHash("sha256").update(linkToken).digest("hex");
+  const linkExpiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1000);
 
-  res.json({ deviceId: device.id, claimed: true });
+  await db.insert(magicLinkTokensTable).values({
+    token: linkTokenHash,
+    email: claimEmail,
+    expiresAt: linkExpiresAt,
+  });
+
+  const allowDevToken = process.env.NODE_ENV === "development" && process.env.ALLOW_DEV_TOKEN_LEAK === "true";
+
+  if (isResendConfigured()) {
+    try {
+      const { subject, html, text } = buildMagicLinkLoginEmail(linkToken, "login");
+      await sendTransactionalEmail({ to: claimEmail, subject, html, text });
+    } catch (err) {
+      req.log.error({ err, email: claimEmail }, "magic_link_device_claim_email_failed");
+    }
+  }
+
+  req.log.info({ deviceId: device.id, email: claimEmail }, "device_claim_pending_verification");
+  res.json({
+    deviceId: device.id,
+    claimed: false,
+    pendingVerification: true,
+    message: "A verification link has been sent to confirm device ownership.",
+    ...(allowDevToken ? { devToken: linkToken } : {}),
+  });
 });
 
 // ── GET /api/devices/pair-status ──────────────────────────────────────────────
