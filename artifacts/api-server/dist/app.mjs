@@ -18923,14 +18923,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto14 = __require("crypto");
+    var crypto15 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto14.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto15.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -22405,17 +22405,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto14 = __require("crypto");
+    var crypto15 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto15.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto14.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto15.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -24045,11 +24045,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
-    var crypto14 = __require("crypto");
+    var crypto15 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto15.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -24058,7 +24058,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto14.createHash("sha1").update(str).digest("hex");
+      return crypto15.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -30033,7 +30033,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "../../node_modules/.pnpm/pg@8.21.0/node_modules/pg/lib/crypto/sasl.js"(exports, module) {
     "use strict";
-    var crypto14 = require_utils5();
+    var crypto15 = require_utils5();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -30051,7 +30051,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto14.randomBytes(18).toString("base64");
+      const clientNonce = crypto15.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
       return {
         mechanism,
@@ -30093,20 +30093,20 @@ var require_sasl = __commonJS({
         const peerCert = stream.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto14.hashByName(hashName, peerCert);
+        const certHash = await crypto15.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto14.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto14.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto14.sha256(clientKey);
-      const clientSignature = await crypto14.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto15.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto15.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto15.sha256(clientKey);
+      const clientSignature = await crypto15.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto14.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto14.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto15.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto15.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -32279,7 +32279,7 @@ var require_client = __commonJS({
     var Query2 = require_query();
     var defaults3 = require_defaults();
     var Connection2 = require_connection();
-    var crypto14 = require_utils5();
+    var crypto15 = require_utils5();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -32526,7 +32526,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto14.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto15.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e2) {
             this.emit("error", e2);
@@ -60410,7 +60410,7 @@ var require_react_dom_server_node_production = __commonJS({
   "../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom/cjs/react-dom-server.node.production.js"(exports) {
     "use strict";
     var util2 = __require("util");
-    var crypto14 = __require("crypto");
+    var crypto15 = __require("crypto");
     var async_hooks = __require("async_hooks");
     var React = require_react();
     var ReactDOM = require_react_dom();
@@ -63074,7 +63074,7 @@ var require_react_dom_server_node_production = __commonJS({
     function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
       if (void 0 !== permalink) return "p" + permalink;
       permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-      componentKeyPath = crypto14.createHash("md5");
+      componentKeyPath = crypto15.createHash("md5");
       componentKeyPath.update(permalink);
       return "k" + componentKeyPath.digest("hex");
     }
@@ -74753,7 +74753,7 @@ var require_react_dom_server_node_development = __commonJS({
       function createPostbackActionStateKey(permalink, componentKeyPath, hookIndex) {
         if (void 0 !== permalink) return "p" + permalink;
         permalink = JSON.stringify([componentKeyPath, null, hookIndex]);
-        componentKeyPath = crypto14.createHash("md5");
+        componentKeyPath = crypto15.createHash("md5");
         componentKeyPath.update(permalink);
         return "k" + componentKeyPath.digest("hex");
       }
@@ -77461,7 +77461,7 @@ var require_react_dom_server_node_development = __commonJS({
           }
         };
       }
-      var util2 = __require("util"), crypto14 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
+      var util2 = __require("util"), crypto15 = __require("crypto"), async_hooks = __require("async_hooks"), React = require_react(), ReactDOM = require_react_dom(), stream = __require("stream"), REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_PROVIDER_TYPE = /* @__PURE__ */ Symbol.for("react.provider"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_SCOPE_TYPE = /* @__PURE__ */ Symbol.for("react.scope"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), REACT_LEGACY_HIDDEN_TYPE = /* @__PURE__ */ Symbol.for("react.legacy_hidden"), REACT_MEMO_CACHE_SENTINEL = /* @__PURE__ */ Symbol.for("react.memo_cache_sentinel"), REACT_VIEW_TRANSITION_TYPE = /* @__PURE__ */ Symbol.for("react.view_transition"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, isArrayImpl = Array.isArray, jsxPropsParents = /* @__PURE__ */ new WeakMap(), jsxChildrenParents = /* @__PURE__ */ new WeakMap(), CLIENT_REFERENCE_TAG = /* @__PURE__ */ Symbol.for("react.client.reference"), scheduleMicrotask = queueMicrotask, currentView = null, writtenBytes = 0, destinationHasCapacity$1 = true, textEncoder = new util2.TextEncoder(), assign = Object.assign, hasOwnProperty = Object.prototype.hasOwnProperty, VALID_ATTRIBUTE_NAME_REGEX = RegExp(
         "^[:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$"
       ), illegalAttributeNameCache = {}, validatedAttributeNameCache = {}, unitlessNumbers = new Set(
         "animationIterationCount aspectRatio borderImageOutset borderImageSlice borderImageWidth boxFlex boxFlexGroup boxOrdinalGroup columnCount columns flex flexGrow flexPositive flexShrink flexNegative flexOrder gridArea gridRow gridRowEnd gridRowSpan gridRowStart gridColumn gridColumnEnd gridColumnSpan gridColumnStart fontWeight lineClamp lineHeight opacity order orphans scale tabSize widows zIndex zoom fillOpacity floodOpacity stopOpacity strokeDasharray strokeDashoffset strokeMiterlimit strokeOpacity strokeWidth MozAnimationIterationCount MozBoxFlex MozBoxFlexGroup MozLineClamp msAnimationIterationCount msFlex msZoom msFlexGrow msFlexNegative msFlexOrder msFlexPositive msFlexShrink msGridColumn msGridColumnSpan msGridRow msGridRowSpan WebkitAnimationIterationCount WebkitBoxFlex WebKitBoxFlexGroup WebkitBoxOrdinalGroup WebkitColumnCount WebkitColumns WebkitFlex WebkitFlexGrow WebkitFlexPositive WebkitFlexShrink WebkitLineClamp".split(
@@ -98139,6 +98139,12 @@ async function withTenantScope(orgId, fn2) {
     return await fn2(tx);
   });
 }
+async function withSystemScope(fn2) {
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.bypass_rls', 'on', true)`);
+    return await fn2(tx);
+  });
+}
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
@@ -102207,7 +102213,9 @@ var GetWaitlistCountResponse = objectType({
   "count": numberType().describe("Total number of waitlist signups")
 });
 var CreateReportHeader = objectType({
-  "Idempotency-Key": stringType().optional().describe("When reused within 24h, returns the same report (deduplicated).")
+  "Idempotency-Key": stringType().optional().describe("When reused within 24h, returns the same report (deduplicated)."),
+  "X-Sentinel-Signature": stringType().optional().describe("HMAC-SHA256 signature or payload attestation digest. Required when authenticating with Bearer deviceToken."),
+  "X-Sentinel-Timestamp": stringType().optional().describe("Unix timestamp in seconds for replay protection. Skew must be <= 300 seconds.")
 });
 var createReportBodyLegacyDefault = false;
 var CreateReportBody = objectType({
@@ -102332,15 +102340,19 @@ var GetLatestReleaseForAgentResponse = objectType({
   "downloadUrl": stringType().url()
 });
 var GetLatestReleaseJsonResponse = objectType({
-  "version": stringType(),
+  "version": stringType().nullish(),
   "name": stringType(),
-  "publishedAt": coerce.date(),
+  "publishedAt": stringType().nullish(),
   "releaseUrl": stringType().url(),
   "assets": arrayType(objectType({
+    "slug": stringType(),
     "name": stringType(),
-    "size": numberType(),
-    "downloadUrl": stringType().url(),
-    "downloads": numberType()
+    "available": booleanType(),
+    "source": stringType().nullish(),
+    "downloadUrl": stringType(),
+    "sha256": stringType().optional(),
+    "size": numberType().optional(),
+    "downloads": numberType().optional()
   }))
 });
 var RedirectLatestBinaryDownloadParams = objectType({
@@ -102369,6 +102381,38 @@ var GetBillingStatusResponse = objectType({
   "status": stringType().nullable(),
   "currentPeriodEnd": coerce.date().nullable(),
   "portalUrl": stringType().nullable()
+});
+var GetFleetDashboardHeader = objectType({
+  "X-Sentinel-Org-Key": stringType().optional().describe("Scoped organization API key")
+});
+var GetFleetDashboardResponse = objectType({
+  "overall": numberType(),
+  "components": arrayType(objectType({
+    "name": stringType(),
+    "score": numberType()
+  })),
+  "findings": arrayType(objectType({
+    "title": stringType(),
+    "severity": stringType().optional(),
+    "category": stringType().optional(),
+    "impact": stringType().optional(),
+    "description": stringType().optional()
+  })),
+  "timeSeries": arrayType(objectType({
+    "id": stringType(),
+    "t": stringType(),
+    "overall": numberType(),
+    "components": arrayType(recordType(stringType(), unknownType())).optional(),
+    "cpu": numberType().optional(),
+    "ram": numberType().optional(),
+    "cpuTemp": numberType().optional(),
+    "chassisTemp": numberType().optional(),
+    "net": numberType().optional()
+  })),
+  "deviceCount": numberType()
+});
+var StreamFleetEventsHeader = objectType({
+  "X-Sentinel-Org-Key": stringType().optional().describe("Scoped organization API key")
 });
 
 // src/routes/waitlist.ts
@@ -102416,7 +102460,7 @@ var waitlist_default = router2;
 var import_express3 = __toESM(require_express2(), 1);
 
 // src/controllers/reports.controller.ts
-import crypto4 from "node:crypto";
+import crypto5 from "node:crypto";
 
 // ../../lib/report-engine/src/schema.ts
 var StorageDeviceSchema = external_exports2.object({
@@ -105419,7 +105463,7 @@ function lazy2(fn2) {
 }
 
 // src/services/reports.service.ts
-import crypto3 from "node:crypto";
+import crypto4 from "node:crypto";
 
 // src/lib/ids.ts
 import { randomBytes } from "crypto";
@@ -106303,6 +106347,9 @@ async function sendTransactionalEmail(input) {
 }
 
 // src/lib/liveFeed.ts
+import crypto2 from "node:crypto";
+var INSTANCE_ID = crypto2.randomUUID();
+var listenerClient = null;
 var clients = /* @__PURE__ */ new Set();
 var fleetClients = /* @__PURE__ */ new Map();
 var activeIpCounts = /* @__PURE__ */ new Map();
@@ -106313,9 +106360,43 @@ var statsLastFetched = 0;
 var STATS_TTL_MS = 3e4;
 var inflightStatsPromise = null;
 var recentEvents = [];
+var MAX_FEED_SIZE = 50;
 var _db = null;
-function initLiveFeed(db2) {
+async function initLiveFeed(db2) {
   _db = db2;
+  if (!listenerClient && process.env.DATABASE_URL) {
+    try {
+      listenerClient = await pool.connect();
+      await listenerClient.query("LISTEN sentinel_live_events");
+      listenerClient.on("notification", (msg) => {
+        if (msg.channel === "sentinel_live_events" && msg.payload) {
+          try {
+            const event = JSON.parse(msg.payload);
+            if (event.instanceId === INSTANCE_ID) return;
+            if (event.type === "new_report" && event.data) {
+              recentEvents.unshift(event.data);
+              if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
+              cachedStats = null;
+              broadcast("new_report", event.data);
+            } else if (event.type === "fleet_delta" && event.orgId && event.data) {
+              const orgSet = fleetClients.get(event.orgId);
+              if (orgSet && orgSet.size > 0) {
+                for (const client2 of orgSet) {
+                  sendToClient(client2, "fleet_delta", event.data);
+                }
+              }
+            }
+          } catch {
+          }
+        }
+      });
+      listenerClient.on("error", () => {
+        listenerClient = null;
+      });
+    } catch {
+      listenerClient = null;
+    }
+  }
 }
 function normalizeOs(raw) {
   if (!raw) return "";
@@ -106332,61 +106413,63 @@ function normalizeOs(raw) {
 async function fetchFreshStats() {
   if (!_db) return emptyStats();
   try {
-    const now = /* @__PURE__ */ new Date();
-    const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
-    const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
-    const totalResult = await _db.execute(sql`
-      SELECT
-        COUNT(*)::int                                                                    AS total,
-        COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
-        COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
-        ROUND(AVG(COALESCE(r.overall_score, (rp.result_json->>'overall')::numeric))::numeric, 1) AS avg_score
-      FROM reports r
-      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND r.overall_score IS NULL
-      WHERE r.deleted_at IS NULL
-    `);
-    const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
-    const totalRow = totalRows[0];
-    const rowsResult = await _db.execute(sql`
-      SELECT
-        COALESCE(r.grade, rp.result_json->>'grade')                          AS grade,
-        COALESCE(r.os, rp.raw_json->'system'->>'os')                         AS os,
-        COALESCE(r.battery_health::text, (rp.raw_json->'battery'->>'health')::text) AS battery_health
-      FROM reports r
-      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND (r.grade IS NULL OR r.os IS NULL)
-      WHERE r.deleted_at IS NULL
-        AND r.created_at >= ${ago7d.toISOString()}::timestamptz
-      ORDER BY r.created_at DESC
-      LIMIT 500
-    `);
-    const rows = Array.isArray(rowsResult) ? rowsResult : rowsResult.rows;
-    const gradeDistribution = {};
-    const osBreakdown = {};
-    let totalBattery = 0;
-    let batteryCount = 0;
-    for (const r2 of rows) {
-      if (r2.grade) {
-        const g = r2.grade.trim().toUpperCase();
-        gradeDistribution[g] = (gradeDistribution[g] ?? 0) + 1;
+    return await withSystemScope(async (tx) => {
+      const now = /* @__PURE__ */ new Date();
+      const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
+      const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
+      const totalResult = await tx.execute(sql`
+        SELECT
+          COUNT(*)::int                                                                    AS total,
+          COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
+          COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
+          ROUND(AVG(COALESCE(r.overall_score, (rp.result_json->>'overall')::numeric))::numeric, 1) AS avg_score
+        FROM reports r
+        LEFT JOIN report_payloads rp ON rp.report_id = r.id AND r.overall_score IS NULL
+        WHERE r.deleted_at IS NULL
+      `);
+      const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
+      const totalRow = totalRows[0];
+      const rowsResult = await tx.execute(sql`
+        SELECT
+          COALESCE(r.grade, rp.result_json->>'grade')                          AS grade,
+          COALESCE(r.os, rp.raw_json->'system'->>'os')                         AS os,
+          COALESCE(r.battery_health::text, (rp.raw_json->'battery'->>'health')::text) AS battery_health
+        FROM reports r
+        LEFT JOIN report_payloads rp ON rp.report_id = r.id AND (r.grade IS NULL OR r.os IS NULL)
+        WHERE r.deleted_at IS NULL
+          AND r.created_at >= ${ago7d.toISOString()}::timestamptz
+        ORDER BY r.created_at DESC
+        LIMIT 500
+      `);
+      const rows = Array.isArray(rowsResult) ? rowsResult : rowsResult.rows;
+      const gradeDistribution = {};
+      const osBreakdown = {};
+      let totalBattery = 0;
+      let batteryCount = 0;
+      for (const r2 of rows) {
+        if (r2.grade) {
+          const g = r2.grade.trim().toUpperCase();
+          gradeDistribution[g] = (gradeDistribution[g] ?? 0) + 1;
+        }
+        const os2 = normalizeOs(r2.os ?? "");
+        if (os2) osBreakdown[os2] = (osBreakdown[os2] ?? 0) + 1;
+        const bh = parseFloat(r2.battery_health ?? "");
+        if (!isNaN(bh) && bh > 0 && bh <= 100) {
+          totalBattery += bh;
+          batteryCount++;
+        }
       }
-      const os2 = normalizeOs(r2.os ?? "");
-      if (os2) osBreakdown[os2] = (osBreakdown[os2] ?? 0) + 1;
-      const bh = parseFloat(r2.battery_health ?? "");
-      if (!isNaN(bh) && bh > 0 && bh <= 100) {
-        totalBattery += bh;
-        batteryCount++;
-      }
-    }
-    return {
-      totalReports: Number(totalRow?.total ?? 0),
-      reportsLast24h: Number(totalRow?.last24h ?? 0),
-      reportsLast7d: Number(totalRow?.last7d ?? 0),
-      avgOverallScore: totalRow?.avg_score != null ? Number(totalRow.avg_score) : null,
-      avgBatteryHealth: batteryCount > 0 ? Math.round(totalBattery / batteryCount * 10) / 10 : null,
-      gradeDistribution,
-      osBreakdown,
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
+      return {
+        totalReports: Number(totalRow?.total ?? 0),
+        reportsLast24h: Number(totalRow?.last24h ?? 0),
+        reportsLast7d: Number(totalRow?.last7d ?? 0),
+        avgOverallScore: totalRow?.avg_score != null ? Number(totalRow.avg_score) : null,
+        avgBatteryHealth: batteryCount > 0 ? Math.round(totalBattery / batteryCount * 10) / 10 : null,
+        gradeDistribution,
+        osBreakdown,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    });
   } catch (err) {
     console.error("[liveFeed] fetchFreshStats error:", err);
     return emptyStats();
@@ -106489,9 +106572,20 @@ function addFleetClient(res, orgId, ipHash) {
 }
 function emitFleetDelta(orgId, delta) {
   const orgSet = fleetClients.get(orgId);
-  if (!orgSet || orgSet.size === 0) return;
-  for (const client2 of orgSet) {
-    sendToClient(client2, "fleet_delta", delta);
+  if (orgSet && orgSet.size > 0) {
+    for (const client2 of orgSet) {
+      sendToClient(client2, "fleet_delta", delta);
+    }
+  }
+  if (_db) {
+    const notifyPayload = JSON.stringify({
+      type: "fleet_delta",
+      orgId,
+      data: delta,
+      instanceId: INSTANCE_ID
+    });
+    _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {
+    });
   }
 }
 function sendToClient(res, event, data) {
@@ -106548,14 +106642,14 @@ async function enqueueLiveFeed(data) {
 }
 
 // src/lib/crypto.ts
-import crypto2 from "node:crypto";
+import crypto3 from "node:crypto";
 function timingSafeEqualStr(a, b3) {
   if (typeof a !== "string" || typeof b3 !== "string") {
     return false;
   }
-  const hashA = crypto2.createHash("sha256").update(a).digest();
-  const hashB = crypto2.createHash("sha256").update(b3).digest();
-  return crypto2.timingSafeEqual(hashA, hashB);
+  const hashA = crypto3.createHash("sha256").update(a).digest();
+  const hashB = crypto3.createHash("sha256").update(b3).digest();
+  return crypto3.timingSafeEqual(hashA, hashB);
 }
 function canonicalJsonHash(obj) {
   const canonical = JSON.stringify(
@@ -106565,7 +106659,7 @@ function canonicalJsonHash(obj) {
       return acc;
     }, {}) : val
   );
-  return crypto2.createHash("sha256").update(canonical).digest("hex");
+  return crypto3.createHash("sha256").update(canonical).digest("hex");
 }
 function getRequiredServerSecret() {
   const secret = process.env.SERVER_SECRET?.trim();
@@ -106633,7 +106727,7 @@ var ReportsService = class {
     const serverSecret = getRequiredServerSecret();
     const payloadHash = canonicalJsonHash(rawJson);
     const callerScope = deviceToken ? await sha256hex(deviceToken) : ipHash;
-    const computedIdempotencyKey = crypto3.createHmac("sha256", serverSecret).update(`${callerScope}||${idempotencyKey ?? ""}||${payloadHash}`).digest("hex");
+    const computedIdempotencyKey = crypto4.createHmac("sha256", serverSecret).update(`${callerScope}||${idempotencyKey ?? ""}||${payloadHash}`).digest("hex");
     const existing = await db.select().from(idempotencyKeysTable).where(eq(idempotencyKeysTable.key, computedIdempotencyKey)).limit(1);
     if (existing.length > 0 && existing[0]) {
       const report = await db.select().from(reportsTable).where(eq(reportsTable.id, existing[0].reportId)).limit(1);
@@ -106734,7 +106828,7 @@ var ReportsService = class {
       if (userRows.length > 0 && userRows[0]) {
         finalUserId = userRows[0].id;
       } else {
-        finalUserId = crypto3.randomBytes(16).toString("hex");
+        finalUserId = crypto4.randomBytes(16).toString("hex");
         try {
           await db.insert(usersTable).values({ id: finalUserId, email: email3 });
         } catch (err) {
@@ -106913,10 +107007,10 @@ var ReportsController = class {
       const signaturePayload = `${timestampStr}.${wireBytes}`;
       let expectedSig;
       if (deviceToken && deviceToken.length >= 10) {
-        const derivedKey = crypto4.createHash("sha256").update(`sentinel-sig-v1:${deviceToken}`).digest();
-        expectedSig = crypto4.createHmac("sha256", derivedKey).update(signaturePayload).digest("hex");
+        const derivedKey = crypto5.createHash("sha256").update(`sentinel-sig-v1:${deviceToken}`).digest();
+        expectedSig = crypto5.createHmac("sha256", derivedKey).update(signaturePayload).digest("hex");
       } else {
-        expectedSig = crypto4.createHash("sha256").update(signaturePayload).digest("hex");
+        expectedSig = crypto5.createHash("sha256").update(signaturePayload).digest("hex");
       }
       if (!timingSafeEqualStr(signatureStr, expectedSig)) {
         res.setHeader("X-Sentinel-Server-Time", nowSec.toString());
@@ -107065,7 +107159,7 @@ router3.get("/shared/:shareToken", ReportsController.getSharedReport);
 var reports_default = router3;
 
 // src/routes/myReports.ts
-import crypto5 from "node:crypto";
+import crypto6 from "node:crypto";
 var import_express4 = __toESM(require_express2(), 1);
 
 // src/lib/magicLinkConstants.ts
@@ -107109,17 +107203,17 @@ ${url2}
 
 // src/routes/myReports.ts
 var router4 = (0, import_express4.Router)();
-var SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-sentinel_session" : "sentinel_session";
+var SESSION_COOKIE = "sentinel_session";
 var SESSION_TTL_DAYS = 30;
 function newToken(bytes = 32) {
-  return crypto5.randomBytes(bytes).toString("hex");
+  return crypto6.randomBytes(bytes).toString("hex");
 }
 function hashToken(token2) {
-  return crypto5.createHash("sha256").update(token2).digest("hex");
+  return crypto6.createHash("sha256").update(token2).digest("hex");
 }
 function getSession(req) {
   const cookies = req.cookies;
-  return cookies?.[SESSION_COOKIE] ?? cookies?.["sentinel_session"] ?? null;
+  return cookies?.[SESSION_COOKIE] ?? cookies?.["__Host-sentinel_session"] ?? null;
 }
 async function resolveEmail(sessionToken) {
   const sessionHash = hashToken(sessionToken);
@@ -107143,8 +107237,8 @@ router4.post("/request", async (req, res) => {
   }
   const { email: email3 } = parsed.data;
   const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
-  const ipHash = crypto5.createHash("sha256").update(ip).digest("hex");
-  const emailHash = crypto5.createHash("sha256").update(email3).digest("hex");
+  const ipHash = crypto6.createHash("sha256").update(ip).digest("hex");
+  const emailHash = crypto6.createHash("sha256").update(email3).digest("hex");
   const [allowIp, allowEmail] = await Promise.all([
     consumeRateLimit(`magic-req:ip:${ipHash}`, 15, 5),
     consumeRateLimit(`magic-req:email:${emailHash}`, 15, 3)
@@ -107241,9 +107335,10 @@ router4.get("/verify", async (req, res) => {
   } catch (claimErr) {
     req.log.warn({ claimErr, email: email3 }, "failed_to_finalize_pending_devices");
   }
+  const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
   res.cookie(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecure,
     sameSite: "lax",
     expires: expiresAt,
     path: "/"
@@ -107319,7 +107414,7 @@ var myReports_default = router4;
 
 // src/routes/devices.ts
 var import_express5 = __toESM(require_express2(), 1);
-import crypto6, { randomBytes as randomBytes2 } from "crypto";
+import crypto7, { randomBytes as randomBytes2 } from "crypto";
 var router5 = (0, import_express5.Router)();
 function newToken2(len = 32) {
   return randomBytes2(len).toString("hex");
@@ -107410,7 +107505,7 @@ router5.post("/claim", async (req, res) => {
   let verifiedUser = null;
   let verifiedOrgId = null;
   if (sessionToken && sessionToken.length >= 16) {
-    const sessionHash = crypto6.createHash("sha256").update(sessionToken).digest("hex");
+    const sessionHash = crypto7.createHash("sha256").update(sessionToken).digest("hex");
     const sessionRows = await db.select().from(myReportsSessionsTable).where(
       and(
         eq(myReportsSessionsTable.token, sessionHash),
@@ -107456,8 +107551,8 @@ router5.post("/claim", async (req, res) => {
   await db.update(devicesTable).set({
     pendingClaimEmail: claimEmail
   }).where(eq(devicesTable.id, device.id));
-  const linkToken = crypto6.randomBytes(32).toString("hex");
-  const linkTokenHash = crypto6.createHash("sha256").update(linkToken).digest("hex");
+  const linkToken = crypto7.randomBytes(32).toString("hex");
+  const linkTokenHash = crypto7.createHash("sha256").update(linkToken).digest("hex");
   const linkExpiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MIN * 60 * 1e3);
   await db.insert(magicLinkTokensTable).values({
     token: linkTokenHash,
@@ -107710,7 +107805,7 @@ var import_express8 = __toESM(require_express2(), 1);
 // src/lib/resolveDownload.ts
 import fs2 from "fs";
 import path from "path";
-import crypto7 from "node:crypto";
+import crypto8 from "node:crypto";
 import { fileURLToPath } from "url";
 var DOWNLOAD_SLUGS = ["oneshot", "setup", "agent"];
 var ASSET_FILENAMES = {
@@ -107834,7 +107929,7 @@ async function getAssetSha256(slug) {
   if (fs2.existsSync(localPath) && fs2.statSync(localPath).isFile()) {
     try {
       const buf = fs2.readFileSync(localPath);
-      return crypto7.createHash("sha256").update(buf).digest("hex");
+      return crypto8.createHash("sha256").update(buf).digest("hex");
     } catch {
       return null;
     }
@@ -107936,12 +108031,12 @@ var downloads_default = router8;
 
 // src/routes/organizations.ts
 var import_express9 = __toESM(require_express2(), 1);
-import crypto9 from "node:crypto";
+import crypto10 from "node:crypto";
 
 // src/middlewares/tenantAuth.ts
-import crypto8 from "node:crypto";
+import crypto9 from "node:crypto";
 function hashToken2(token2) {
-  return crypto8.createHash("sha256").update(token2).digest("hex");
+  return crypto9.createHash("sha256").update(token2).digest("hex");
 }
 async function requireTenantAuth(req, res, next2) {
   try {
@@ -108016,7 +108111,7 @@ async function requireTenantAuth(req, res, next2) {
 // src/routes/organizations.ts
 var router9 = (0, import_express9.Router)();
 function hashToken3(token2) {
-  return crypto9.createHash("sha256").update(token2).digest("hex");
+  return crypto10.createHash("sha256").update(token2).digest("hex");
 }
 router9.post("/", async (req, res) => {
   const parsed = CreateOrganizationBody.safeParse(req.body);
@@ -108057,7 +108152,7 @@ router9.post("/", async (req, res) => {
       userId = newUserId;
     }
     const orgId = createId();
-    const apiKey = `sentinel_org_${crypto9.randomBytes(24).toString("hex")}`;
+    const apiKey = `sentinel_org_${crypto10.randomBytes(24).toString("hex")}`;
     const apiKeyHash = hashToken3(apiKey);
     await db.insert(organizationsTable).values({
       id: orgId,
@@ -110226,11 +110321,11 @@ var StripeContext = class _StripeContext {
 };
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/platform/NodePlatformFunctions.js
-import * as crypto11 from "crypto";
+import * as crypto12 from "crypto";
 import { EventEmitter } from "events";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/NodeCryptoProvider.js
-import * as crypto10 from "crypto";
+import * as crypto11 from "crypto";
 
 // ../../node_modules/.pnpm/stripe@22.1.1_@types+node@25.9.0/node_modules/stripe/esm/crypto/CryptoProvider.js
 var CryptoProvider = class {
@@ -110273,7 +110368,7 @@ var CryptoProviderOnlySupportsAsyncError = class extends Error {
 var NodeCryptoProvider = class extends CryptoProvider {
   /** @override */
   computeHMACSignature(payload, secret) {
-    return crypto10.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
+    return crypto11.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
   }
   /** @override */
   async computeHMACSignatureAsync(payload, secret) {
@@ -110282,7 +110377,7 @@ var NodeCryptoProvider = class extends CryptoProvider {
   }
   /** @override */
   async computeSHA256Async(data) {
-    return new Uint8Array(await crypto10.createHash("sha256").update(data).digest());
+    return new Uint8Array(await crypto11.createHash("sha256").update(data).digest());
   }
 };
 
@@ -110621,8 +110716,8 @@ var StreamProcessingError = class extends StripeError {
 var NodePlatformFunctions = class extends PlatformFunctions {
   /** @override */
   uuid4() {
-    if (crypto11.randomUUID) {
-      return crypto11.randomUUID();
+    if (crypto12.randomUUID) {
+      return crypto12.randomUUID();
     }
     return super.uuid4();
   }
@@ -110641,11 +110736,11 @@ var NodePlatformFunctions = class extends PlatformFunctions {
     if (a.length !== b3.length) {
       return false;
     }
-    if (crypto11.timingSafeEqual) {
+    if (crypto12.timingSafeEqual) {
       const textEncoder = new TextEncoder();
       const aEncoded = textEncoder.encode(a);
       const bEncoded = textEncoder.encode(b3);
-      return crypto11.timingSafeEqual(aEncoded, bEncoded);
+      return crypto12.timingSafeEqual(aEncoded, bEncoded);
     }
     return super.secureCompare(a, b3);
   }
@@ -125410,7 +125505,7 @@ var stripe_default = router10;
 
 // src/routes/fleet.ts
 var import_express11 = __toESM(require_express2(), 1);
-import crypto12 from "node:crypto";
+import crypto13 from "node:crypto";
 var router11 = (0, import_express11.Router)();
 function getClientIp3(req) {
   return req.ip ?? req.socket?.remoteAddress ?? "unknown";
@@ -125522,7 +125617,7 @@ router11.get("/stream", async (req, res) => {
   const tenantReq = req;
   const orgId = tenantReq.tenant.orgId;
   const ip = getClientIp3(req);
-  const ipHash = crypto12.createHash("sha256").update(ip).digest("hex");
+  const ipHash = crypto13.createHash("sha256").update(ip).digest("hex");
   const allowed = await consumeRateLimit(ipHash + ":fleet_sse_burst", 1, 10);
   if (!allowed) {
     res.set("Retry-After", "60");
@@ -125550,7 +125645,7 @@ var fleet_default = router11;
 
 // src/routes/live.ts
 var import_express12 = __toESM(require_express2(), 1);
-import crypto13 from "node:crypto";
+import crypto14 from "node:crypto";
 initLiveFeed(db);
 var router12 = (0, import_express12.Router)();
 function getClientIp4(req) {
@@ -125570,7 +125665,7 @@ router12.get("/stats", async (_req, res) => {
 });
 router12.get("/stream", async (req, res) => {
   const ip = getClientIp4(req);
-  const ipHash = crypto13.createHash("sha256").update(ip).digest("hex");
+  const ipHash = crypto14.createHash("sha256").update(ip).digest("hex");
   const burstAllowed = await consumeRateLimit(ipHash + ":sse_burst", 1, 10);
   if (!burstAllowed) {
     res.set("Retry-After", "60");

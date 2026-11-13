@@ -26,6 +26,8 @@ tags:
     description: Stable redirects to latest GitHub release assets
   - name: organizations
     description: B2B Multi-tenant billing and fleet management
+  - name: fleet
+    description: Enterprise fleet dashboard and real-time telemetry stream
 paths:
   /healthz:
     get:
@@ -101,6 +103,18 @@ paths:
           schema:
             type: string
           description: When reused within 24h, returns the same report (deduplicated).
+        - name: X-Sentinel-Signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: HMAC-SHA256 signature or payload attestation digest. Required when authenticating with Bearer deviceToken.
+        - name: X-Sentinel-Timestamp
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Unix timestamp in seconds for replay protection. Skew must be <= 300 seconds.
       requestBody:
         required: true
         content:
@@ -121,7 +135,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReportCreateResult"
         "401":
-          description: Invalid device Bearer token (agent uploads only)
+          description: Invalid device Bearer token or missing/invalid HMAC attestation signature
+          headers:
+            X-Sentinel-Server-Time:
+              description: Current server Unix timestamp in seconds for clock skew recovery
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -673,6 +692,86 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /fleet/dashboard:
+    get:
+      operationId: getFleetDashboard
+      tags: [fleet]
+      summary: Get fleet aggregation and telemetry metrics
+      description: |
+        Returns aggregated fleet health, component scores, top findings, and recent time-series
+        for the authenticated organization. Requires session cookie or X-Sentinel-Org-Key header.
+      parameters:
+        - name: X-Sentinel-Org-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Scoped organization API key
+      responses:
+        "200":
+          description: Fleet dashboard telemetry and component analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FleetDashboardResponse"
+        "401":
+          description: Unauthorized — missing or invalid organization session/API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to fetch fleet dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /fleet/stream:
+    get:
+      operationId: streamFleetEvents
+      tags: [fleet]
+      summary: Real-time Server-Sent Events (SSE) telemetry stream
+      description: |
+        Establishes a tenant-scoped SSE stream emitting real-time telemetry updates and
+        report delta events for the authenticated organization.
+      parameters:
+        - name: X-Sentinel-Org-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Scoped organization API key
+      responses:
+        "200":
+          description: Real-time SSE stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Active stream capacity reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
     ReportId:
@@ -726,6 +825,8 @@ components:
           type: string
         details:
           type: string
+        serverTime:
+          type: integer
       required:
         - error
     OkResponse:
@@ -1024,12 +1125,11 @@ components:
       type: object
       properties:
         version:
-          type: string
+          type: [string, "null"]
         name:
           type: string
         publishedAt:
-          type: string
-          format: date-time
+          type: [string, "null"]
         releaseUrl:
           type: string
           format: uri
@@ -1038,28 +1138,33 @@ components:
           items:
             $ref: "#/components/schemas/ReleaseAsset"
       required:
-        - version
         - name
-        - publishedAt
         - releaseUrl
         - assets
     ReleaseAsset:
       type: object
       properties:
+        slug:
+          type: string
         name:
+          type: string
+        available:
+          type: boolean
+        source:
+          type: [string, "null"]
+        downloadUrl:
+          type: string
+        sha256:
           type: string
         size:
           type: integer
-        downloadUrl:
-          type: string
-          format: uri
         downloads:
           type: integer
       required:
+        - slug
         - name
-        - size
+        - available
         - downloadUrl
-        - downloads
     CreateOrganizationRequest:
       type: object
       properties:
@@ -1122,3 +1227,81 @@ components:
         - status
         - currentPeriodEnd
         - portalUrl
+    FleetDashboardResponse:
+      type: object
+      properties:
+        overall:
+          type: integer
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/FleetComponentScore"
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/FleetFinding"
+        timeSeries:
+          type: array
+          items:
+            $ref: "#/components/schemas/FleetTimeSeriesPoint"
+        deviceCount:
+          type: integer
+      required:
+        - overall
+        - components
+        - findings
+        - timeSeries
+        - deviceCount
+    FleetComponentScore:
+      type: object
+      properties:
+        name:
+          type: string
+        score:
+          type: integer
+      required:
+        - name
+        - score
+    FleetFinding:
+      type: object
+      properties:
+        title:
+          type: string
+        severity:
+          type: string
+        category:
+          type: string
+        impact:
+          type: string
+        description:
+          type: string
+      required:
+        - title
+    FleetTimeSeriesPoint:
+      type: object
+      properties:
+        id:
+          type: string
+        t:
+          type: string
+        overall:
+          type: integer
+        components:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        cpu:
+          type: number
+        ram:
+          type: number
+        cpuTemp:
+          type: number
+        chassisTemp:
+          type: number
+        net:
+          type: number
+      required:
+        - id
+        - t
+        - overall

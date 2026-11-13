@@ -45,7 +45,9 @@ auto-claimed to the device's email (if the device is paired).
  * @summary Create a hardware report
  */
 export const CreateReportHeader = zod.object({
-  "Idempotency-Key": zod.string().optional().describe('When reused within 24h, returns the same report (deduplicated).')
+  "Idempotency-Key": zod.string().optional().describe('When reused within 24h, returns the same report (deduplicated).'),
+  "X-Sentinel-Signature": zod.string().optional().describe('HMAC-SHA256 signature or payload attestation digest. Required when authenticating with Bearer deviceToken.'),
+  "X-Sentinel-Timestamp": zod.string().optional().describe('Unix timestamp in seconds for replay protection. Skew must be <= 300 seconds.')
 })
 
 export const createReportBodyLegacyDefault = false;
@@ -268,15 +270,19 @@ export const GetLatestReleaseForAgentResponse = zod.object({
  * @summary Latest GitHub release metadata (JSON)
  */
 export const GetLatestReleaseJsonResponse = zod.object({
-  "version": zod.string(),
+  "version": zod.string().nullish(),
   "name": zod.string(),
-  "publishedAt": zod.coerce.date(),
+  "publishedAt": zod.string().nullish(),
   "releaseUrl": zod.string().url(),
   "assets": zod.array(zod.object({
+  "slug": zod.string(),
   "name": zod.string(),
-  "size": zod.number(),
-  "downloadUrl": zod.string().url(),
-  "downloads": zod.number()
+  "available": zod.boolean(),
+  "source": zod.string().nullish(),
+  "downloadUrl": zod.string(),
+  "sha256": zod.string().optional(),
+  "size": zod.number().optional(),
+  "downloads": zod.number().optional()
 }))
 })
 
@@ -334,6 +340,55 @@ export const GetBillingStatusResponse = zod.object({
   "status": zod.string().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
   "portalUrl": zod.string().nullable()
+})
+
+
+/**
+ * Returns aggregated fleet health, component scores, top findings, and recent time-series
+for the authenticated organization. Requires session cookie or X-Sentinel-Org-Key header.
+
+ * @summary Get fleet aggregation and telemetry metrics
+ */
+export const GetFleetDashboardHeader = zod.object({
+  "X-Sentinel-Org-Key": zod.string().optional().describe('Scoped organization API key')
+})
+
+export const GetFleetDashboardResponse = zod.object({
+  "overall": zod.number(),
+  "components": zod.array(zod.object({
+  "name": zod.string(),
+  "score": zod.number()
+})),
+  "findings": zod.array(zod.object({
+  "title": zod.string(),
+  "severity": zod.string().optional(),
+  "category": zod.string().optional(),
+  "impact": zod.string().optional(),
+  "description": zod.string().optional()
+})),
+  "timeSeries": zod.array(zod.object({
+  "id": zod.string(),
+  "t": zod.string(),
+  "overall": zod.number(),
+  "components": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "cpu": zod.number().optional(),
+  "ram": zod.number().optional(),
+  "cpuTemp": zod.number().optional(),
+  "chassisTemp": zod.number().optional(),
+  "net": zod.number().optional()
+})),
+  "deviceCount": zod.number()
+})
+
+
+/**
+ * Establishes a tenant-scoped SSE stream emitting real-time telemetry updates and
+report delta events for the authenticated organization.
+
+ * @summary Real-time Server-Sent Events (SSE) telemetry stream
+ */
+export const StreamFleetEventsHeader = zod.object({
+  "X-Sentinel-Org-Key": zod.string().optional().describe('Scoped organization API key')
 })
 
 

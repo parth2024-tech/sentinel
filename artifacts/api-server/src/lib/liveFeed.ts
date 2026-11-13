@@ -1,6 +1,8 @@
 import { type Response } from "express";
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
+import { pool, withSystemScope } from "@workspace/db";
+import crypto from "node:crypto";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -27,6 +29,10 @@ export interface LiveFeedEvent {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
+const INSTANCE_ID = crypto.randomUUID();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let listenerClient: any = null;
+
 const clients = new Set<Response>();
 const fleetClients = new Map<string, Set<Response>>();
 const activeIpCounts = new Map<string, number>();
@@ -46,14 +52,56 @@ let statsBroadcastTimer: NodeJS.Timeout | null = null;
 const recentEvents: LiveFeedEvent[] = [];
 const MAX_FEED_SIZE = 50;
 
-// ── DB init ───────────────────────────────────────────────────────────────────
+// ── DB init & Postgres LISTEN/NOTIFY Fan-Out ──────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: NodePgDatabase<any> | null = null;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function initLiveFeed(db: NodePgDatabase<any>) {
+export async function initLiveFeed(db: NodePgDatabase<any>) {
   _db = db;
+
+  // Setup cross-instance LISTEN connection if database is configured
+  if (!listenerClient && process.env.DATABASE_URL) {
+    try {
+      listenerClient = await pool.connect();
+      await listenerClient.query("LISTEN sentinel_live_events");
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      listenerClient.on("notification", (msg: any) => {
+        if (msg.channel === "sentinel_live_events" && msg.payload) {
+          try {
+            const event = JSON.parse(msg.payload);
+            // Skip echo from this process instance
+            if (event.instanceId === INSTANCE_ID) return;
+
+            if (event.type === "new_report" && event.data) {
+              recentEvents.unshift(event.data);
+              if (recentEvents.length > MAX_FEED_SIZE) recentEvents.length = MAX_FEED_SIZE;
+              cachedStats = null;
+              broadcast("new_report", event.data);
+            } else if (event.type === "fleet_delta" && event.orgId && event.data) {
+              const orgSet = fleetClients.get(event.orgId);
+              if (orgSet && orgSet.size > 0) {
+                for (const client of orgSet) {
+                  sendToClient(client, "fleet_delta", event.data);
+                }
+              }
+            }
+          } catch {
+            // Ignore corrupted payload
+          }
+        }
+      });
+
+      listenerClient.on("error", () => {
+        listenerClient = null;
+      });
+    } catch {
+      // Non-fatal fallback for environments where DB is offline or mock
+      listenerClient = null;
+    }
+  }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -80,81 +128,83 @@ async function fetchFreshStats(): Promise<LiveStats> {
   if (!_db) return emptyStats();
 
   try {
-    const now = new Date();
-    const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const ago7d  = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return await withSystemScope(async (tx) => {
+      const now = new Date();
+      const ago24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const ago7d  = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Single query for totals + avg score using materialized columns on reportsTable
-    const totalResult = await _db.execute<{
-      total: string;
-      last24h: string;
-      last7d: string;
-      avg_score: string | null;
-    }>(sql`
-      SELECT
-        COUNT(*)::int                                                                    AS total,
-        COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
-        COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
-        ROUND(AVG(COALESCE(r.overall_score, (rp.result_json->>'overall')::numeric))::numeric, 1) AS avg_score
-      FROM reports r
-      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND r.overall_score IS NULL
-      WHERE r.deleted_at IS NULL
-    `);
-    const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
-    const totalRow = totalRows[0];
+      // Single query for totals + avg score using materialized columns on reportsTable
+      const totalResult = await tx.execute<{
+        total: string;
+        last24h: string;
+        last7d: string;
+        avg_score: string | null;
+      }>(sql`
+        SELECT
+          COUNT(*)::int                                                                    AS total,
+          COUNT(*) FILTER (WHERE r.created_at >= ${ago24h.toISOString()}::timestamptz)::int AS last24h,
+          COUNT(*) FILTER (WHERE r.created_at >= ${ago7d.toISOString()}::timestamptz)::int  AS last7d,
+          ROUND(AVG(COALESCE(r.overall_score, (rp.result_json->>'overall')::numeric))::numeric, 1) AS avg_score
+        FROM reports r
+        LEFT JOIN report_payloads rp ON rp.report_id = r.id AND r.overall_score IS NULL
+        WHERE r.deleted_at IS NULL
+      `);
+      const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows;
+      const totalRow = totalRows[0];
 
-    // Sample recent rows for distribution data (last 7d, max 500) using materialized columns
-    const rowsResult = await _db.execute<{
-      grade: string | null;
-      os: string | null;
-      battery_health: string | null;
-    }>(sql`
-      SELECT
-        COALESCE(r.grade, rp.result_json->>'grade')                          AS grade,
-        COALESCE(r.os, rp.raw_json->'system'->>'os')                         AS os,
-        COALESCE(r.battery_health::text, (rp.raw_json->'battery'->>'health')::text) AS battery_health
-      FROM reports r
-      LEFT JOIN report_payloads rp ON rp.report_id = r.id AND (r.grade IS NULL OR r.os IS NULL)
-      WHERE r.deleted_at IS NULL
-        AND r.created_at >= ${ago7d.toISOString()}::timestamptz
-      ORDER BY r.created_at DESC
-      LIMIT 500
-    `);
-    const rows = Array.isArray(rowsResult) ? rowsResult : rowsResult.rows;
+      // Sample recent rows for distribution data (last 7d, max 500) using materialized columns
+      const rowsResult = await tx.execute<{
+        grade: string | null;
+        os: string | null;
+        battery_health: string | null;
+      }>(sql`
+        SELECT
+          COALESCE(r.grade, rp.result_json->>'grade')                          AS grade,
+          COALESCE(r.os, rp.raw_json->'system'->>'os')                         AS os,
+          COALESCE(r.battery_health::text, (rp.raw_json->'battery'->>'health')::text) AS battery_health
+        FROM reports r
+        LEFT JOIN report_payloads rp ON rp.report_id = r.id AND (r.grade IS NULL OR r.os IS NULL)
+        WHERE r.deleted_at IS NULL
+          AND r.created_at >= ${ago7d.toISOString()}::timestamptz
+        ORDER BY r.created_at DESC
+        LIMIT 500
+      `);
+      const rows = Array.isArray(rowsResult) ? rowsResult : rowsResult.rows;
 
-    const gradeDistribution: Record<string, number> = {};
-    const osBreakdown: Record<string, number> = {};
-    let totalBattery = 0;
-    let batteryCount = 0;
+      const gradeDistribution: Record<string, number> = {};
+      const osBreakdown: Record<string, number> = {};
+      let totalBattery = 0;
+      let batteryCount = 0;
 
-    for (const r of rows) {
-      if (r.grade) {
-        const g = r.grade.trim().toUpperCase();
-        gradeDistribution[g] = (gradeDistribution[g] ?? 0) + 1;
+      for (const r of rows) {
+        if (r.grade) {
+          const g = r.grade.trim().toUpperCase();
+          gradeDistribution[g] = (gradeDistribution[g] ?? 0) + 1;
+        }
+
+        const os = normalizeOs(r.os ?? "");
+        if (os) osBreakdown[os] = (osBreakdown[os] ?? 0) + 1;
+
+        const bh = parseFloat(r.battery_health ?? "");
+        if (!isNaN(bh) && bh > 0 && bh <= 100) {
+          totalBattery += bh;
+          batteryCount++;
+        }
       }
 
-      const os = normalizeOs(r.os ?? "");
-      if (os) osBreakdown[os] = (osBreakdown[os] ?? 0) + 1;
-
-      const bh = parseFloat(r.battery_health ?? "");
-      if (!isNaN(bh) && bh > 0 && bh <= 100) {
-        totalBattery += bh;
-        batteryCount++;
-      }
-    }
-
-    return {
-      totalReports:     Number(totalRow?.total    ?? 0),
-      reportsLast24h:   Number(totalRow?.last24h  ?? 0),
-      reportsLast7d:    Number(totalRow?.last7d   ?? 0),
-      avgOverallScore:  totalRow?.avg_score != null ? Number(totalRow.avg_score) : null,
-      avgBatteryHealth: batteryCount > 0
-        ? Math.round((totalBattery / batteryCount) * 10) / 10
-        : null,
-      gradeDistribution,
-      osBreakdown,
-      updatedAt: new Date().toISOString(),
-    };
+      return {
+        totalReports:     Number(totalRow?.total    ?? 0),
+        reportsLast24h:   Number(totalRow?.last24h  ?? 0),
+        reportsLast7d:    Number(totalRow?.last7d   ?? 0),
+        avgOverallScore:  totalRow?.avg_score != null ? Number(totalRow.avg_score) : null,
+        avgBatteryHealth: batteryCount > 0
+          ? Math.round((totalBattery / batteryCount) * 10) / 10
+          : null,
+        gradeDistribution,
+        osBreakdown,
+        updatedAt: new Date().toISOString(),
+      };
+    });
   } catch (err) {
     console.error("[liveFeed] fetchFreshStats error:", err);
     return emptyStats();
@@ -272,9 +322,21 @@ export function addFleetClient(res: Response, orgId: string, ipHash?: string): b
 
 export function emitFleetDelta(orgId: string, delta: unknown) {
   const orgSet = fleetClients.get(orgId);
-  if (!orgSet || orgSet.size === 0) return;
-  for (const client of orgSet) {
-    sendToClient(client, "fleet_delta", delta);
+  if (orgSet && orgSet.size > 0) {
+    for (const client of orgSet) {
+      sendToClient(client, "fleet_delta", delta);
+    }
+  }
+
+  // Cross-instance fanout via Postgres NOTIFY
+  if (_db) {
+    const notifyPayload = JSON.stringify({
+      type: "fleet_delta",
+      orgId,
+      data: delta,
+      instanceId: INSTANCE_ID,
+    });
+    _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {});
   }
 }
 
@@ -320,8 +382,18 @@ export function emitNewReport(event: LiveFeedEvent) {
   // Invalidate cache
   cachedStats = null;
 
-  // Broadcast the new event immediately
+  // Broadcast the new event immediately to local connections
   broadcast("new_report", sanitized);
+
+  // Cross-instance fanout via Postgres NOTIFY
+  if (_db) {
+    const notifyPayload = JSON.stringify({
+      type: "new_report",
+      data: sanitized,
+      instanceId: INSTANCE_ID,
+    });
+    _db.execute(sql`SELECT pg_notify('sentinel_live_events', ${notifyPayload})`).catch(() => {});
+  }
 
   // Debounce refreshed stats broadcast (1000ms delay to let DB write settle)
   if (statsBroadcastTimer) {
@@ -388,4 +460,13 @@ export function closeAllStreams(): void {
   }
   fleetClients.clear();
   activeIpCounts.clear();
+
+  if (listenerClient) {
+    try {
+      listenerClient.release();
+    } catch {
+      // ignore
+    }
+    listenerClient = null;
+  }
 }

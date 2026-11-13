@@ -214,4 +214,92 @@ describe("PostgreSQL Real-DB Integration & Constraints", () => {
       await testDb.delete(reportsTable).where(sql`id = ${backfillReportId}`);
     }
   });
+
+  it("enforces RLS isolation under restricted non-superuser role (sentinel_app)", async () => {
+    if (!isDbReachable || !pool || !testDb) return;
+
+    // Create non-superuser role if not exists
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'sentinel_app') THEN
+          CREATE ROLE sentinel_app NOSUPERUSER NOBYPASSRLS;
+        END IF;
+      END
+      $$;
+      GRANT ALL ON ALL TABLES IN SCHEMA public TO sentinel_app;
+      GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO sentinel_app;
+    `);
+
+    const orgA = `org_test_a_${Date.now()}`;
+    const orgB = `org_test_b_${Date.now()}`;
+    const repA = `rep_test_a_${Date.now()}`;
+    const repB = `rep_test_b_${Date.now()}`;
+    const repAnon = `rep_test_anon_${Date.now()}`;
+    const ownerId = `user_owner_${Date.now()}`;
+
+    try {
+      await pool.query(`INSERT INTO users (id, email) VALUES ($1, $2)`, [ownerId, `owner_${Date.now()}@example.com`]);
+      await pool.query(`INSERT INTO organizations (id, name, owner_id) VALUES ($1, 'Org A', $2)`, [orgA, ownerId]);
+      await pool.query(`INSERT INTO organizations (id, name, owner_id) VALUES ($1, 'Org B', $2)`, [orgB, ownerId]);
+
+      await pool.query(`INSERT INTO reports (id, org_id) VALUES ($1, $2)`, [repA, orgA]);
+      await pool.query(`INSERT INTO reports (id, org_id) VALUES ($1, $2)`, [repB, orgB]);
+      await pool.query(`INSERT INTO reports (id, org_id) VALUES ($1, NULL)`, [repAnon]);
+
+      // 1. Tenant A scope: can see repA and repAnon, CANNOT see repB
+      await testDb.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL ROLE sentinel_app`);
+        await tx.execute(sql`SELECT set_config('app.current_org_id', ${orgA}, true)`);
+
+        const visibleReports = await tx.select({ id: reportsTable.id }).from(reportsTable);
+        const visibleIds = visibleReports.map(r => r.id);
+
+        expect(visibleIds).toContain(repA);
+        expect(visibleIds).toContain(repAnon);
+        expect(visibleIds).not.toContain(repB);
+      });
+
+      // 2. Tenant B scope: can see repB and repAnon, CANNOT see repA
+      await testDb.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL ROLE sentinel_app`);
+        await tx.execute(sql`SELECT set_config('app.current_org_id', ${orgB}, true)`);
+
+        const visibleReports = await tx.select({ id: reportsTable.id }).from(reportsTable);
+        const visibleIds = visibleReports.map(r => r.id);
+
+        expect(visibleIds).toContain(repB);
+        expect(visibleIds).toContain(repAnon);
+        expect(visibleIds).not.toContain(repA);
+      });
+
+      // 3. Anonymous scope (no app.current_org_id set): can see repAnon, CANNOT see repA or repB
+      await testDb.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL ROLE sentinel_app`);
+        const visibleReports = await tx.select({ id: reportsTable.id }).from(reportsTable);
+        const visibleIds = visibleReports.map(r => r.id);
+
+        expect(visibleIds).toContain(repAnon);
+        expect(visibleIds).not.toContain(repA);
+        expect(visibleIds).not.toContain(repB);
+      });
+
+      // 4. System bypass scope (app.bypass_rls = 'on'): can see all reports
+      await testDb.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL ROLE sentinel_app`);
+        await tx.execute(sql`SELECT set_config('app.bypass_rls', 'on', true)`);
+
+        const visibleReports = await tx.select({ id: reportsTable.id }).from(reportsTable);
+        const visibleIds = visibleReports.map(r => r.id);
+
+        expect(visibleIds).toContain(repA);
+        expect(visibleIds).toContain(repB);
+        expect(visibleIds).toContain(repAnon);
+      });
+    } finally {
+      await pool.query(`DELETE FROM reports WHERE id IN ($1, $2, $3)`, [repA, repB, repAnon]);
+      await pool.query(`DELETE FROM organizations WHERE id IN ($1, $2)`, [orgA, orgB]);
+      await pool.query(`DELETE FROM users WHERE id = $1`, [ownerId]);
+    }
+  });
 });

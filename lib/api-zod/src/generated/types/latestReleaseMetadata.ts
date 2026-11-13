@@ -8,9 +8,11 @@
 import type { ReleaseAsset } from './releaseAsset';
 
 export interface LatestReleaseMetadata {
-  version: string;
+  /** @nullable */
+  version?: string | null;
   name: string;
-  publishedAt: Date;
+  /** @nullable */
+  publishedAt?: string | null;
   releaseUrl: string;
   assets: ReleaseAsset[];
 }

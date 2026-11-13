@@ -32,6 +32,7 @@ import type {
   DevicePairInitResponse,
   DevicePairStatusResponse,
   ErrorResponse,
+  FleetDashboardResponse,
   GetDevicePairStatusParams,
   HabitAnswersRequest,
   HabitAnswersResponse,
@@ -1775,6 +1776,166 @@ export function useGetBillingStatus<TData = Awaited<ReturnType<typeof getBilling
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetBillingStatusQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFleetDashboardUrl = () => {
+
+
+
+
+  return `/api/fleet/dashboard`
+}
+
+/**
+ * Returns aggregated fleet health, component scores, top findings, and recent time-series
+for the authenticated organization. Requires session cookie or X-Sentinel-Org-Key header.
+
+ * @summary Get fleet aggregation and telemetry metrics
+ */
+export const getFleetDashboard = async ( options?: RequestInit): Promise<FleetDashboardResponse> => {
+
+  return customFetch<FleetDashboardResponse>(getGetFleetDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFleetDashboardQueryKey = () => {
+    return [
+    `/api/fleet/dashboard`
+    ] as const;
+    }
+
+
+export const getGetFleetDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getFleetDashboard>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFleetDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFleetDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFleetDashboard>>> = ({ signal }) => getFleetDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFleetDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFleetDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getFleetDashboard>>>
+export type GetFleetDashboardQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get fleet aggregation and telemetry metrics
+ */
+
+export function useGetFleetDashboard<TData = Awaited<ReturnType<typeof getFleetDashboard>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFleetDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFleetDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getStreamFleetEventsUrl = () => {
+
+
+
+
+  return `/api/fleet/stream`
+}
+
+/**
+ * Establishes a tenant-scoped SSE stream emitting real-time telemetry updates and
+report delta events for the authenticated organization.
+
+ * @summary Real-time Server-Sent Events (SSE) telemetry stream
+ */
+export const streamFleetEvents = async ( options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getStreamFleetEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getStreamFleetEventsQueryKey = () => {
+    return [
+    `/api/fleet/stream`
+    ] as const;
+    }
+
+
+export const getStreamFleetEventsQueryOptions = <TData = Awaited<ReturnType<typeof streamFleetEvents>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof streamFleetEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStreamFleetEventsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof streamFleetEvents>>> = ({ signal }) => streamFleetEvents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof streamFleetEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type StreamFleetEventsQueryResult = NonNullable<Awaited<ReturnType<typeof streamFleetEvents>>>
+export type StreamFleetEventsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Real-time Server-Sent Events (SSE) telemetry stream
+ */
+
+export function useStreamFleetEvents<TData = Awaited<ReturnType<typeof streamFleetEvents>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof streamFleetEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getStreamFleetEventsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

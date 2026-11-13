@@ -28,6 +28,7 @@ export interface WaitlistCount {
 export interface ErrorResponse {
   error: string;
   details?: string;
+  serverTime?: number;
 }
 
 export interface OkResponse {
@@ -200,16 +201,23 @@ export interface AgentVersionResponse {
 }
 
 export interface ReleaseAsset {
+  slug: string;
   name: string;
-  size: number;
+  available: boolean;
+  /** @nullable */
+  source?: string | null;
   downloadUrl: string;
-  downloads: number;
+  sha256?: string;
+  size?: number;
+  downloads?: number;
 }
 
 export interface LatestReleaseMetadata {
-  version: string;
+  /** @nullable */
+  version?: string | null;
   name: string;
-  publishedAt: string;
+  /** @nullable */
+  publishedAt?: string | null;
   releaseUrl: string;
   assets: ReleaseAsset[];
 }
@@ -248,6 +256,41 @@ export interface BillingStatusResponse {
   currentPeriodEnd: string | null;
   /** @nullable */
   portalUrl: string | null;
+}
+
+export interface FleetComponentScore {
+  name: string;
+  score: number;
+}
+
+export interface FleetFinding {
+  title: string;
+  severity?: string;
+  category?: string;
+  impact?: string;
+  description?: string;
+}
+
+export type FleetTimeSeriesPointComponentsItem = { [key: string]: unknown };
+
+export interface FleetTimeSeriesPoint {
+  id: string;
+  t: string;
+  overall: number;
+  components?: FleetTimeSeriesPointComponentsItem[];
+  cpu?: number;
+  ram?: number;
+  cpuTemp?: number;
+  chassisTemp?: number;
+  net?: number;
+}
+
+export interface FleetDashboardResponse {
+  overall: number;
+  components: FleetComponentScore[];
+  findings: FleetFinding[];
+  timeSeries: FleetTimeSeriesPoint[];
+  deviceCount: number;
 }
 
 export type VerifyMyReportsMagicLinkParams = {

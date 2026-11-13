@@ -5,6 +5,7 @@ import {
   myReportsSessionsTable,
   suspectPayloadsTable,
   pairSessionsTable,
+  withSystemScope,
 } from "@workspace/db";
 import { lt, or, and, isNotNull, inArray, sql } from "drizzle-orm";
 import { logger } from "./logger.js";
@@ -218,14 +219,16 @@ async function purgeLegacyPlaintextTokens(): Promise<void> {
 }
 
 /**
- * Runs all cleanup jobs in sequence.
+ * Runs all cleanup jobs in sequence under an administrative system bypass scope.
  */
 async function runAllCleanups(): Promise<void> {
-  await cleanupMagicLinkTokens();
-  await cleanupExpiredSessions();
-  await cleanupIdempotencyKeys();
-  await cleanupSuspectPayloads();
-  await cleanupPairSessions();
+  await withSystemScope(async () => {
+    await cleanupMagicLinkTokens();
+    await cleanupExpiredSessions();
+    await cleanupIdempotencyKeys();
+    await cleanupSuspectPayloads();
+    await cleanupPairSessions();
+  });
 }
 
 /**

@@ -7,8 +7,13 @@
  */
 
 export interface ReleaseAsset {
+  slug: string;
   name: string;
-  size: number;
+  available: boolean;
+  /** @nullable */
+  source?: string | null;
   downloadUrl: string;
-  downloads: number;
+  sha256?: string;
+  size?: number;
+  downloads?: number;
 }

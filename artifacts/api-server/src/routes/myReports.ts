@@ -22,7 +22,7 @@ import { consumeRateLimit } from "../lib/rateLimit.js";
 
 const router = Router();
 
-const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-sentinel_session" : "sentinel_session";
+const SESSION_COOKIE = "sentinel_session";
 const SESSION_TTL_DAYS = 30;
 
 function newToken(bytes = 32): string {
@@ -35,7 +35,7 @@ function hashToken(token: string): string {
 
 function getSession(req: Request): string | null {
   const cookies = req.cookies as Record<string, string> | undefined;
-  return cookies?.[SESSION_COOKIE] ?? cookies?.["sentinel_session"] ?? null;
+  return cookies?.[SESSION_COOKIE] ?? cookies?.["__Host-sentinel_session"] ?? null;
 }
 
 async function resolveEmail(sessionToken: string): Promise<string | null> {
@@ -213,9 +213,11 @@ router.get("/verify", async (req, res) => {
     req.log.warn({ claimErr, email }, "failed_to_finalize_pending_devices");
   }
 
+  const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
+
   res.cookie(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecure,
     sameSite: "lax",
     expires: expiresAt,
     path: "/",

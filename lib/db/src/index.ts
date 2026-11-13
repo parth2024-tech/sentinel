@@ -37,4 +37,18 @@ export async function withTenantScope<T>(
   });
 }
 
+/**
+ * Execute administrative operations within a system-level bypass scope.
+ * Sets PostgreSQL session variable `app.bypass_rls = 'on'` locally within the transaction
+ * for background cleanup jobs, global telemetry aggregations, and administrative tasks.
+ */
+export async function withSystemScope<T>(
+  fn: (tx: typeof db) => Promise<T>
+): Promise<T> {
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT set_config('app.bypass_rls', 'on', true)`);
+    return await fn(tx as unknown as typeof db);
+  });
+}
+
 export * from "./schema";
